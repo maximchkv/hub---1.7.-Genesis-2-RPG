@@ -12,6 +12,12 @@ struct RootView: View {
                 HubView()
             case .tower:
                 TowerView()
+            case .chest:
+                ChestView()
+            case .battle:
+                BattleView()
+            case .defeat:
+                DefeatView()
             case .castle:
                 CastleView()
             case .cardLibrary:
