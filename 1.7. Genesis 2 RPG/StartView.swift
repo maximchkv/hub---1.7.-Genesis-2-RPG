@@ -13,5 +13,6 @@ struct StartView: View {
             }
         }
         .padding()
+        .onAppear { store.goToStart() }
     }
 }

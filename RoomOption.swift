@@ -1,3 +1,5 @@
+import Foundation
+
 enum RoomKind: String, Codable {
     case combat
     case chest

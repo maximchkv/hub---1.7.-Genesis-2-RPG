@@ -5,7 +5,6 @@ struct HubView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Meta header
             VStack(spacing: 8) {
                 HStack {
                     Text("Days: \(store.meta.days)")
@@ -16,24 +15,45 @@ struct HubView: View {
                 }
                 .font(.headline)
 
-                if let run = store.run {
-                    Text("Current Floor: \(run.currentFloor)")
-                        .font(.subheadline)
-                }
+                Text("Current Floor: \(store.run?.currentFloor ?? 0)")
+                    .font(.subheadline)
+
+                Text("Chest streak: \(store.run?.nonCombatStreak ?? 0)")
+                    .font(.caption)
             }
             .padding()
             .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            // Debug actions
-            Button("Day Tick (debug)") {
-                store.debugDayTick()
+            if let toast = store.toast {
+                Text(toast)
+                    .font(.caption)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(.thinMaterial)
+                    .clipShape(Capsule())
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            if store.toast == toast {
+                                store.toast = nil
+                            }
+                        }
+                    }
             }
 
-            Button("End Run (debug)") {
-                store.endRun()
+            HStack(spacing: 12) {
+                Button("Tower") {
+                    store.goToTower()
+                }
+                .disabled(store.run == nil)
+
+                Button("Castle") { store.goToCastle() }
+                Button("Cards") { store.goToCardLibrary() }
             }
+
+            Button("End Run (debug)") { store.endRun() }
         }
         .padding()
+        .onAppear { store.goToHub() }
     }
 }

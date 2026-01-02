@@ -5,10 +5,17 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack {
-            if store.run == nil {
+            switch store.route {
+            case .start:
                 StartView()
-            } else {
+            case .hub:
                 HubView()
+            case .tower:
+                TowerView()
+            case .castle:
+                CastleView()
+            case .cardLibrary:
+                CardLibraryView()
             }
         }
     }
