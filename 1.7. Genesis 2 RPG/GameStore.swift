@@ -145,18 +145,70 @@ final class GameStore: ObservableObject {
         route = .tower
     }
 
+    // MARK: - Combat core
+    private func applyDamage(
+        _ amount: Int,
+        toHP hp: inout Int,
+        block: inout Int
+    ) -> (blocked: Int, dealt: Int) {
+        let blocked = min(block, amount)
+        block -= blocked
+        let dealt = amount - blocked
+        if dealt > 0 {
+            hp -= dealt
+        }
+        return (blocked, dealt)
+    }
+
+    // 011B: progression formulas
+    private func baseValue(level: Int) -> Int {
+        var v = 5
+        if level <= 1 { return v }
+        for _ in 2...level {
+            v = Int((Double(v) * 1.25).rounded())
+        }
+        return v
+    }
+
+    private func powerStrikeDamage(level: Int) -> Int {
+        baseValue(level: level)
+    }
+
+    private func defendBlock(level: Int) -> Int {
+        baseValue(level: level)
+    }
+
+    private func doubleStrikeHit(level: Int) -> Int {
+        Int((Double(powerStrikeDamage(level: level)) * 0.8).rounded())
+    }
+
+    private func counterDamage(level: Int) -> Int {
+        Int((Double(powerStrikeDamage(level: level)) * 0.6).rounded())
+    }
+
+    private func counterBlock(level: Int) -> Int {
+        Int((Double(defendBlock(level: level)) * 0.8).rounded())
+    }
+
     // MARK: - Battle
     func startBattle() {
         let floor = run?.currentFloor ?? 1
+        var levels: [ActionCardKind: Int] = [:]
+        // По умолчанию все карты 1-го уровня (можно расширить позже)
+        levels[.powerStrike] = 1
+        levels[.defend] = 1
+        levels[.doubleStrike] = 1
+        levels[.counterStance] = 1
+
         battle = BattleState(
             floor: floor,
             enemyName: "Enemy",
-            enemyHP: 20,
-            playerHP: 20,
             actionPoints: 2,
             hand: drawHand(),
             enemyIntent: EnemyIntent(kind: .attack),
-            log: [CombatLogEntry("Battle started")]
+            log: [CombatLogEntry("Battle started")],
+            enemyAttackedThisTurn: false,
+            cardLevels: levels
         )
         route = .battle
     }
@@ -177,14 +229,58 @@ final class GameStore: ObservableObject {
         route = .hub
     }
 
-    // MARK: - Cards (no combat logic yet)
+    // MARK: - Cards (011B: все 4 карты)
     func playCard(_ card: ActionCard) {
         guard var battle = battle else { return }
         guard battle.actionPoints >= card.cost else { return }
 
+        // тратим AP
         battle.actionPoints -= card.cost
+
+        let lvl = battle.cardLevels[card.kind, default: 1]
+
+        switch card.kind {
+        case .powerStrike:
+            let dmg = powerStrikeDamage(level: lvl)
+            let r = applyDamage(dmg, toHP: &battle.enemyHP, block: &battle.enemyBlock)
+            pushLog("Player: Power Strike — \(r.dealt) dmg (blocked \(r.blocked))")
+
+        case .defend:
+            let b = defendBlock(level: lvl)
+            battle.playerBlock += b
+            pushLog("Player: Defend — +\(b) block")
+
+        case .doubleStrike:
+            let hit = doubleStrikeHit(level: lvl)
+            let r1 = applyDamage(hit, toHP: &battle.enemyHP, block: &battle.enemyBlock)
+            pushLog("Player: Double 1 — \(r1.dealt) dmg (blocked \(r1.blocked))")
+            let r2 = applyDamage(hit, toHP: &battle.enemyHP, block: &battle.enemyBlock)
+            pushLog("Player: Double 2 — \(r2.dealt) dmg (blocked \(r2.blocked))")
+
+        case .counterStance:
+            let b = counterBlock(level: lvl)
+            battle.playerBlock += b
+            pushLog("Player: Counter Stance — +\(b) block")
+
+            if battle.enemyAttackedThisTurn {
+                let dmg = counterDamage(level: lvl)
+                let r = applyDamage(dmg, toHP: &battle.enemyHP, block: &battle.enemyBlock)
+                pushLog("Player: Counter — \(r.dealt) dmg (blocked \(r.blocked))")
+            } else {
+                pushLog("Player: Counter — no trigger")
+            }
+        }
+
+        // Commit state
         self.battle = battle
 
+        // Победа сразу после удара
+        if battle.enemyHP <= 0 {
+            winBattle()
+            return
+        }
+
+        // Лог AP (сохраняем стиль)
         pushLog("Player used \(cardTitle(card.kind)) (-\(card.cost) AP)")
     }
 
@@ -193,18 +289,50 @@ final class GameStore: ObservableObject {
 
         pushLog("Player ended turn")
 
-        // Enemy "acts" (stub) — делает то, что было намерением
+        // 4.1 Перед ходом врага — сброс флага атаки
+        battle.enemyAttackedThisTurn = false
+
+        // Enemy acts
         let acted = battle.enemyIntent
         pushLog("Enemy acted: \(acted.text) \(acted.icon)")
 
-        // Затем выбираем намерение на следующий ход
+        switch acted.kind {
+        case .attack:
+            battle.enemyAttackedThisTurn = true
+            let r = applyDamage(5, toHP: &battle.playerHP, block: &battle.playerBlock)
+            pushLog("Enemy: Attack — \(r.dealt) dmg (blocked \(r.blocked))")
+
+        case .defend:
+            battle.enemyBlock += 5
+            pushLog("Enemy: Defend — +5 block")
+
+        case .counter:
+            pushLog("Enemy: Counter (stub)")
+        }
+
+        // 4.3 Сжечь блок врага в конце его хода
+        if battle.enemyBlock > 0 {
+            pushLog("Enemy block burned: \(battle.enemyBlock) → 0")
+            battle.enemyBlock = 0
+        }
+
+        // Commit mid-state
+        self.battle = battle
+
+        // 5) Победа/поражение
+        if battle.enemyHP <= 0 {
+            winBattle()
+            return
+        }
+        if battle.playerHP <= 0 {
+            loseBattle()
+            return
+        }
+
+        // Новый intent на следующий ход
         cycleEnemyIntent()
 
-        // Логируем следующее намерение (оно же показывается в UI сверху)
-        let next = (self.battle ?? battle).enemyIntent
-        pushLog("Next intent: \(next.text) \(next.icon)")
-
-        // New turn: reset AP and draw new hand
+        // Новый ход игрока: восстановить AP и раздать новую руку
         battle = self.battle ?? battle
         battle.actionPoints = 2
         battle.hand = drawHand()

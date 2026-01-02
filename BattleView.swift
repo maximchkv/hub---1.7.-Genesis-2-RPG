@@ -13,8 +13,9 @@ struct BattleView: View {
                     Text(battle.enemyName)
                         .font(.title2)
 
-                    Text("Enemy HP: \(battle.enemyHP)")
-                    Text("Player HP: \(battle.playerHP)")
+                    // HP + Block
+                    Text("Enemy HP: \(battle.enemyHP)    Block: \(battle.enemyBlock)")
+                    Text("Player HP: \(battle.playerHP)    Block: \(battle.playerBlock)")
 
                     // Enemy intent
                     HStack(spacing: 8) {
