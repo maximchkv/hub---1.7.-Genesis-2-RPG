@@ -9,7 +9,7 @@ struct StartView: View {
                 .font(.title)
 
             Button("Start Run (debug)") {
-                store.run = RunState(currentFloor: 1)
+                store.startRun()
             }
         }
         .padding()

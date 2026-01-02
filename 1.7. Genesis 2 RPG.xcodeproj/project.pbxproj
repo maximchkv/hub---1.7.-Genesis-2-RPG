@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		507E29992F07F0DA00BD8FBB /* PlayerMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29982F07F0DA00BD8FBB /* PlayerMeta.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		507E29802F07EE5100BD8FBB /* 1.7. Genesis 2 RPG.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "1.7. Genesis 2 RPG.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		507E29982F07F0DA00BD8FBB /* PlayerMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerMeta.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +39,7 @@
 			children = (
 				507E29822F07EE5100BD8FBB /* 1.7. Genesis 2 RPG */,
 				507E29812F07EE5100BD8FBB /* Products */,
+				507E29982F07F0DA00BD8FBB /* PlayerMeta.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -119,6 +125,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				507E29992F07F0DA00BD8FBB /* PlayerMeta.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
