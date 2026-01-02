@@ -9,7 +9,11 @@ import SwiftUI
 
 @main
 struct __7__Genesis_2_RPGApp: App {
-    @StateObject private var store = GameStore()
+    @StateObject private var store: GameStore
+
+    init() {
+        _store = StateObject(wrappedValue: GameStore())
+    }
 
     var body: some Scene {
         WindowGroup {

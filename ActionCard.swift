@@ -1,20 +1,27 @@
 import Foundation
 
 enum ActionCardKind: String, Codable {
-    case strongAttack
-    case doubleAttack
-    case defend
-    case counter
+    case powerStrike      // Мощный удар
+    case defend           // Защита (важно: кейс называется defend, не guard)
+    case doubleStrike     // Двойной удар
+    case counterStance    // Контратака
 }
 
 struct ActionCard: Identifiable, Codable {
     let id: UUID
     let kind: ActionCardKind
-    let cost: Int
 
-    init(kind: ActionCardKind, cost: Int) {
+    var cost: Int {
+        switch kind {
+        case .powerStrike: return 1
+        case .defend: return 1
+        case .doubleStrike: return 2
+        case .counterStance: return 2
+        }
+    }
+
+    init(kind: ActionCardKind) {
         self.id = UUID()
         self.kind = kind
-        self.cost = cost
     }
 }

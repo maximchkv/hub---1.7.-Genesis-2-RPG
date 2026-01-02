@@ -23,19 +23,19 @@ struct ActionCardView: View {
 
     private var title: String {
         switch card.kind {
-        case .strongAttack: return "Strike"
-        case .doubleAttack: return "Double"
-        case .defend: return "Defend"
-        case .counter: return "Counter"
+        case .powerStrike: return "Power Strike"
+        case .defend: return "Guard"
+        case .doubleStrike: return "Double Strike"
+        case .counterStance: return "Counter Stance"
         }
     }
 
     private var icon: String {
         switch card.kind {
-        case .strongAttack: return "🗡️"
-        case .doubleAttack: return "⚔️"
+        case .powerStrike: return "🗡️"
         case .defend: return "🛡️"
-        case .counter: return "🔁"
+        case .doubleStrike: return "⚔️"
+        case .counterStance: return "🔁"
         }
     }
 }

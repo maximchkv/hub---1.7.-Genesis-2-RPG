@@ -12,8 +12,25 @@ final class GameStore: ObservableObject {
 
     private let towerService = TowerService()
 
-    init(meta: PlayerMeta = PlayerMeta()) {
+    // MVP card pool
+    private let allCards: [ActionCardKind] = [
+        .powerStrike,
+        .defend,
+        .doubleStrike,
+        .counterStance
+    ]
+
+    private func drawHand() -> [ActionCard] {
+        let shuffled = allCards.shuffled()
+        return Array(shuffled.prefix(3)).map { ActionCard(kind: $0) }
+    }
+
+    init(meta: PlayerMeta) {
         self.meta = meta
+    }
+
+    convenience init() {
+        self.init(meta: PlayerMeta())
     }
 
     // MARK: - Navigation
@@ -137,11 +154,7 @@ final class GameStore: ObservableObject {
             enemyHP: 20,
             playerHP: 20,
             actionPoints: 2,
-            hand: [
-                ActionCard(kind: .strongAttack, cost: 1),
-                ActionCard(kind: .defend, cost: 1),
-                ActionCard(kind: .doubleAttack, cost: 2)
-            ],
+            hand: drawHand(),
             enemyIntent: EnemyIntent(kind: .attack),
             log: [CombatLogEntry("Battle started")]
         )
@@ -191,12 +204,13 @@ final class GameStore: ObservableObject {
         let next = (self.battle ?? battle).enemyIntent
         pushLog("Next intent: \(next.text) \(next.icon)")
 
-        // New player turn
+        // New turn: reset AP and draw new hand
         battle = self.battle ?? battle
         battle.actionPoints = 2
+        battle.hand = drawHand()
         self.battle = battle
 
-        pushLog("New turn: AP refilled")
+        pushLog("New turn: hand refreshed")
     }
 
     // MARK: - Log + Intent utilities
@@ -223,10 +237,10 @@ final class GameStore: ObservableObject {
 
     private func cardTitle(_ kind: ActionCardKind) -> String {
         switch kind {
-        case .strongAttack: return "Strike"
-        case .doubleAttack: return "Double"
-        case .defend: return "Defend"
-        case .counter: return "Counter"
+        case .powerStrike: return "Power Strike"
+        case .defend: return "Guard"
+        case .doubleStrike: return "Double Strike"
+        case .counterStance: return "Counter Stance"
         }
     }
 }
