@@ -74,7 +74,6 @@ final class GameStore: ObservableObject {
     var castleIncomePerDay: Int {
         castleTiles.reduce(0) { acc, t in
             guard let b = t.building else { return acc }
-            // MVP: доход = base * level (минимум 1)
             let lvl = max(1, t.level)
             return acc + (b.baseIncomePerDay * lvl)
         }
@@ -85,7 +84,38 @@ final class GameStore: ObservableObject {
         toast = "\(mode.rawValue) mode"
     }
 
-    // Build specific kind on tile (used by overlay)
+    // Helpers for overlays
+    func isCastleTileEmpty(_ index: Int) -> Bool {
+        guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return false }
+        return castleTiles[idx].building == nil
+    }
+
+    func isCastleTileUpgradeable(_ index: Int) -> Bool {
+        guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return false }
+        return castleTiles[idx].building != nil
+    }
+
+    struct CastleTileUIInfo {
+        let title: String
+        let icon: String
+        let level: Int
+        let incomePerDay: Int
+    }
+
+    func castleTileInfo(_ index: Int) -> CastleTileUIInfo? {
+        guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return nil }
+        let t = castleTiles[idx]
+        guard let b = t.building else { return nil }
+        let lvl = max(1, t.level)
+        return CastleTileUIInfo(
+            title: b.title,
+            icon: b.emoji,
+            level: lvl,
+            incomePerDay: b.baseIncomePerDay * lvl
+        )
+    }
+
+    // Build specific kind on tile (used by Build overlay)
     func buildOnTile(index: Int, kind: BuildingKind) {
         guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return }
         guard castleTiles[idx].building == nil else {
@@ -97,27 +127,13 @@ final class GameStore: ObservableObject {
         toast = "Built \(kind.title)"
     }
 
-    func handleCastleTileTap(_ tileId: Int) {
-        guard let idx = castleTiles.firstIndex(where: { $0.id == tileId }) else { return }
-
-        switch castleMode {
-        case .build:
-            // Overlay-driven; do not auto-build here
-            if castleTiles[idx].building != nil {
-                // future: open details; for now, show toast
-                toast = "Tile is not empty"
-            }
-        case .upgrade:
-            guard let b = castleTiles[idx].building else {
-                toast = "Nothing to upgrade"
-                return
-            }
-            castleTiles[idx].level += 1
-            toast = "Upgraded \(b.title) to Lv \(castleTiles[idx].level)"
-
-        case .artifacts:
-            toast = "Artifacts (stub)"
-        }
+    // Upgrade tile by +1 level (used by Upgrade overlay)
+    func upgradeTile(index: Int) {
+        guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return }
+        guard let b = castleTiles[idx].building else { return }
+        let newLevel = max(1, castleTiles[idx].level) + 1
+        castleTiles[idx].level = newLevel
+        toast = "Upgraded \(b.title) to Lv \(newLevel)"
     }
 
     private let towerService = TowerService()
@@ -358,7 +374,6 @@ final class GameStore: ObservableObject {
     func startBattle() {
         let floor = run?.currentFloor ?? 1
         var levels: [ActionCardKind: Int] = [:]
-        // По умолчанию все карты 1-го уровня (можно расширить позже)
         levels[.powerStrike] = 1
         levels[.defend] = 1
         levels[.doubleStrike] = 1
@@ -374,10 +389,8 @@ final class GameStore: ObservableObject {
             enemyAttackedThisTurn: false,
             cardLevels: levels
         )
-        // Start of battle: player's turn
         newBattle.phase = .player
 
-        // Start-of-first-turn system log
         pushLog(&newBattle, side: .system, "New turn: hand refreshed")
         battle = newBattle
         route = .battle
@@ -399,20 +412,12 @@ final class GameStore: ObservableObject {
         route = .hub
     }
 
-    // MARK: - Cards (011B: все 4 карты)
+    // MARK: - Cards
     func playCard(_ card: ActionCard) {
         guard var battle = battle else { return }
-
-        // ход игрока только в фазе игрока
         guard battle.phase == .player else { return }
-
-        // нельзя играть одну и ту же карту (по kind) больше 1 раза за ход
         if battle.usedCardsThisTurn.contains(card.kind) { return }
-
-        // нельзя играть, если не хватает AP
         guard battle.actionPoints >= card.cost else { return }
-
-        // тратим AP
         battle.actionPoints -= card.cost
 
         let lvl = battle.cardLevels[card.kind, default: 1]
@@ -422,12 +427,10 @@ final class GameStore: ObservableObject {
             let dmg = powerStrikeDamage(level: lvl)
             let r = applyDamage(dmg, toHP: &battle.enemyHP, block: &battle.enemyBlock)
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(r.dealt) (blocked \(r.blocked))")
-
         case .defend:
             let b = defendBlock(level: lvl)
             battle.playerBlock += b
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(b)")
-
         case .doubleStrike:
             let hit = doubleStrikeHit(level: lvl)
             let r1 = applyDamage(hit, toHP: &battle.enemyHP, block: &battle.enemyBlock)
@@ -435,21 +438,15 @@ final class GameStore: ObservableObject {
             let totalDealt = r1.dealt + r2.dealt
             let totalBlocked = r1.blocked + r2.blocked
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(totalDealt) (blocked \(totalBlocked))")
-
         case .counterStance:
             let b = counterBlock(level: lvl)
             battle.playerBlock += b
-            // В этом же ходе карта не наносит урон; эффект — блок
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(b)")
         }
 
-        // пометили карту как использованную в текущем ходу
         battle.usedCardsThisTurn.insert(card.kind)
-
-        // Commit state
         self.battle = battle
 
-        // Победа сразу после удара
         if battle.enemyHP <= 0 {
             winBattle()
             return
@@ -458,35 +455,25 @@ final class GameStore: ObservableObject {
 
     func endTurn() {
         guard var b = battle else { return }
-
-        // 1) Закрыли ход игрока — UI должен сразу показать ENEMY TURN
         pushLog(&b, side: .player, "End turn")
         b.phase = .enemy
         battle = b
 
-        // 2) Разделитель перед ходом врага
         pushDivider()
 
-        // НАЧАЛО хода врага -> его Block обнуляется
         guard var bEnemyStart = battle else { return }
         bEnemyStart.enemyBlock = 0
         battle = bEnemyStart
 
-        // 3) Ход врага = действие текущего intent
         guard var b2 = battle else { return }
         performEnemyTurn(&b2)
-        // if performEnemyTurn ended battle (player died), it will have called loseBattle()
         if self.battle == nil { return }
         battle = b2
 
-        // 4) Разделитель после хода врага
         pushDivider()
 
-        // НАЧАЛО нового хода игрока -> его Block обнуляется
         guard var b3 = battle else { return }
         b3.playerBlock = 0
-
-        // 5) Новый ход игрока: обновляем intent, AP, руку
         b3.enemyIntent = rollEnemyIntent()
         b3.actionPoints = 2
         b3.hand = drawHand()
@@ -496,7 +483,6 @@ final class GameStore: ObservableObject {
         battle = b3
     }
 
-    // MARK: - Enemy turn helpers
     private func performEnemyTurn(_ b: inout BattleState) {
         let intent = b.enemyIntent
 
@@ -518,7 +504,6 @@ final class GameStore: ObservableObject {
             pushLog(&b, side: .enemy, "Defend: block +\(blockGain)")
 
         case .counter:
-            // Минимальная реализация: подготовка
             pushLog(&b, side: .enemy, "Counter")
         }
     }
@@ -530,7 +515,6 @@ final class GameStore: ObservableObject {
         return EnemyIntent(kind: .counter, value: 0)
     }
 
-    // MARK: - Enemy turn (legacy, unused)
     private func enemyTurn() {
         guard var battle = battle else { return }
 

@@ -3,17 +3,27 @@ import SwiftUI
 struct CastleView: View {
     @EnvironmentObject private var store: GameStore
 
-    // Local state for build picker overlay
+    // Local state: Build (022E) and Upgrade (022F) overlays
     @State private var isBuildPickerPresented: Bool = false
     @State private var buildPickerTileIndex: Int? = nil
 
-    // 022B constants (kept)
+    @State private var isUpgradePickerPresented: Bool = false
+    @State private var upgradePickerTileIndex: Int? = nil
+
+    // 022G: local interaction mode used only for highlighting
+    private enum CastleInteractionMode {
+        case build
+        case upgrade
+    }
+    @State private var mode: CastleInteractionMode = .build
+
+    // Layout constants (from 022D)
     private let castleHorizontalPadding: CGFloat = 16
     private let gridAspect: CGFloat = 1.25 // height = width * 1.25
 
     var body: some View {
         VStack(spacing: 12) {
-            // Header
+            // Header — статус замка
             HStack {
                 Text("Best: \(store.meta.bestFloor)")
                 Spacer()
@@ -23,8 +33,9 @@ struct CastleView: View {
             }
             .font(.caption)
 
-            // Info block
+            // Верхний информационный блок (3 колонки)
             HStack(alignment: .top, spacing: 12) {
+                // Левая колонка — экономика
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Buildings: \(store.castleBuildingsCount)")
                     Text("Income: +\(store.castleIncomePerDay)/day")
@@ -33,6 +44,7 @@ struct CastleView: View {
                 .font(.caption)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+                // Центр — плейсхолдер замка
                 RoundedRectangle(cornerRadius: 16)
                     .fill(.thinMaterial)
                     .frame(height: 120)
@@ -43,6 +55,7 @@ struct CastleView: View {
                     )
                     .frame(maxWidth: .infinity)
 
+                // Правая колонка — реликвии (stub icons for now)
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Relics")
                         .font(.caption)
@@ -58,11 +71,31 @@ struct CastleView: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            // Mode pills
+            // Режимные кнопки — теперь только подсветка (не влияют на действие)
             HStack(spacing: 10) {
-                castleModePill(.build)
-                castleModePill(.upgrade)
-                castleModePill(.artifacts)
+                Button("Build") { mode = .build }
+                    .font(.system(size: 14, weight: .semibold))
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 14)
+                    .background(mode == .build ? Color.primary.opacity(0.10) : Color.secondary.opacity(0.10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 999)
+                            .stroke(mode == .build ? Color.primary.opacity(0.35) : Color.clear, lineWidth: 1)
+                    )
+                    .clipShape(Capsule())
+
+                Button("Upgrade") { mode = .upgrade }
+                    .font(.system(size: 14, weight: .semibold))
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 14)
+                    .background(mode == .upgrade ? Color.primary.opacity(0.10) : Color.secondary.opacity(0.10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 999)
+                            .stroke(mode == .upgrade ? Color.primary.opacity(0.35) : Color.clear, lineWidth: 1)
+                    )
+                    .clipShape(Capsule())
+
+                // Keep artifacts pill if you want, but it’s not part of highlighting in 022G
             }
             .padding(.top, 6)
 
@@ -102,23 +135,42 @@ struct CastleView: View {
                                 spacing: cellSpacing
                             ) {
                                 ForEach(store.castleTiles) { tile in
-                                    CastleTileButton(
-                                        emoji: tileEmoji(tile),
-                                        title: tileTitle(tile),
-                                        statLine: tileStat(tile),
-                                        levelLine: tileLevel(tile),
-                                        width: cellWidth,
-                                        height: cellHeight
-                                    ) {
-                                        // Open picker only on empty tile in Build mode
-                                        if store.castleMode == .build, tile.building == nil {
+                                    // Compute highlighting per mode
+                                    let isEmpty = (tile.building == nil)
+                                    let isUpg = (tile.building != nil)
+                                    let isHighlighted = (mode == .build && isEmpty) || (mode == .upgrade && isUpg)
+
+                                    Button {
+                                        // 022G: auto action by tile state
+                                        if isEmpty {
                                             buildPickerTileIndex = tile.id
                                             isBuildPickerPresented = true
-                                        } else {
-                                            // Delegate to store for other behaviors
-                                            store.handleCastleTileTap(tile.id)
+                                            return
                                         }
+                                        if isUpg {
+                                            upgradePickerTileIndex = tile.id
+                                            isUpgradePickerPresented = true
+                                            return
+                                        }
+                                    } label: {
+                                        // Tile UI (polished layout)
+                                        CastleTileContentView(
+                                            iconText: tile.building?.emoji ?? "⬜️",
+                                            titleText: tile.building?.title ?? "Empty",
+                                            statText: tile.building == nil
+                                                ? "Tap to build"
+                                                : "+\((tile.building?.baseIncomePerDay ?? 0) * max(1, tile.level))/day",
+                                            levelText: tile.building == nil ? "—" : "Lv \(max(1, tile.level))",
+                                            width: cellWidth,
+                                            height: cellHeight
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(isHighlighted ? Color.accentColor.opacity(0.55) : Color.clear, lineWidth: 2)
+                                        )
+                                        .opacity(isHighlighted ? 1.0 : 0.92)
                                     }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .padding(innerPadding)
@@ -139,7 +191,7 @@ struct CastleView: View {
         }
         .padding(.horizontal, castleHorizontalPadding)
         .padding(.vertical, 12)
-        // Overlay for build picker
+        // Overlays: Build (022E) and Upgrade (022F)
         .overlay {
             if isBuildPickerPresented, let idx = buildPickerTileIndex {
                 BuildPickerOverlay(
@@ -159,98 +211,86 @@ struct CastleView: View {
                     }
                 )
             }
+
+            if isUpgradePickerPresented, let idx = upgradePickerTileIndex,
+               let info = store.castleTileInfo(idx) {
+                UpgradePickerOverlay(
+                    title: info.title,
+                    icon: info.icon,
+                    currentLevel: info.level,
+                    incomePerDay: info.incomePerDay,
+                    onUpgrade: {
+                        store.upgradeTile(index: idx)
+                        isUpgradePickerPresented = false
+                        upgradePickerTileIndex = nil
+                    },
+                    onCancel: {
+                        isUpgradePickerPresented = false
+                        upgradePickerTileIndex = nil
+                    }
+                )
+            }
         }
-    }
-
-    // 022C helpers (kept)
-    @ViewBuilder
-    private func castleModePill(_ mode: GameStore.CastleMode) -> some View {
-        let isActive = (store.castleMode == mode)
-
-        Button(mode.rawValue) {
-            store.setCastleMode(mode)
-        }
-        .font(.system(size: 14, weight: .semibold))
-        .padding(.vertical, 8)
-        .padding(.horizontal, 14)
-        .background(isActive ? Color.primary.opacity(0.10) : Color.secondary.opacity(0.10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 999)
-                .stroke(isActive ? Color.primary.opacity(0.35) : Color.clear, lineWidth: 1)
-        )
-        .clipShape(Capsule())
-    }
-
-    private func tileEmoji(_ t: GameStore.CastleTile) -> String {
-        t.building?.emoji ?? "⬜️"
-    }
-
-    private func tileTitle(_ t: GameStore.CastleTile) -> String {
-        t.building?.title ?? "Empty"
-    }
-
-    private func tileStat(_ t: GameStore.CastleTile) -> String {
-        guard let b = t.building else { return "Tap to build" }
-        let lvl = max(1, t.level)
-        let income = b.baseIncomePerDay * lvl
-        return "+\(income)/day"
-    }
-
-    private func tileLevel(_ t: GameStore.CastleTile) -> String {
-        guard t.building != nil else { return "—" }
-        return "Lv \(max(1, t.level))"
     }
 }
 
-// Castle tile button with 022D reflow (unchanged here)
-private struct CastleTileButton: View {
-    let emoji: String
-    let title: String
-    let statLine: String
-    let levelLine: String
+// MARK: - Polished tile content view (022G)
+private struct CastleTileContentView: View {
+    let iconText: String
+    let titleText: String
+    let statText: String
+    let levelText: String
     let width: CGFloat
     let height: CGFloat
-    let onTap: () -> Void
 
     var body: some View {
+        // Sizing constants (reuse from 022D where reasonable)
         let pad: CGFloat = max(8, min(12, width * 0.08))
-        let iconBoxH: CGFloat = max(18, min(24, height * 0.22))
+        let iconBlockH: CGFloat = max(44, min(56, height * 0.38))
         let titleSize: CGFloat = max(11, min(13, width * 0.12))
         let statSize: CGFloat = max(9,  min(11, width * 0.10))
         let levelSize: CGFloat = max(9, min(11, width * 0.10))
 
-        return Button(action: onTap) {
-            VStack(spacing: 6) {
-                Text(emoji)
-                    .frame(height: iconBoxH)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.secondary.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+        return VStack(spacing: 6) {
+            // Bigger icon + title block with darker background
+            VStack(spacing: 4) {
+                Text(iconText)
+                    .font(.system(size: 20))
 
-                Text(title)
-                    .font(.system(size: titleSize, weight: .semibold))
+                Text(titleText)
+                    .font(.caption2)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-
-                Text(statLine)
-                    .font(.system(size: statSize))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-
-                Text(levelLine)
-                    .font(.system(size: levelSize, weight: .semibold))
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.primary.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .minimumScaleFactor(0.7)
             }
-            .padding(pad)
-            .frame(width: width, height: height)
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .frame(maxWidth: .infinity)
+            .frame(height: iconBlockH)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.black.opacity(0.08))
+            )
+
+            // Stat line
+            Text(statText)
+                .font(.system(size: statSize))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+
+            // Level “merged” with button (no separate filled background)
+            Text(levelText)
+                .font(.system(size: levelSize, weight: .semibold))
+                .padding(.vertical, 2)
+                .padding(.horizontal, 6)
+                .foregroundStyle(.secondary)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                )
         }
-        .buttonStyle(.plain)
+        .padding(pad)
+        .frame(width: width, height: height)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
