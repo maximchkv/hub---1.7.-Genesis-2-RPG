@@ -45,13 +45,14 @@ final class GameStore: ObservableObject {
     }
 
     private func pushLog(_ battle: inout BattleState, side: LogSide, _ message: String) {
-        battle.log.append(CombatLogEntry(id: UUID(), text: logText(side, message), isPlayer: side == .player))
+        let kind: CombatLogEntry.Kind = (side == .system) ? .system : .normal
+        battle.log.append(CombatLogEntry(id: UUID(), text: logText(side, message), isPlayer: side == .player, kind: kind))
     }
 
     // Divider marker for UI (not a visible text)
     private func pushDivider() {
         guard var b = battle else { return }
-        b.log.append(CombatLogEntry(id: UUID(), text: "__DIVIDER__", isPlayer: false))
+        b.log.append(CombatLogEntry(id: UUID(), text: "__DIVIDER__", isPlayer: false, kind: .separator))
         battle = b
     }
 
@@ -232,6 +233,9 @@ final class GameStore: ObservableObject {
             enemyAttackedThisTurn: false,
             cardLevels: levels
         )
+        // Start of battle: player's turn
+        newBattle.phase = .player
+
         // Start-of-first-turn system log
         pushLog(&newBattle, side: .system, "New turn: hand refreshed")
         battle = newBattle
@@ -257,6 +261,9 @@ final class GameStore: ObservableObject {
     // MARK: - Cards (011B: все 4 карты)
     func playCard(_ card: ActionCard) {
         guard var battle = battle else { return }
+
+        // ход игрока только в фазе игрока
+        guard battle.phase == .player else { return }
 
         // нельзя играть одну и ту же карту (по kind) больше 1 раза за ход
         if battle.usedCardsThisTurn.contains(card.kind) { return }
@@ -311,8 +318,9 @@ final class GameStore: ObservableObject {
     func endTurn() {
         guard var b = battle else { return }
 
-        // 1) Закрыли ход игрока
+        // 1) Закрыли ход игрока — UI должен сразу показать ENEMY TURN
         pushLog(&b, side: .player, "End turn")
+        b.phase = .enemy
         battle = b
 
         // 2) Разделитель перед ходом врага
@@ -341,8 +349,8 @@ final class GameStore: ObservableObject {
         b3.enemyIntent = rollEnemyIntent()
         b3.actionPoints = 2
         b3.hand = drawHand()
-        // Сброс “использованных карт за ход”
         b3.usedCardsThisTurn.removeAll()
+        b3.phase = .player
         pushLog(&b3, side: .system, "New turn: hand refreshed")
         battle = b3
     }

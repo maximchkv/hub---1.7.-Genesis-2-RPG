@@ -1,4 +1,9 @@
 struct BattleState {
+    enum Phase: String, Codable, Hashable {
+        case player
+        case enemy
+    }
+
     var floor: Int
     var enemyName: String
 
@@ -25,4 +30,7 @@ struct BattleState {
 
     // 015: набор карт, уже использованных в текущем ходу (по kind)
     var usedCardsThisTurn: Set<ActionCardKind> = []
+
+    // 018A: текущая фаза хода
+    var phase: Phase = .player
 }
