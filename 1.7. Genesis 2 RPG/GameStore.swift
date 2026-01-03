@@ -59,7 +59,19 @@ final class GameStore: ObservableObject {
     // MARK: - Navigation
     func goToStart() { route = .start }
     func goToHub() { route = .hub }
-    func goToTower() { route = .tower }
+
+    func goToTower() {
+        route = .tower
+
+        if run == nil {
+            startRun()
+        }
+
+        if run?.roomOptions.isEmpty ?? true {
+            refreshRoomOptions()
+        }
+    }
+
     func goToCastle() { route = .castle }
     func goToCardLibrary() { route = .cardLibrary }
     func goToChest() { route = .chest }
@@ -86,9 +98,11 @@ final class GameStore: ObservableObject {
 
     // MARK: - Tower
     func refreshRoomOptions() {
-        guard var run else { return }
-        run.roomOptions = towerService.generateRoomOptions(nonCombatStreak: run.nonCombatStreak)
-        self.run = run
+        guard var r = run else { return }
+        r.roomOptions = towerService.generateRoomOptions(
+            nonCombatStreak: r.nonCombatStreak
+        )
+        run = r
     }
 
     func selectRoom(_ option: RoomOption) {

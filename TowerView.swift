@@ -64,7 +64,7 @@ struct TowerView: View {
         }
         .padding()
         .onAppear {
-            if store.run != nil, (store.run?.roomOptions.isEmpty ?? true) {
+            if store.run?.roomOptions.isEmpty ?? true {
                 store.refreshRoomOptions()
             }
         }
