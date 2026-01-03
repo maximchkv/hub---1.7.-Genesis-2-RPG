@@ -131,7 +131,7 @@ struct CastleView: View {
                     }
                     .frame(width: contentWidth, alignment: .center)
 
-                    // Mode buttons — store-driven with toggle idle behavior
+                    // Mode buttons — store-driven with toggle idle behavior + Next Day
                     HStack(spacing: 12) {
                         modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
@@ -144,6 +144,11 @@ struct CastleView: View {
                                 store.setCastleMode(CastleUIMode.upgrade)
                             }
                         }
+
+                        Button("Next Day (debug)") {
+                            store.castleAdvanceDay()
+                        }
+                        .buttonStyle(.bordered)
                     }
                     .padding(.top, 6)
                     .frame(width: contentWidth, alignment: .center)
@@ -195,7 +200,7 @@ struct CastleView: View {
                                                 titleText: tile.building?.title ?? "Empty",
                                                 statText: tile.building == nil
                                                     ? "Tap to build"
-                                                    : "+\((tile.building?.baseIncomePerDay ?? 0) * max(1, tile.level))/day",
+                                                    : "+\((tile.building?.incomePerDay(level: max(1, tile.level)) ?? 0))/day",
                                                 levelText: tile.building == nil ? "—" : "Lv \(max(1, tile.level))",
                                                 width: cellWidth,
                                                 height: cellHeight
@@ -249,6 +254,10 @@ struct CastleView: View {
             }
             .scrollIndicators(.hidden)
             .background(Color(.systemBackground))
+        }
+        .onAppear {
+            // 024: ensure header income is consistent on entry
+            store.castleRecomputeStats()
         }
         // Relics sheet
         .sheet(isPresented: $isRelicsSheetPresented) {

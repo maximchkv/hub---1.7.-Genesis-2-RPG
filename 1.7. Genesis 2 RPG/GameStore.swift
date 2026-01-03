@@ -66,6 +66,19 @@ final class GameStore: ObservableObject {
             case .farm: return 1
             }
         }
+
+        // 024: unified income formula per level
+        func incomePerDay(level: Int) -> Int {
+            let lvl = max(1, level)
+            switch self {
+            case .farm:
+                // simple: 1 per level
+                return max(1, 1 * lvl)
+            case .mine:
+                // simple: 2 per level
+                return max(1, 2 * lvl)
+            }
+        }
     }
 
     struct CastleTile: Identifiable {
@@ -94,8 +107,7 @@ final class GameStore: ObservableObject {
     var castleIncomePerDay: Int {
         castleTiles.reduce(0) { acc, t in
             guard let b = t.building else { return acc }
-            let lvl = max(1, t.level)
-            return acc + (b.baseIncomePerDay * lvl)
+            return acc + b.incomePerDay(level: t.level)
         }
     }
 
@@ -131,7 +143,7 @@ final class GameStore: ObservableObject {
             title: b.title,
             icon: b.emoji,
             level: lvl,
-            incomePerDay: b.baseIncomePerDay * lvl
+            incomePerDay: b.incomePerDay(level: lvl)
         )
     }
 
@@ -145,7 +157,8 @@ final class GameStore: ObservableObject {
         castleTiles[idx].building = kind
         castleTiles[idx].level = 1
         toast = "Built \(kind.title)"
-        // 023B/023C: real flows can reset mode after success if needed
+        // 024: keep header income in sync
+        castleRecomputeStats()
     }
 
     // Upgrade tile by +1 level (used by Upgrade overlay)
@@ -155,7 +168,8 @@ final class GameStore: ObservableObject {
         let newLevel = max(1, castleTiles[idx].level) + 1
         castleTiles[idx].level = newLevel
         toast = "Upgraded \(b.title) to Lv \(newLevel)"
-        // 023B/023C: real flows can reset mode after success if needed
+        // 024: keep header income in sync
+        castleRecomputeStats()
     }
 
     private let towerService = TowerService()
@@ -612,10 +626,8 @@ final class GameStore: ObservableObject {
 
         case .idle:
             if tile.isEmpty {
-                castleModeUI = .build
                 openBuildSheet(forTile: tile.id)
             } else {
-                castleModeUI = .upgrade
                 selectedCastleTileIndex = tile.id
                 isUpgradeSheetPresented = true
             }
@@ -659,5 +671,22 @@ final class GameStore: ObservableObject {
         isBuildSheetPresented = false
         selectedBuildTileIndex = nil
         castleModeUI = .idle
+    }
+
+    // MARK: - Castle day tick + stats (024)
+    func castleRecomputeStats() {
+        // meta.incomePerDay is computed (get-only). Keep this as a hook for future aggregate recomputations.
+        _ = meta.incomePerDay
+    }
+
+    func castleAdvanceDay() {
+        let todayIncome = meta.incomePerDay
+
+        meta.days += 1
+        meta.gold += todayIncome
+
+        // Recompute after possible changes (hook)
+        castleRecomputeStats()
+        toast = "Day +1  •  Gold +\(todayIncome)"
     }
 }
