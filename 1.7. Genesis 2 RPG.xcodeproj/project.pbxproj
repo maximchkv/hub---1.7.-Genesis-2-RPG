@@ -24,6 +24,8 @@
 		507E29B52F07F6DD00BD8FBB /* ActionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29B42F07F6DD00BD8FBB /* ActionCardView.swift */; };
 		507E29B72F07F7E300BD8FBB /* EnemyIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29B62F07F7E300BD8FBB /* EnemyIntent.swift */; };
 		507E29B92F07F7E400BD8FBB /* CombatLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29B82F07F7E400BD8FBB /* CombatLogEntry.swift */; };
+		507E29E12F09654100BD8FBB /* CastleUpgradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */; };
+		507E29E32F09654100BD8FBB /* CastleRelicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E22F09654100BD8FBB /* CastleRelicsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +47,8 @@
 		507E29B42F07F6DD00BD8FBB /* ActionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionCardView.swift; sourceTree = "<group>"; };
 		507E29B62F07F7E300BD8FBB /* EnemyIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnemyIntent.swift; sourceTree = "<group>"; };
 		507E29B82F07F7E400BD8FBB /* CombatLogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CombatLogEntry.swift; sourceTree = "<group>"; };
+		507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleUpgradeView.swift; sourceTree = "<group>"; };
+		507E29E22F09654100BD8FBB /* CastleRelicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleRelicsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -88,6 +92,8 @@
 				507E29B42F07F6DD00BD8FBB /* ActionCardView.swift */,
 				507E29B62F07F7E300BD8FBB /* EnemyIntent.swift */,
 				507E29B82F07F7E400BD8FBB /* CombatLogEntry.swift */,
+				507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */,
+				507E29E22F09654100BD8FBB /* CastleRelicsView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -173,6 +179,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				507E29E32F09654100BD8FBB /* CastleRelicsView.swift in Sources */,
 				507E299B2F07F17D00BD8FBB /* Route.swift in Sources */,
 				507E29AB2F07F51A00BD8FBB /* ChestView.swift in Sources */,
 				507E29B32F07F6C600BD8FBB /* ActionCard.swift in Sources */,
@@ -183,6 +190,7 @@
 				507E29A72F07F51500BD8FBB /* Artifact.swift in Sources */,
 				507E29B72F07F7E300BD8FBB /* EnemyIntent.swift in Sources */,
 				507E29A32F07F2F800BD8FBB /* RoomOption.swift in Sources */,
+				507E29E12F09654100BD8FBB /* CastleUpgradeView.swift in Sources */,
 				507E29AD2F07F60F00BD8FBB /* BattleState.swift in Sources */,
 				507E29A52F07F2FB00BD8FBB /* TowerService.swift in Sources */,
 				507E29B92F07F7E400BD8FBB /* CombatLogEntry.swift in Sources */,

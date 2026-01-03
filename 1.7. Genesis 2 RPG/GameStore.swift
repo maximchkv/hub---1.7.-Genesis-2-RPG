@@ -10,6 +10,14 @@ final class GameStore: ObservableObject {
     @Published var chest: ChestState? = nil
     @Published var battle: BattleState? = nil
 
+    // Castle routing (021B)
+    enum CastleRoute: Equatable {
+        case main
+        case upgrade
+        case relics
+    }
+    @Published var castleRoute: CastleRoute = .main
+
     private let towerService = TowerService()
 
     // MVP card pool
@@ -72,9 +80,26 @@ final class GameStore: ObservableObject {
         }
     }
 
-    func goToCastle() { route = .castle }
+    func goToCastle() {
+        route = .castle
+        castleRoute = .main
+    }
+
     func goToCardLibrary() { route = .cardLibrary }
     func goToChest() { route = .chest }
+
+    // MARK: - Castle internal navigation (021B)
+    func goToCastleUpgrade() {
+        castleRoute = .upgrade
+    }
+
+    func goToCastleRelics() {
+        castleRoute = .relics
+    }
+
+    func backToCastleMain() {
+        castleRoute = .main
+    }
 
     // MARK: - Run
     func startRun() {
