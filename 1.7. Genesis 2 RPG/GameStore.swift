@@ -1,6 +1,16 @@
 import SwiftUI
 import Combine
 
+// 023C: Build sheet candidate model
+struct BuildCandidate: Identifiable, Equatable {
+    let id = UUID()
+    let kind: GameStore.BuildingKind
+    let title: String
+    let emoji: String
+    let incomePerDay: Int
+    let blurb: String
+}
+
 enum CastleUIMode: String {
     case idle
     case build
@@ -64,6 +74,10 @@ final class GameStore: ObservableObject {
         var building: BuildingKind? = nil
         var level: Int = 0
         var isUnderConstruction: Bool = false // на будущее, пока не используем
+
+        // 023B: View-only helpers
+        var isEmpty: Bool { building == nil }
+        var canUpgrade: Bool { building != nil }
     }
 
     @Published var castleMode: CastleMode = .build
@@ -131,6 +145,7 @@ final class GameStore: ObservableObject {
         castleTiles[idx].building = kind
         castleTiles[idx].level = 1
         toast = "Built \(kind.title)"
+        // 023B/023C: real flows can reset mode after success if needed
     }
 
     // Upgrade tile by +1 level (used by Upgrade overlay)
@@ -140,6 +155,7 @@ final class GameStore: ObservableObject {
         let newLevel = max(1, castleTiles[idx].level) + 1
         castleTiles[idx].level = newLevel
         toast = "Upgraded \(b.title) to Lv \(newLevel)"
+        // 023B/023C: real flows can reset mode after success if needed
     }
 
     private let towerService = TowerService()
@@ -310,7 +326,7 @@ final class GameStore: ObservableObject {
             Artifact(icon: "🗿", name: "Stone Sigil", description: "A steady, reliable blessing.", incomeBonus: 1),
             Artifact(icon: "🌑", name: "Night Seal", description: "Quiet power from the dark.", incomeBonus: 2)
         ]
-        return pool.randomElement() ?? Artifact(icon: "🪙", name: "Coin Charm", description: "A small charm that attracts coins.", incomeBonus: 1)
+        return pool.randomElement() ?? Artifact(icon: "🪙", name: "Coin Charm", description: "A small charm", incomeBonus: 1)
     }
 
     func openChest() {
@@ -566,6 +582,13 @@ final class GameStore: ObservableObject {
     @Published var isUpgradeSheetPresented: Bool = false
     @Published var selectedCastleTileIndex: Int? = nil
 
+    // 023C: Build sheet state
+    @Published var selectedBuildTileIndex: Int? = nil
+    @Published var buildCandidates: [BuildCandidate] = [
+        BuildCandidate(kind: .farm, title: "Farm", emoji: "🌾", incomePerDay: 1, blurb: "+1 / day"),
+        BuildCandidate(kind: .mine, title: "Mine", emoji: "⛏️", incomePerDay: 2, blurb: "+2 / day")
+    ]
+
     // MARK: - Castle UI Actions
     func setCastleMode(_ mode: CastleUIMode) {
         if castleModeUI == mode {
@@ -575,22 +598,66 @@ final class GameStore: ObservableObject {
         }
     }
 
-    func handleCastleTileTap(index: Int, isEmpty: Bool) {
-        guard castleModeUI != .idle else { return }
-
-        selectedCastleTileIndex = index
-
+    // 023B: unified tap entry point
+    func onTileTapped(_ tile: CastleTile) {
         switch castleModeUI {
         case .build:
-            guard isEmpty else { return }
-            isBuildSheetPresented = true
+            guard tile.isEmpty else { return }
+            openBuildSheet(forTile: tile.id)
 
         case .upgrade:
-            guard !isEmpty else { return }
+            guard tile.canUpgrade else { return }
+            selectedCastleTileIndex = tile.id
             isUpgradeSheetPresented = true
 
         case .idle:
-            break
+            if tile.isEmpty {
+                castleModeUI = .build
+                openBuildSheet(forTile: tile.id)
+            } else {
+                castleModeUI = .upgrade
+                selectedCastleTileIndex = tile.id
+                isUpgradeSheetPresented = true
+            }
         }
+    }
+
+    // Backward compatibility (can be removed after View migration)
+    func handleCastleTileTap(index: Int, isEmpty: Bool) {
+        guard let tile = castleTiles.first(where: { $0.id == index }) else { return }
+        onTileTapped(tile)
+    }
+
+    // 023B: close helpers that also reset mode to idle
+    func closeBuildSheet() {
+        isBuildSheetPresented = false
+        castleModeUI = .idle
+    }
+
+    func closeUpgradeSheet() {
+        isUpgradeSheetPresented = false
+        castleModeUI = .idle
+    }
+
+    // 023C: Build sheet control
+    func openBuildSheet(forTile index: Int) {
+        selectedBuildTileIndex = index
+        isBuildSheetPresented = true
+    }
+
+    func cancelBuildSheet() {
+        isBuildSheetPresented = false
+        selectedBuildTileIndex = nil
+        castleModeUI = .idle
+    }
+
+    func confirmBuild(_ candidate: BuildCandidate) {
+        guard let index = selectedBuildTileIndex else { return }
+        // Use existing build logic
+        buildOnTile(index: index, kind: candidate.kind)
+        // Close and reset
+        isBuildSheetPresented = false
+        selectedBuildTileIndex = nil
+        castleModeUI = .idle
     }
 }

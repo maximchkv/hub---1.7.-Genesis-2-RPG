@@ -188,7 +188,7 @@ struct CastleView: View {
                                         }()
 
                                         Button {
-                                            store.handleCastleTileTap(index: tile.id, isEmpty: isEmpty)
+                                            store.onTileTapped(tile)
                                         } label: {
                                             CastleTileContentView(
                                                 iconText: tile.building?.emoji ?? "⬜️",
@@ -203,12 +203,17 @@ struct CastleView: View {
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12)
                                                     .stroke(isHighlighted ? Color.accentColor.opacity(0.9) : Color.clear, lineWidth: 3)
-                                                    .animation(.easeInOut(duration: 0.18), value: isHighlighted)
                                             )
-                                            .opacity(isHighlighted ? 1.0 : 0.92)
-                                            .scaleEffect(isHighlighted ? 1.0 : 0.995)
-                                            .animation(.spring(response: 0.22, dampingFraction: 0.9), value: isHighlighted)
-                                            .animation(.spring(response: 0.22, dampingFraction: 0.9), value: store.castleModeUI)
+                                            .opacity({
+                                                switch store.castleModeUI {
+                                                case CastleUIMode.build:
+                                                    return tile.canUpgrade ? 0.4 : 1.0
+                                                case CastleUIMode.upgrade:
+                                                    return tile.isEmpty ? 0.4 : 1.0
+                                                case CastleUIMode.idle:
+                                                    return 1.0
+                                                }
+                                            }())
                                         }
                                         .buttonStyle(.plain)
                                     }
@@ -239,24 +244,23 @@ struct CastleView: View {
             RelicsListSheetView()
                 .environmentObject(store)
         }
-        // Build/Upgrade stub sheets (023A)
+        // Build sheet (replaces "Build (stub)")
         .sheet(isPresented: $store.isBuildSheetPresented) {
-            VStack(spacing: 12) {
-                Text("Build (stub)")
-                    .font(.title2)
-
-                if let idx = store.selectedCastleTileIndex {
-                    Text("Tile: \(idx)")
-                        .font(.headline)
+            CastleBuildSheetView(
+                onPickFarm: {
+                    // TODO: hook real build later
+                },
+                onPickMine: {
+                    // TODO: hook real build later
+                },
+                onClose: {
+                    // Use existing close path for this sheet
+                    store.closeBuildSheet()
                 }
-
-                Button("Close") {
-                    store.isBuildSheetPresented = false
-                }
-                .padding(.top, 8)
-            }
-            .padding()
+            )
+            .presentationDetents([.medium])
         }
+        // Upgrade sheet (unchanged)
         .sheet(isPresented: $store.isUpgradeSheetPresented) {
             VStack(spacing: 12) {
                 Text("Upgrade (stub)")
@@ -268,7 +272,7 @@ struct CastleView: View {
                 }
 
                 Button("Close") {
-                    store.isUpgradeSheetPresented = false
+                    store.closeUpgradeSheet()
                 }
                 .padding(.top, 8)
             }
@@ -333,5 +337,70 @@ private struct CastleTileContentView: View {
         .frame(width: width, height: height)
         .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// 023C: Simple Build sheet UI (Farm / Mine)
+private struct CastleBuildSheetView: View {
+    let onPickFarm: () -> Void
+    let onPickMine: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Build")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            VStack(spacing: 10) {
+                Button {
+                    onPickFarm()
+                    onClose()
+                } label: {
+                    HStack(spacing: 12) {
+                        Text("🌾").font(.title2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Farm").font(.headline)
+                            Text("+ income/day (stub)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity)
+                    .background(.thinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onPickMine()
+                    onClose()
+                } label: {
+                    HStack(spacing: 12) {
+                        Text("⛏️").font(.title2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Mine").font(.headline)
+                            Text("+ income/day (stub)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity)
+                    .background(.thinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button("Close") {
+                onClose()
+            }
+            .padding(.top, 4)
+        }
+        .padding(20)
     }
 }
