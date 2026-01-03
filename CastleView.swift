@@ -21,6 +21,33 @@ struct CastleView: View {
     private let castleHorizontalPadding: CGFloat = 16
     private let gridAspect: CGFloat = 1.25 // height = width * 1.25
 
+    // 022H: Mode button helper
+    private func modePill(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .frame(minWidth: 92)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isActive ? Color.white : Color.accentColor)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(isActive ? Color.accentColor : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.accentColor.opacity(isActive ? 0.0 : 0.35), lineWidth: 1.5)
+        )
+        .background(
+            // subtle base for inactive
+            RoundedRectangle(cornerRadius: 14)
+                .fill(isActive ? Color.clear : Color.black.opacity(0.04))
+        )
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             // Header — статус замка
@@ -71,31 +98,19 @@ struct CastleView: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            // Режимные кнопки — теперь только подсветка (не влияют на действие)
-            HStack(spacing: 10) {
-                Button("Build") { mode = .build }
-                    .font(.system(size: 14, weight: .semibold))
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 14)
-                    .background(mode == .build ? Color.primary.opacity(0.10) : Color.secondary.opacity(0.10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 999)
-                            .stroke(mode == .build ? Color.primary.opacity(0.35) : Color.clear, lineWidth: 1)
-                    )
-                    .clipShape(Capsule())
+            // Режимные кнопки — only highlight (not behavior)
+            HStack(spacing: 12) {
+                modePill("Build", isActive: mode == .build) {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                        mode = .build
+                    }
+                }
 
-                Button("Upgrade") { mode = .upgrade }
-                    .font(.system(size: 14, weight: .semibold))
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 14)
-                    .background(mode == .upgrade ? Color.primary.opacity(0.10) : Color.secondary.opacity(0.10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 999)
-                            .stroke(mode == .upgrade ? Color.primary.opacity(0.35) : Color.clear, lineWidth: 1)
-                    )
-                    .clipShape(Capsule())
-
-                // Keep artifacts pill if you want, but it’s not part of highlighting in 022G
+                modePill("Upgrade", isActive: mode == .upgrade) {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                        mode = .upgrade
+                    }
+                }
             }
             .padding(.top, 6)
 
@@ -135,7 +150,6 @@ struct CastleView: View {
                                 spacing: cellSpacing
                             ) {
                                 ForEach(store.castleTiles) { tile in
-                                    // Compute highlighting per mode
                                     let isEmpty = (tile.building == nil)
                                     let isUpg = (tile.building != nil)
                                     let isHighlighted = (mode == .build && isEmpty) || (mode == .upgrade && isUpg)
@@ -153,7 +167,6 @@ struct CastleView: View {
                                             return
                                         }
                                     } label: {
-                                        // Tile UI (polished layout)
                                         CastleTileContentView(
                                             iconText: tile.building?.emoji ?? "⬜️",
                                             titleText: tile.building?.title ?? "Empty",
@@ -164,11 +177,16 @@ struct CastleView: View {
                                             width: cellWidth,
                                             height: cellHeight
                                         )
+                                        // Highlight overlay + animation
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(isHighlighted ? Color.accentColor.opacity(0.55) : Color.clear, lineWidth: 2)
+                                                .animation(.easeInOut(duration: 0.18), value: isHighlighted)
                                         )
                                         .opacity(isHighlighted ? 1.0 : 0.92)
+                                        .scaleEffect(isHighlighted ? 1.0 : 0.995)
+                                        .animation(.spring(response: 0.22, dampingFraction: 0.9), value: isHighlighted)
+                                        .animation(.spring(response: 0.22, dampingFraction: 0.9), value: mode)
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -244,10 +262,8 @@ private struct CastleTileContentView: View {
     let height: CGFloat
 
     var body: some View {
-        // Sizing constants (reuse from 022D where reasonable)
         let pad: CGFloat = max(8, min(12, width * 0.08))
         let iconBlockH: CGFloat = max(44, min(56, height * 0.38))
-        let titleSize: CGFloat = max(11, min(13, width * 0.12))
         let statSize: CGFloat = max(9,  min(11, width * 0.10))
         let levelSize: CGFloat = max(9, min(11, width * 0.10))
 
