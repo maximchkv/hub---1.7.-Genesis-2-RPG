@@ -17,8 +17,7 @@ struct CastleView: View {
     }
     @State private var mode: CastleInteractionMode = .build
 
-    // Layout constants (from 022D)
-    private let castleHorizontalPadding: CGFloat = 16
+    // Layout constants
     private let gridAspect: CGFloat = 1.25 // height = width * 1.25
 
     // 022H: Mode button helper
@@ -49,166 +48,203 @@ struct CastleView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Header — статус замка
-            HStack {
-                Text("Best: \(store.meta.bestFloor)")
-                Spacer()
-                Text("Day: \(store.meta.days)")
-                Spacer()
-                Text("+\(store.meta.incomePerDay) / day")
-            }
-            .font(.caption)
+        GeometryReader { geo in
+            ScrollView {
+                // 022J: fixed-width wrapper centered via contentWidth
+                let contentWidth = min(geo.size.width - 32, 520)
 
-            // Верхний информационный блок (3 колонки)
-            HStack(alignment: .top, spacing: 12) {
-                // Левая колонка — экономика
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Buildings: \(store.castleBuildingsCount)")
-                    Text("Income: +\(store.castleIncomePerDay)/day")
-                    Text("Free tiles: \(store.castleFreeTilesCount)")
-                }
-                .font(.caption)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Центр — плейсхолдер замка
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.thinMaterial)
-                    .frame(height: 120)
-                    .overlay(
-                        Text("Castle Image")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    )
-                    .frame(maxWidth: .infinity)
-
-                // Правая колонка — реликвии (stub icons for now)
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("Relics")
+                VStack(spacing: 12) {
+                    // Header — bottom divider + clamp to contentWidth
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("Best: \(store.meta.bestFloor)")
+                                .lineLimit(1).minimumScaleFactor(0.85)
+                            Spacer()
+                            Text("Day: \(store.meta.days)")
+                                .lineLimit(1).minimumScaleFactor(0.85)
+                            Spacer()
+                            Text("+\(store.meta.incomePerDay) / day")
+                                .lineLimit(1).minimumScaleFactor(0.85)
+                        }
                         .font(.caption)
-                        .fontWeight(.semibold)
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
 
-                    HStack(spacing: 4) {
-                        Text("🗿")
-                        Text("🗝️")
-                        Text("—")
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.12))
+                            .frame(height: 1)
                     }
-                }
-                .font(.caption)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            }
+                    .background(.thinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .frame(width: contentWidth, alignment: .center)
 
-            // Режимные кнопки — only highlight (not behavior)
-            HStack(spacing: 12) {
-                modePill("Build", isActive: mode == .build) {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                        mode = .build
-                    }
-                }
+                    // 022K: Top block with computed fixed widths per contentWidth
+                    let imageBox: CGFloat = 120
+                    let gap: CGFloat = 12
+                    let rightCol: CGFloat = 70
+                    let leftCol: CGFloat = max(120, contentWidth - imageBox - rightCol - gap*2)
 
-                modePill("Upgrade", isActive: mode == .upgrade) {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                        mode = .upgrade
-                    }
-                }
-            }
-            .padding(.top, 6)
+                    HStack(alignment: .top, spacing: gap) {
 
-            // Grid container (sizing from 022D)
-            GeometryReader { geo in
-                let usableWidth = geo.size.width - (castleHorizontalPadding * 2)
-                let usableHeight = geo.size.height
+                        // LEFT: stats (clamped width, wrapping/scaling)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Buildings: \(store.castleBuildingsCount)")
+                            Text("Income: +\(store.castleIncomePerDay)/day")
+                            Text("Free tiles: \(store.castleFreeTilesCount)")
+                        }
+                        .font(.caption)
+                        .frame(width: leftCol, alignment: .leading)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .multilineTextAlignment(.leading)
+                        .layoutPriority(2)
 
-                let gridWidth = usableWidth * 1.05
-                let gridHeight = min(usableHeight, (usableWidth * gridAspect) * 1.15)
+                        // CENTER: castle image placeholder (fixed square box)
+                        VStack(spacing: 6) {
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(.thinMaterial)
+                                .frame(width: imageBox, height: imageBox)
+                                .overlay(
+                                    Text("🏰")
+                                        .font(.system(size: 36))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+                                )
+                        }
+                        .frame(width: imageBox)
+                        .layoutPriority(1)
 
-                let cols: CGFloat = 5
-                let rows: CGFloat = 5
-
-                let innerPadding: CGFloat = 14
-                let cellSpacing: CGFloat = 10
-
-                let innerW = gridWidth - innerPadding * 2
-                let innerH = gridHeight - innerPadding * 2
-
-                let cellWidth = (innerW - cellSpacing * (cols - 1)) / cols
-                let cellHeight = (innerH - cellSpacing * (rows - 1)) / rows
-
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-
-                    RoundedRectangle(cornerRadius: 22)
-                        .fill(.thinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22)
-                                .stroke(Color.primary.opacity(0.12), lineWidth: 1.5)
-                        )
-                        .frame(width: gridWidth, height: gridHeight)
-                        .overlay(
-                            LazyVGrid(
-                                columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: cellSpacing), count: Int(cols)),
-                                spacing: cellSpacing
-                            ) {
-                                ForEach(store.castleTiles) { tile in
-                                    let isEmpty = (tile.building == nil)
-                                    let isUpg = (tile.building != nil)
-                                    let isHighlighted = (mode == .build && isEmpty) || (mode == .upgrade && isUpg)
-
-                                    Button {
-                                        // 022G: auto action by tile state
-                                        if isEmpty {
-                                            buildPickerTileIndex = tile.id
-                                            isBuildPickerPresented = true
-                                            return
-                                        }
-                                        if isUpg {
-                                            upgradePickerTileIndex = tile.id
-                                            isUpgradePickerPresented = true
-                                            return
-                                        }
-                                    } label: {
-                                        CastleTileContentView(
-                                            iconText: tile.building?.emoji ?? "⬜️",
-                                            titleText: tile.building?.title ?? "Empty",
-                                            statText: tile.building == nil
-                                                ? "Tap to build"
-                                                : "+\((tile.building?.baseIncomePerDay ?? 0) * max(1, tile.level))/day",
-                                            levelText: tile.building == nil ? "—" : "Lv \(max(1, tile.level))",
-                                            width: cellWidth,
-                                            height: cellHeight
-                                        )
-                                        // Highlight overlay + animation
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(isHighlighted ? Color.accentColor.opacity(0.55) : Color.clear, lineWidth: 2)
-                                                .animation(.easeInOut(duration: 0.18), value: isHighlighted)
-                                        )
-                                        .opacity(isHighlighted ? 1.0 : 0.92)
-                                        .scaleEffect(isHighlighted ? 1.0 : 0.995)
-                                        .animation(.spring(response: 0.22, dampingFraction: 0.9), value: isHighlighted)
-                                        .animation(.spring(response: 0.22, dampingFraction: 0.9), value: mode)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
+                        // RIGHT: relics (fixed width, top aligned)
+                        VStack(alignment: .trailing, spacing: 6) {
+                            Text("Relics")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                            HStack(spacing: 6) {
+                                Text("🗿")
+                                Text("🗝️")
+                                Text("—")
                             }
-                            .padding(innerPadding)
-                        )
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 12)
-
-                    Spacer(minLength: 12)
-
-                    Button("Back to Hub") {
-                        store.goToHub()
+                            .font(.caption)
+                        }
+                        .frame(width: rightCol, alignment: .trailing)
+                        .layoutPriority(0)
                     }
-                    .padding(.bottom, 8)
+                    .frame(width: contentWidth, alignment: .center)
+
+                    // Mode buttons — only highlight (not behavior), animated switch
+                    HStack(spacing: 12) {
+                        modePill("Build", isActive: mode == .build) {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                                mode = .build
+                            }
+                        }
+
+                        modePill("Upgrade", isActive: mode == .upgrade) {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                                mode = .upgrade
+                            }
+                        }
+                    }
+                    .padding(.top, 6)
+                    .frame(width: contentWidth, alignment: .center)
+
+                    // Grid container (derived from contentWidth per 022J)
+                    let gridWidth = contentWidth
+                    let gridHeight = gridWidth * gridAspect
+
+                    // Derived cell sizing
+                    let cols: CGFloat = 5
+                    let rows: CGFloat = 5
+                    let innerPadding: CGFloat = 14
+                    let cellSpacing: CGFloat = 10
+
+                    let innerW = gridWidth - innerPadding * 2
+                    let innerH = gridHeight - innerPadding * 2
+
+                    let cellWidth = (innerW - cellSpacing * (cols - 1)) / cols
+                    let cellHeight = (innerH - cellSpacing * (rows - 1)) / rows
+
+                    VStack(spacing: 0) {
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(.thinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22)
+                                    .stroke(Color.primary.opacity(0.12), lineWidth: 1.5)
+                            )
+                            .frame(width: gridWidth, height: gridHeight)
+                            .overlay(
+                                LazyVGrid(
+                                    columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: cellSpacing), count: Int(cols)),
+                                    spacing: cellSpacing
+                                ) {
+                                    ForEach(store.castleTiles) { tile in
+                                        let isEmpty = (tile.building == nil)
+                                        let isUpg = (tile.building != nil)
+                                        let isHighlighted = (mode == .build && isEmpty) || (mode == .upgrade && isUpg)
+
+                                        Button {
+                                            // Auto action by tile state (022G)
+                                            if isEmpty {
+                                                buildPickerTileIndex = tile.id
+                                                isBuildPickerPresented = true
+                                                return
+                                            }
+                                            if isUpg {
+                                                upgradePickerTileIndex = tile.id
+                                                isUpgradePickerPresented = true
+                                                return
+                                            }
+                                        } label: {
+                                            CastleTileContentView(
+                                                iconText: tile.building?.emoji ?? "⬜️",
+                                                titleText: tile.building?.title ?? "Empty",
+                                                statText: tile.building == nil
+                                                    ? "Tap to build"
+                                                    : "+\((tile.building?.baseIncomePerDay ?? 0) * max(1, tile.level))/day",
+                                                levelText: tile.building == nil ? "—" : "Lv \(max(1, tile.level))",
+                                                width: cellWidth,
+                                                height: cellHeight
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .stroke(isHighlighted ? Color.accentColor.opacity(0.55) : Color.clear, lineWidth: 2)
+                                                    .animation(.easeInOut(duration: 0.18), value: isHighlighted)
+                                            )
+                                            .opacity(isHighlighted ? 1.0 : 0.92)
+                                            .scaleEffect(isHighlighted ? 1.0 : 0.995)
+                                            .animation(.spring(response: 0.22, dampingFraction: 0.9), value: isHighlighted)
+                                            .animation(.spring(response: 0.22, dampingFraction: 0.9), value: mode)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(innerPadding)
+                            )
+                            .frame(maxWidth: .infinity, alignment: .center) // explicit centering
+
+                        // Back to Hub
+                        Button("Back to Hub") {
+                            store.goToHub()
+                        }
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                .frame(width: contentWidth, alignment: .center)     // fixed width content
+                .frame(maxWidth: .infinity, alignment: .center)     // center inside ScrollView
+                .padding(.top, 12)
+                .padding(.bottom, 18)
             }
-            .padding(.horizontal, 0)
+            .scrollIndicators(.hidden)
+            .background(Color(.systemBackground))
         }
-        .padding(.horizontal, castleHorizontalPadding)
-        .padding(.vertical, 12)
+        // Reset mode to Build when entering Castle
+        .onAppear {
+            mode = .build
+        }
         // Overlays: Build (022E) and Upgrade (022F)
         .overlay {
             if isBuildPickerPresented, let idx = buildPickerTileIndex {
