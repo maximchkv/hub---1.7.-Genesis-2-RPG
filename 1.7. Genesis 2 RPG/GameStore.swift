@@ -1,6 +1,12 @@
 import SwiftUI
 import Combine
 
+enum CastleUIMode: String {
+    case idle
+    case build
+    case upgrade
+}
+
 @MainActor
 final class GameStore: ObservableObject {
     @Published var meta: PlayerMeta
@@ -551,6 +557,40 @@ final class GameStore: ObservableObject {
         case .defend: return "Guard"
         case .doubleStrike: return "Double Strike"
         case .counterStance: return "Counter Stance"
+        }
+    }
+
+    // MARK: - Castle UI State
+    @Published var castleModeUI: CastleUIMode = .idle
+    @Published var isBuildSheetPresented: Bool = false
+    @Published var isUpgradeSheetPresented: Bool = false
+    @Published var selectedCastleTileIndex: Int? = nil
+
+    // MARK: - Castle UI Actions
+    func setCastleMode(_ mode: CastleUIMode) {
+        if castleModeUI == mode {
+            castleModeUI = .idle
+        } else {
+            castleModeUI = mode
+        }
+    }
+
+    func handleCastleTileTap(index: Int, isEmpty: Bool) {
+        guard castleModeUI != .idle else { return }
+
+        selectedCastleTileIndex = index
+
+        switch castleModeUI {
+        case .build:
+            guard isEmpty else { return }
+            isBuildSheetPresented = true
+
+        case .upgrade:
+            guard !isEmpty else { return }
+            isUpgradeSheetPresented = true
+
+        case .idle:
+            break
         }
     }
 }

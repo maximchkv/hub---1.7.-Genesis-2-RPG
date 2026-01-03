@@ -3,20 +3,6 @@ import SwiftUI
 struct CastleView: View {
     @EnvironmentObject private var store: GameStore
 
-    // Local state: Build (022E) and Upgrade (022F) overlays
-    @State private var isBuildPickerPresented: Bool = false
-    @State private var buildPickerTileIndex: Int? = nil
-
-    @State private var isUpgradePickerPresented: Bool = false
-    @State private var upgradePickerTileIndex: Int? = nil
-
-    // 022G: local interaction mode used only for highlighting
-    private enum CastleInteractionMode {
-        case build
-        case upgrade
-    }
-    @State private var mode: CastleInteractionMode = .build
-
     // Relics sheet state (022J)
     @State private var isRelicsSheetPresented: Bool = false
 
@@ -44,7 +30,6 @@ struct CastleView: View {
                 .stroke(Color.accentColor.opacity(isActive ? 0.0 : 0.35), lineWidth: 1.5)
         )
         .background(
-            // subtle base for inactive
             RoundedRectangle(cornerRadius: 14)
                 .fill(isActive ? Color.clear : Color.black.opacity(0.04))
         )
@@ -122,7 +107,6 @@ struct CastleView: View {
 
                         // RIGHT (relics) — сохрани текущий контент/кликабельность
                         VStack(alignment: .trailing, spacing: 6) {
-                            // ваш текущий tappable блок Relics
                             Button {
                                 isRelicsSheetPresented = true
                             } label: {
@@ -139,7 +123,7 @@ struct CastleView: View {
                                     .font(.caption)
                                     .foregroundStyle(.primary)
                                 }
-                                .contentShape(Rectangle()) // tap entire rectangle
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
@@ -147,17 +131,17 @@ struct CastleView: View {
                     }
                     .frame(width: contentWidth, alignment: .center)
 
-                    // Mode buttons — only highlight (not behavior), animated switch
+                    // Mode buttons — store-driven with toggle idle behavior
                     HStack(spacing: 12) {
-                        modePill("Build", isActive: mode == .build) {
+                        modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                mode = .build
+                                store.setCastleMode(CastleUIMode.build)
                             }
                         }
 
-                        modePill("Upgrade", isActive: mode == .upgrade) {
+                        modePill("Upgrade", isActive: store.castleModeUI == CastleUIMode.upgrade) {
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                mode = .upgrade
+                                store.setCastleMode(CastleUIMode.upgrade)
                             }
                         }
                     }
@@ -195,21 +179,16 @@ struct CastleView: View {
                                 ) {
                                     ForEach(store.castleTiles) { tile in
                                         let isEmpty = (tile.building == nil)
-                                        let isUpg = (tile.building != nil)
-                                        let isHighlighted = (mode == .build && isEmpty) || (mode == .upgrade && isUpg)
+                                        let isHighlighted: Bool = {
+                                            switch store.castleModeUI {
+                                            case CastleUIMode.build: return isEmpty
+                                            case CastleUIMode.upgrade: return !isEmpty
+                                            case CastleUIMode.idle: return false
+                                            }
+                                        }()
 
                                         Button {
-                                            // Auto action by tile state
-                                            if isEmpty {
-                                                buildPickerTileIndex = tile.id
-                                                isBuildPickerPresented = true
-                                                return
-                                            }
-                                            if isUpg {
-                                                upgradePickerTileIndex = tile.id
-                                                isUpgradePickerPresented = true
-                                                return
-                                            }
+                                            store.handleCastleTileTap(index: tile.id, isEmpty: isEmpty)
                                         } label: {
                                             CastleTileContentView(
                                                 iconText: tile.building?.emoji ?? "⬜️",
@@ -223,20 +202,20 @@ struct CastleView: View {
                                             )
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(isHighlighted ? Color.accentColor.opacity(0.55) : Color.clear, lineWidth: 2)
+                                                    .stroke(isHighlighted ? Color.accentColor.opacity(0.9) : Color.clear, lineWidth: 3)
                                                     .animation(.easeInOut(duration: 0.18), value: isHighlighted)
                                             )
                                             .opacity(isHighlighted ? 1.0 : 0.92)
                                             .scaleEffect(isHighlighted ? 1.0 : 0.995)
                                             .animation(.spring(response: 0.22, dampingFraction: 0.9), value: isHighlighted)
-                                            .animation(.spring(response: 0.22, dampingFraction: 0.9), value: mode)
+                                            .animation(.spring(response: 0.22, dampingFraction: 0.9), value: store.castleModeUI)
                                         }
                                         .buttonStyle(.plain)
                                     }
                                 }
                                 .padding(innerPadding)
                             )
-                            .frame(maxWidth: .infinity, alignment: .center) // explicit centering
+                            .frame(maxWidth: .infinity, alignment: .center)
 
                         // Back to Hub
                         Button("Back to Hub") {
@@ -247,62 +226,53 @@ struct CastleView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .frame(width: contentWidth, alignment: .center)     // fixed width content
-                .frame(maxWidth: .infinity, alignment: .center)     // center inside ScrollView
+                .frame(width: contentWidth, alignment: .center)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 12)
                 .padding(.bottom, 18)
             }
             .scrollIndicators(.hidden)
             .background(Color(.systemBackground))
         }
-        // Reset mode to Build when entering Castle
-        .onAppear {
-            mode = .build
-        }
-        // Overlays: Build (022E) and Upgrade (022F)
-        .overlay {
-            if isBuildPickerPresented, let idx = buildPickerTileIndex {
-                BuildPickerOverlay(
-                    onSelectMine: {
-                        store.buildOnTile(index: idx, kind: .mine)
-                        isBuildPickerPresented = false
-                        buildPickerTileIndex = nil
-                    },
-                    onSelectFarm: {
-                        store.buildOnTile(index: idx, kind: .farm)
-                        isBuildPickerPresented = false
-                        buildPickerTileIndex = nil
-                    },
-                    onCancel: {
-                        isBuildPickerPresented = false
-                        buildPickerTileIndex = nil
-                    }
-                )
-            }
-
-            if isUpgradePickerPresented, let idx = upgradePickerTileIndex,
-               let info = store.castleTileInfo(idx) {
-                UpgradePickerOverlay(
-                    title: info.title,
-                    icon: info.icon,
-                    currentLevel: info.level,
-                    incomePerDay: info.incomePerDay,
-                    onUpgrade: {
-                        store.upgradeTile(index: idx)
-                        isUpgradePickerPresented = false
-                        upgradePickerTileIndex = nil
-                    },
-                    onCancel: {
-                        isUpgradePickerPresented = false
-                        upgradePickerTileIndex = nil
-                    }
-                )
-            }
-        }
         // Relics sheet
         .sheet(isPresented: $isRelicsSheetPresented) {
             RelicsListSheetView()
                 .environmentObject(store)
+        }
+        // Build/Upgrade stub sheets (023A)
+        .sheet(isPresented: $store.isBuildSheetPresented) {
+            VStack(spacing: 12) {
+                Text("Build (stub)")
+                    .font(.title2)
+
+                if let idx = store.selectedCastleTileIndex {
+                    Text("Tile: \(idx)")
+                        .font(.headline)
+                }
+
+                Button("Close") {
+                    store.isBuildSheetPresented = false
+                }
+                .padding(.top, 8)
+            }
+            .padding()
+        }
+        .sheet(isPresented: $store.isUpgradeSheetPresented) {
+            VStack(spacing: 12) {
+                Text("Upgrade (stub)")
+                    .font(.title2)
+
+                if let idx = store.selectedCastleTileIndex {
+                    Text("Tile: \(idx)")
+                        .font(.headline)
+                }
+
+                Button("Close") {
+                    store.isUpgradeSheetPresented = false
+                }
+                .padding(.top, 8)
+            }
+            .padding()
         }
     }
 }
