@@ -105,7 +105,7 @@ final class GameStore: ObservableObject {
             state.buildingType
         }
 
-        // Level used by UI; nil if empty/constructing
+        // Level used by UI; 0 if empty/constructing
         var level: Int {
             switch state {
             case .built(_, let level): return max(1, level)
@@ -209,23 +209,58 @@ final class GameStore: ObservableObject {
             toast = "Tile is not empty"
             return
         }
-        // keep hook
         castleRecomputeStats()
     }
 
     // Upgrade tile by +1 level (used by Upgrade overlay) — now marks upgrading (pending)
+    // Legacy API kept for compatibility (delegates to 027A3 implementation)
     func upgradeTile(index: Int) {
-        guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return }
-        switch castleTiles[idx].state {
-        case .built(let b, let lvl):
-            let current = max(1, lvl)
-            castleTiles[idx].state = .upgrading(type: b, fromLevel: current)
-            toast = "Upgrading \(b.title) to Lv \(current + 1)"
+        upgradeTile(tileIndex: index)
+    }
+
+    // 027A3: Can upgrade check (gold + state)
+    func canUpgradeTile(tileIndex: Int) -> Bool {
+        guard castleTiles.indices.contains(tileIndex) else { return false }
+        let tile = castleTiles[tileIndex]
+        switch tile.state {
+        case .built(let type, let level):
+            let cost = type.upgradeCost(fromLevel: level)
+            return meta.gold >= cost
         default:
-            return
+            return false
         }
-        // keep hook
-        castleRecomputeStats()
+    }
+
+    // 027A3: Upgrade with cost, busy checks, and pending state
+    func upgradeTile(tileIndex: Int) {
+        guard castleTiles.indices.contains(tileIndex) else { return }
+
+        switch castleTiles[tileIndex].state {
+        case .built(let type, let level):
+            let cost = type.upgradeCost(fromLevel: level)
+            guard meta.gold >= cost else {
+                toast = "Not enough gold"
+                return
+            }
+
+            // pay immediately on confirmation
+            meta.gold -= cost
+
+            // set pending upgrade
+            castleTiles[tileIndex].state = .upgrading(type: type, fromLevel: max(1, level))
+
+            // income should not change yet; keep hook
+            castleRecomputeStats()
+
+            toast = "Upgrade started"
+
+        case .empty:
+            toast = "Nothing to upgrade"
+        case .constructing:
+            toast = "Busy: constructing"
+        case .upgrading:
+            toast = "Busy: upgrading"
+        }
     }
 
     private let towerService = TowerService()
@@ -355,7 +390,8 @@ final class GameStore: ObservableObject {
 
         run.currentFloor += 1
 
-        applyDayTick()
+        // Unified day tick after floor progression
+        advanceDayTick()
 
         meta.bestFloor = max(meta.bestFloor, run.currentFloor)
 
@@ -381,7 +417,7 @@ final class GameStore: ObservableObject {
         }
     }
 
-    // MARK: - Day Tick
+    // MARK: - Day Tick (legacy, kept for compatibility in non-castle flows)
     func applyDayTick() {
         meta.days += 1
         meta.gold += meta.incomePerDay
@@ -729,14 +765,44 @@ final class GameStore: ObservableObject {
         castleModeUI = .idle
     }
 
-    // MARK: - Castle day tick + stats (026/027A1)
+    // MARK: - Castle day tick + stats (026/027A1/027A2)
     func castleRecomputeStats() {
         // No-op: stats are computed via castleIncomePerDay
     }
 
-    // Apply pending constructing/upgrading on day advance, then grant gold by built income
+    // Unified Day Tick per 027A2
+    func advanceDayTick() {
+        // 1) +1 Day
+        meta.days += 1
+
+        // 2) Income BEFORE applying pending (built only)
+        let incomeBeforeApplying = castleIncomePerDay
+        meta.gold += incomeBeforeApplying
+
+        // 3) Apply pending
+        applyCastlePending()
+
+        // 4) Hook for future recomputations
+        recomputeCastleEconomy()
+
+        // Feedback
+        toast = "Day +1  •  Gold +\(incomeBeforeApplying)"
+
+        // 6) Invariants
+        for tile in castleTiles {
+            if case .built(_, let level) = tile.state {
+                assert(level >= 1)
+            }
+        }
+    }
+
+    // Debug button should use the same unified tick
     func castleAdvanceDay() {
-        // 1) resolve pending states
+        advanceDayTick()
+    }
+
+    // Apply constructing/upgrading to become built states
+    private func applyCastlePending() {
         for i in castleTiles.indices {
             switch castleTiles[i].state {
             case .constructing(let type):
@@ -748,20 +814,15 @@ final class GameStore: ObservableObject {
                 break
             }
         }
+    }
 
-        // 2) compute today's income from built tiles only
-        let income = castleIncomePerDay
-
-        // 3) advance day + add gold
-        meta.days += 1
-        meta.gold += income
-
-        // 4) toast
-        toast = "Day +1  •  Gold +\(income)"
+    // No-op in this architecture; meta.incomePerDay is global baseline; castle income is computed.
+    private func recomputeCastleEconomy() {
+        // Keep as a hook if later you aggregate meta fields.
     }
 }
 
-// MARK: - BuildingKind income progression (027A1)
+// MARK: - BuildingKind income progression (027A1) + upgrade cost (027A3)
 extension GameStore.BuildingKind {
     var baseIncome: Int {
         switch self {
@@ -780,5 +841,12 @@ extension GameStore.BuildingKind {
     func incomePerDay(level: Int) -> Int {
         let lvl = max(1, level)
         return baseIncome + (lvl - 1) * incomeGrowthPerLevel
+    }
+
+    // 027A3: quadratic upgrade cost
+    func upgradeCost(fromLevel: Int) -> Int {
+        let lvl = max(1, fromLevel)
+        // L1->L2: 20, L2->L3: 35, L3->L4: 55, L4->L5: 80 ...
+        return 10 + (lvl * lvl * 5) + (lvl * 5)
     }
 }
