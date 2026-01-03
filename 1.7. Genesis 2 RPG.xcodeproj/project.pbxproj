@@ -26,6 +26,7 @@
 		507E29B92F07F7E400BD8FBB /* CombatLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29B82F07F7E400BD8FBB /* CombatLogEntry.swift */; };
 		507E29E12F09654100BD8FBB /* CastleUpgradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */; };
 		507E29E32F09654100BD8FBB /* CastleRelicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E22F09654100BD8FBB /* CastleRelicsView.swift */; };
+		507E29E52F09678500BD8FBB /* CastleGridCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E42F09678500BD8FBB /* CastleGridCellView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 		507E29B82F07F7E400BD8FBB /* CombatLogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CombatLogEntry.swift; sourceTree = "<group>"; };
 		507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleUpgradeView.swift; sourceTree = "<group>"; };
 		507E29E22F09654100BD8FBB /* CastleRelicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleRelicsView.swift; sourceTree = "<group>"; };
+		507E29E42F09678500BD8FBB /* CastleGridCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleGridCellView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -94,6 +96,7 @@
 				507E29B82F07F7E400BD8FBB /* CombatLogEntry.swift */,
 				507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */,
 				507E29E22F09654100BD8FBB /* CastleRelicsView.swift */,
+				507E29E42F09678500BD8FBB /* CastleGridCellView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -190,6 +193,7 @@
 				507E29A72F07F51500BD8FBB /* Artifact.swift in Sources */,
 				507E29B72F07F7E300BD8FBB /* EnemyIntent.swift in Sources */,
 				507E29A32F07F2F800BD8FBB /* RoomOption.swift in Sources */,
+				507E29E52F09678500BD8FBB /* CastleGridCellView.swift in Sources */,
 				507E29E12F09654100BD8FBB /* CastleUpgradeView.swift in Sources */,
 				507E29AD2F07F60F00BD8FBB /* BattleState.swift in Sources */,
 				507E29A52F07F2FB00BD8FBB /* TowerService.swift in Sources */,

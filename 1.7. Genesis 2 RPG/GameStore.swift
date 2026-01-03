@@ -18,6 +18,101 @@ final class GameStore: ObservableObject {
     }
     @Published var castleRoute: CastleRoute = .main
 
+    // MARK: - Castle (MVP)
+    enum CastleMode: String {
+        case build = "Build"
+        case upgrade = "Upgrade"
+        case artifacts = "Artifacts"
+    }
+
+    enum BuildingKind: CaseIterable {
+        case mine
+        case farm
+
+        var emoji: String {
+            switch self {
+            case .mine: return "⛏️"
+            case .farm: return "🌾"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .mine: return "Mine"
+            case .farm: return "Farm"
+            }
+        }
+
+        // MVP: базовый доход за сутки (позже балансируем)
+        var baseIncomePerDay: Int {
+            switch self {
+            case .mine: return 2
+            case .farm: return 1
+            }
+        }
+    }
+
+    struct CastleTile: Identifiable {
+        let id: Int // 0...24
+
+        var building: BuildingKind? = nil
+        var level: Int = 0
+        var isUnderConstruction: Bool = false // на будущее, пока не используем
+    }
+
+    @Published var castleMode: CastleMode = .build
+    @Published var castleTiles: [CastleTile] = (0..<25).map { CastleTile(id: $0) }
+
+    var castleBuildingsCount: Int {
+        castleTiles.filter { $0.building != nil }.count
+    }
+
+    var castleFreeTilesCount: Int {
+        castleTiles.filter { $0.building == nil }.count
+    }
+
+    var castleIncomePerDay: Int {
+        castleTiles.reduce(0) { acc, t in
+            guard let b = t.building else { return acc }
+            // MVP: доход = base * level (минимум 1)
+            let lvl = max(1, t.level)
+            return acc + (b.baseIncomePerDay * lvl)
+        }
+    }
+
+    func setCastleMode(_ mode: CastleMode) {
+        castleMode = mode
+        toast = "\(mode.rawValue) mode"
+    }
+
+    func handleCastleTileTap(_ tileId: Int) {
+        guard let idx = castleTiles.firstIndex(where: { $0.id == tileId }) else { return }
+
+        switch castleMode {
+        case .build:
+            if castleTiles[idx].building != nil {
+                toast = "Tile is not empty"
+                return
+            }
+            // MVP: ставим постройку (фикс: Mine)
+            let next: BuildingKind = .mine
+            castleTiles[idx].building = next
+            castleTiles[idx].level = 1
+            toast = "Built \(next.title)"
+
+        case .upgrade:
+            guard let b = castleTiles[idx].building else {
+                toast = "Nothing to upgrade"
+                return
+            }
+            castleTiles[idx].level += 1
+            toast = "Upgraded \(b.title) to Lv \(castleTiles[idx].level)"
+
+        case .artifacts:
+            toast = "Artifacts (stub)"
+        }
+    }
+
     private let towerService = TowerService()
 
     // MVP card pool
