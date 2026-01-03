@@ -28,24 +28,40 @@ struct BattleView: View {
                     }
                 }
 
-                // --- Log (scrollable, keeps full history) ---
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(Array(battle.log.enumerated()), id: \.offset) { _, entry in
-                            if entry.text == "__DIVIDER__" {
-                                Divider()
-                                    .padding(.vertical, 6)
-                            } else {
-                                Text(entry.text)
-                                    .font(.caption2)
-                                    .fontWeight(entry.isPlayer ? .bold : .regular)
-                                    // Enemy logs should be black; only system should be gray.
-                                    .foregroundStyle(entry.kind == .system ? .secondary : .primary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                // --- Log (auto-scroll to bottom) ---
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(battle.log, id: \.id) { entry in
+                                if entry.kind == .separator || entry.text == "__DIVIDER__" {
+                                    Divider()
+                                        .padding(.vertical, 6)
+                                        .id(entry.id)
+                                } else {
+                                    Text(entry.text)
+                                        .font(.caption2)
+                                        .fontWeight(entry.isPlayer ? .bold : .regular)
+                                        .foregroundStyle(entry.kind == .system ? .secondary : .primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id(entry.id)
+                                }
                             }
+
+                            // bottom anchor (stable id)
+                            Color.clear
+                                .frame(height: 1)
+                                .id("LOG_BOTTOM")
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .onChange(of: battle.log.count) { _ in
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onAppear {
+                        proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
+                    }
                 }
                 .padding(12)
                 .background(.thinMaterial)
@@ -84,6 +100,7 @@ struct BattleView: View {
                                         card: card,
                                         disabled: !canPlay
                                     )
+                                    .frame(width: cardWidth)
                                 }
                                 .disabled(!canPlay)
                                 .opacity(canPlay ? 1 : 0.35)

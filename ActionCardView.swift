@@ -11,12 +11,16 @@ struct ActionCardView: View {
 
             Text(title)
                 .font(.caption)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity)
 
             Text("\(card.cost) AP")
                 .font(.caption2)
         }
         .padding(12)
-        .frame(width: 90, height: 120)
+        .frame(width: 96, height: 120)
         .background(disabled ? Color.gray.opacity(0.3) : Color.blue.opacity(0.3))
         .cornerRadius(12)
     }
