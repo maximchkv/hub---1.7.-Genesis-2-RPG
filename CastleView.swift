@@ -207,9 +207,9 @@ struct CastleView: View {
                                             .opacity({
                                                 switch store.castleModeUI {
                                                 case CastleUIMode.build:
-                                                    return tile.canUpgrade ? 0.4 : 1.0
+                                                    return (tile.building != nil) ? 0.4 : 1.0
                                                 case CastleUIMode.upgrade:
-                                                    return tile.isEmpty ? 0.4 : 1.0
+                                                    return (tile.building == nil) ? 0.4 : 1.0
                                                 case CastleUIMode.idle:
                                                     return 1.0
                                                 }
@@ -244,18 +244,31 @@ struct CastleView: View {
             RelicsListSheetView()
                 .environmentObject(store)
         }
-        // Build sheet (replaces "Build (stub)")
+        // Build sheet
         .sheet(isPresented: $store.isBuildSheetPresented) {
             CastleBuildSheetView(
                 onPickFarm: {
-                    // TODO: hook real build later
+                    // Use predefined candidate (Farm)
+                    if let farm = store.buildCandidates.first(where: { $0.kind == .farm }) {
+                        store.confirmBuild(farm)
+                    } else {
+                        // Fallback: construct and confirm directly
+                        store.confirmBuild(
+                            BuildCandidate(kind: .farm, title: "Farm", emoji: "🌾", incomePerDay: 1, blurb: "+1 / day")
+                        )
+                    }
                 },
                 onPickMine: {
-                    // TODO: hook real build later
+                    if let mine = store.buildCandidates.first(where: { $0.kind == .mine }) {
+                        store.confirmBuild(mine)
+                    } else {
+                        store.confirmBuild(
+                            BuildCandidate(kind: .mine, title: "Mine", emoji: "⛏️", incomePerDay: 2, blurb: "+2 / day")
+                        )
+                    }
                 },
                 onClose: {
-                    // Use existing close path for this sheet
-                    store.closeBuildSheet()
+                    store.cancelBuildSheet()
                 }
             )
             .presentationDetents([.medium])
