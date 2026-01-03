@@ -51,7 +51,7 @@ struct CastleView: View {
                             Text("Day: \(store.meta.days)")
                                 .lineLimit(1).minimumScaleFactor(0.85)
                             Spacer()
-                            Text("+\(store.meta.incomePerDay) / day")
+                            Text("+\(store.castleIncomePerDay) / day")
                                 .lineLimit(1).minimumScaleFactor(0.85)
                         }
                         .font(.caption)
@@ -131,7 +131,7 @@ struct CastleView: View {
                     }
                     .frame(width: contentWidth, alignment: .center)
 
-                    // Mode buttons — store-driven with toggle idle behavior + Next Day
+                    // Mode buttons — store-driven with toggle idle behavior
                     HStack(spacing: 12) {
                         modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
@@ -144,14 +144,18 @@ struct CastleView: View {
                                 store.setCastleMode(CastleUIMode.upgrade)
                             }
                         }
-
-                        Button("Next Day (debug)") {
-                            store.castleAdvanceDay()
-                        }
-                        .buttonStyle(.bordered)
                     }
+                    .frame(width: contentWidth, alignment: .center)
+
+                    // Next Day (debug) — placed under mode buttons, before the grid
+                    #if DEBUG
+                    Button("Next Day (debug)") {
+                        store.castleAdvanceDay()
+                    }
+                    .buttonStyle(.bordered)
                     .padding(.top, 6)
                     .frame(width: contentWidth, alignment: .center)
+                    #endif
 
                     // Grid container (derived from contentWidth)
                     let gridWidth = contentWidth
