@@ -29,6 +29,7 @@
 		507E29E52F09678500BD8FBB /* CastleGridCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E42F09678500BD8FBB /* CastleGridCellView.swift */; };
 		507E29E72F09756700BD8FBB /* BuildPickerOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E62F09756700BD8FBB /* BuildPickerOverlay.swift */; };
 		507E29E92F0977B900BD8FBB /* UpgradePickerOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E82F0977B900BD8FBB /* UpgradePickerOverlay.swift */; };
+		507E29EB2F09821C00BD8FBB /* RelicsListSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EA2F09821C00BD8FBB /* RelicsListSheetView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 		507E29E42F09678500BD8FBB /* CastleGridCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleGridCellView.swift; sourceTree = "<group>"; };
 		507E29E62F09756700BD8FBB /* BuildPickerOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildPickerOverlay.swift; sourceTree = "<group>"; };
 		507E29E82F0977B900BD8FBB /* UpgradePickerOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradePickerOverlay.swift; sourceTree = "<group>"; };
+		507E29EA2F09821C00BD8FBB /* RelicsListSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelicsListSheetView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -103,6 +105,7 @@
 				507E29E42F09678500BD8FBB /* CastleGridCellView.swift */,
 				507E29E62F09756700BD8FBB /* BuildPickerOverlay.swift */,
 				507E29E82F0977B900BD8FBB /* UpgradePickerOverlay.swift */,
+				507E29EA2F09821C00BD8FBB /* RelicsListSheetView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -207,6 +210,7 @@
 				507E29A52F07F2FB00BD8FBB /* TowerService.swift in Sources */,
 				507E29B92F07F7E400BD8FBB /* CombatLogEntry.swift in Sources */,
 				507E29A12F07F18000BD8FBB /* CardLibraryView.swift in Sources */,
+				507E29EB2F09821C00BD8FBB /* RelicsListSheetView.swift in Sources */,
 				507E29992F07F0DA00BD8FBB /* PlayerMeta.swift in Sources */,
 				507E29AF2F07F61E00BD8FBB /* BattleView.swift in Sources */,
 				507E29B12F07F62000BD8FBB /* DefeatView.swift in Sources */,

@@ -17,6 +17,9 @@ struct CastleView: View {
     }
     @State private var mode: CastleInteractionMode = .build
 
+    // Relics sheet state (022J)
+    @State private var isRelicsSheetPresented: Bool = false
+
     // Layout constants
     private let gridAspect: CGFloat = 1.25 // height = width * 1.25
 
@@ -50,7 +53,7 @@ struct CastleView: View {
     var body: some View {
         GeometryReader { geo in
             ScrollView {
-                // 022J: fixed-width wrapper centered via contentWidth
+                // Fixed-width wrapper centered via contentWidth
                 let contentWidth = min(geo.size.width - 32, 520)
 
                 VStack(spacing: 12) {
@@ -78,58 +81,69 @@ struct CastleView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .frame(width: contentWidth, alignment: .center)
 
-                    // 022K: Top block with computed fixed widths per contentWidth
+                    // Top block with computed fixed widths per contentWidth
                     let imageBox: CGFloat = 120
                     let gap: CGFloat = 12
                     let rightCol: CGFloat = 70
                     let leftCol: CGFloat = max(120, contentWidth - imageBox - rightCol - gap*2)
 
-                    HStack(alignment: .top, spacing: gap) {
+                    // REPLACED: three-column symmetric HStack (center fixed width)
+                    HStack(alignment: .top, spacing: 12) {
 
-                        // LEFT: stats (clamped width, wrapping/scaling)
+                        // LEFT (stats)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Buildings: \(store.castleBuildingsCount)")
                             Text("Income: +\(store.castleIncomePerDay)/day")
                             Text("Free tiles: \(store.castleFreeTilesCount)")
                         }
                         .font(.caption)
-                        .frame(width: leftCol, alignment: .leading)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
-                        .multilineTextAlignment(.leading)
-                        .layoutPriority(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        // CENTER: castle image placeholder (fixed square box)
-                        VStack(spacing: 6) {
+                        // CENTER (castle image placeholder) — всегда по центру
+                        VStack(spacing: 8) {
                             RoundedRectangle(cornerRadius: 14)
                                 .fill(.thinMaterial)
-                                .frame(width: imageBox, height: imageBox)
                                 .overlay(
-                                    Text("🏰")
-                                        .font(.system(size: 36))
+                                    VStack(spacing: 6) {
+                                        Text("🏰")
+                                            .font(.title2)
+                                        Text("Castle Image")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 14)
                                         .stroke(Color.primary.opacity(0.10), lineWidth: 1)
                                 )
+                                .frame(width: 140, height: 110)
                         }
-                        .frame(width: imageBox)
-                        .layoutPriority(1)
+                        .frame(width: 140)
 
-                        // RIGHT: relics (fixed width, top aligned)
+                        // RIGHT (relics) — сохрани текущий контент/кликабельность
                         VStack(alignment: .trailing, spacing: 6) {
-                            Text("Relics")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                            HStack(spacing: 6) {
-                                Text("🗿")
-                                Text("🗝️")
-                                Text("—")
+                            // ваш текущий tappable блок Relics
+                            Button {
+                                isRelicsSheetPresented = true
+                            } label: {
+                                VStack(alignment: .trailing, spacing: 6) {
+                                    Text("Relics")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.primary)
+                                    HStack(spacing: 6) {
+                                        Text("🗿")
+                                        Text("🗝️")
+                                        Text("—")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(.primary)
+                                }
+                                .contentShape(Rectangle()) // tap entire rectangle
                             }
-                            .font(.caption)
+                            .buttonStyle(.plain)
                         }
-                        .frame(width: rightCol, alignment: .trailing)
-                        .layoutPriority(0)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                     .frame(width: contentWidth, alignment: .center)
 
@@ -150,7 +164,7 @@ struct CastleView: View {
                     .padding(.top, 6)
                     .frame(width: contentWidth, alignment: .center)
 
-                    // Grid container (derived from contentWidth per 022J)
+                    // Grid container (derived from contentWidth)
                     let gridWidth = contentWidth
                     let gridHeight = gridWidth * gridAspect
 
@@ -185,7 +199,7 @@ struct CastleView: View {
                                         let isHighlighted = (mode == .build && isEmpty) || (mode == .upgrade && isUpg)
 
                                         Button {
-                                            // Auto action by tile state (022G)
+                                            // Auto action by tile state
                                             if isEmpty {
                                                 buildPickerTileIndex = tile.id
                                                 isBuildPickerPresented = true
@@ -284,6 +298,11 @@ struct CastleView: View {
                     }
                 )
             }
+        }
+        // Relics sheet
+        .sheet(isPresented: $isRelicsSheetPresented) {
+            RelicsListSheetView()
+                .environmentObject(store)
         }
     }
 }
