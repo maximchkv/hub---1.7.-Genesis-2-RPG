@@ -4,41 +4,103 @@ import SwiftUI
 struct BattleView: View {
     @EnvironmentObject private var store: GameStore
 
+    // Spacing/layout constants for 019C3
+    private let topHeaderPad: CGFloat = 10
+    private let gapHeaderToPanels: CGFloat = 10
+    private let gapPanelsToLog: CGFloat = 12
+    private let panelsHeight: CGFloat = 92
+
     var body: some View {
-        VStack(spacing: 16) {
-            if let battle = store.battle {
-
-                // T3-ARCH-BOOT-019A — Header + Status Area (scaffold)
-                VStack(spacing: 10) {
-
-                    // Header (Floor)
+        GeometryReader { geo in
+            VStack(spacing: 12) {
+                if let battle = store.battle {
+                    // 1) Header (Floor) with fixed top padding
                     Text("Floor \(battle.floor)")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .padding(.top, topHeaderPad)
 
-                    // Status Area (2 equal panels)
-                    HStack(spacing: 12) {
+                    // 2) Player/Enemy panels (fixed height + explicit top gap)
+                    playerEnemyPanels
+                        .frame(height: panelsHeight)
+                        .padding(.top, gapHeaderToPanels)
+                        .padding(.horizontal, 16)
 
-                        StatusPanel(
-                            side: .player,
-                            name: "Player",
-                            hp: battle.playerHP,
-                            maxHP: 20,
-                            block: battle.playerBlock,
-                            intentKind: nil
-                        )
+                    // 3) Logs: start below panels with explicit top gap, take remaining space
+                    battleLogView
+                        .padding(.top, gapPanelsToLog)
+                        .frame(maxWidth: .infinity)
+                        .frame(maxHeight: .infinity)
+                        .padding(.horizontal, 16)
 
-                        StatusPanel(
-                            side: .enemy,
-                            name: battle.enemyName,
-                            hp: battle.enemyHP,
-                            maxHP: 20,
-                            block: battle.enemyBlock,
-                            intentKind: battle.enemyIntent.kind
-                        )
-                    }
+                    // 4) Actions row (fixed)
+                    actionsRow
+                        .padding(.horizontal, 16)
+
+                    // 5) Bottom buttons (fixed, 2 rows)
+                    bottomButtons
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 10)
+                } else {
+                    Text("No battle state")
+                    Button("Back") { store.goToTower() }
                 }
+            }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+        }
+        .padding(.vertical, 0)
+    }
 
+    // MARK: - Sections
+
+    private var playerEnemyPanels: some View {
+        HStack(spacing: 12) {
+            playerPanel
+                .frame(maxWidth: .infinity)
+
+            enemyPanel
+                .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var playerPanel: some View {
+        Group {
+            if let b = store.battle {
+                StatusPanel(
+                    side: .player,
+                    name: "Player",
+                    hp: b.playerHP,
+                    maxHP: 20,
+                    block: b.playerBlock,
+                    intentKind: nil
+                )
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    private var enemyPanel: some View {
+        Group {
+            if let b = store.battle {
+                StatusPanel(
+                    side: .enemy,
+                    name: b.enemyName,
+                    hp: b.enemyHP,
+                    maxHP: 20,
+                    block: b.enemyBlock,
+                    intentKind: b.enemyIntent.kind
+                )
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    private var battleLogView: some View {
+        Group {
+            if let battle = store.battle {
                 // --- Log (auto-scroll to bottom) ---
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -78,80 +140,91 @@ struct BattleView: View {
                 .background(.thinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .frame(maxWidth: .infinity)
-                .frame(maxHeight: .infinity, alignment: .top)
+                // Important: do not add negative offsets/overlays here
+            } else {
+                EmptyView()
+            }
+        }
+    }
 
-                // Bottom controls
+    private var actionsRow: some View {
+        Group {
+            if let battle = store.battle {
                 VStack(spacing: 8) {
                     Text("Action Points: \(battle.actionPoints)")
-                        .font(.caption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
 
-                    // Layout constants
-                    let cardWidth: CGFloat = 96
-                    let rowSpacing: CGFloat = 16
-                    let sideInset: CGFloat = 16
-
-                    let count = battle.hand.count
-                    let totalWidth =
-                        CGFloat(count) * cardWidth +
-                        CGFloat(max(0, count - 1)) * rowSpacing
+                    // Layout constants (kept contained)
+                    let cardWidth: CGFloat = 120
+                    let cardHeight: CGFloat = 180
+                    let rowSpacing: CGFloat = 12
 
                     let isEnemyPhase = (battle.phase == .enemy)
 
-                    HStack {
-                        Spacer(minLength: 0)
+                    HStack(spacing: rowSpacing) {
+                        ForEach(battle.hand, id: \.id) { card in
+                            let isUsed = battle.usedCardsThisTurn.contains(card.kind)
+                            let hasAP = card.cost <= battle.actionPoints
+                            let canPlay = !isEnemyPhase && hasAP && !isUsed
 
-                        HStack(spacing: rowSpacing) {
-                            ForEach(battle.hand, id: \.id) { card in
-                                let isUsed = battle.usedCardsThisTurn.contains(card.kind)
-                                let hasAP = card.cost <= battle.actionPoints
-                                let canPlay = !isEnemyPhase && hasAP && !isUsed
-
-                                Button {
-                                    store.playCard(card)
-                                } label: {
-                                    ActionCardView(
-                                        card: card,
-                                        disabled: !canPlay
-                                    )
-                                    .frame(width: cardWidth)
-                                }
-                                .disabled(!canPlay)
-                                .opacity(canPlay ? 1 : 0.35)
-                                .frame(width: cardWidth)
+                            Button {
+                                store.playCard(card)
+                            } label: {
+                                ActionCardView(
+                                    card: card,
+                                    disabled: !canPlay
+                                )
+                                .frame(width: cardWidth, height: cardHeight)
                             }
+                            .disabled(!canPlay)
+                            .opacity(canPlay ? 1 : 0.35)
+                            .frame(width: cardWidth, height: cardHeight)
                         }
-                        .frame(width: totalWidth, alignment: .center)
-
-                        Spacer(minLength: 0)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.horizontal, sideInset)
-                    .frame(height: 120)
-
-                    HStack(spacing: 16) {
-                        Button("End Turn") {
-                            store.endTurn()
-                        }
-                        .disabled(isEnemyPhase)
-
-                        Button("Surrender") {
-                            store.surrenderBattle()
-                        }
-                    }
-
-                    // Debug/flow controls
-                    VStack(spacing: 12) {
-                        Button("Win (debug)") { store.winBattle() }
-                        Button("Lose (debug)") { store.loseBattle() }
-                    }
-                    .padding(.top, 8)
                 }
             } else {
-                Text("No battle state")
-                Button("Back") { store.goToTower() }
+                EmptyView()
             }
         }
-        .padding()
+    }
+
+    private var bottomButtons: some View {
+        Group {
+            if let battle = store.battle {
+                let isEnemyPhase = (battle.phase == .enemy)
+
+                VStack(spacing: 8) {
+                    // Row 1: End Turn / Surrender
+                    HStack(spacing: 12) {
+                        Button("End Turn") { store.endTurn() }
+                            .disabled(isEnemyPhase)
+                            .frame(maxWidth: .infinity)
+
+                        Button("Surrender") { store.surrenderBattle() }
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    // Row 2: win_debug / lose_debug
+                    HStack(spacing: 12) {
+                        Button("win_debug") {
+                            store.winBattle()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .buttonStyle(.bordered)
+
+                        Button("lose_debug") {
+                            store.loseBattle()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .buttonStyle(.bordered)
+                    }
+                }
+            } else {
+                EmptyView()
+            }
+        }
     }
 }
 
@@ -183,11 +256,15 @@ private struct StatusPanel: View {
                 Text(name)
                     .font(.subheadline)
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("HP: \(hp) / \(maxHP)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
 
                     HPBar(value: hp, maxValue: maxHP)
                         .frame(height: 6)
@@ -196,6 +273,8 @@ private struct StatusPanel: View {
                 Text("Block: \(block)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 // Fixed Intent row (reserved space in both panels to prevent jumping)
                 intentRow
@@ -209,7 +288,7 @@ private struct StatusPanel: View {
             }
         }
         .padding(12)
-        .frame(height: 120) // fixed panel height so it never jumps
+        .frame(height: 120) // keeps internal layout consistent; outer container clamps to panelsHeight
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(.secondarySystemBackground))
@@ -236,9 +315,9 @@ private struct StatusPanel: View {
 
                 Text("Intent: \(intentTitle(k))")
                     .font(.caption)
-                    .lineLimit(2)                 // allow long text
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                    .minimumScaleFactor(0.85)     // soft fallback if too long
+                    .minimumScaleFactor(0.85)
             } else {
                 // Reserve same vertical space in Player panel
                 Text(" ")
@@ -248,7 +327,7 @@ private struct StatusPanel: View {
             Spacer(minLength: 0)
         }
         .foregroundStyle(.secondary)
-        .frame(minHeight: 28, alignment: .topLeading) // keeps panels stable
+        .frame(minHeight: 28, alignment: .topLeading)
     }
 
     private func intentTitle(_ k: EnemyIntentKind) -> String {

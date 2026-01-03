@@ -5,24 +5,57 @@ struct ActionCardView: View {
     let disabled: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
-            Text(icon)
-                .font(.largeTitle)
+        VStack(spacing: 8) {
 
+            // 1) Icon container (smaller than before, for emoji now, images later)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(.systemGray6))
+                Text(icon)
+                    .font(.title2)
+            }
+            .frame(height: 44)
+
+            // 2) Skill name
             Text(title)
-                .font(.caption)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.9)
                 .frame(maxWidth: .infinity)
 
+            // 3) Description (placeholder text for now)
+            Text(descriptionText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .minimumScaleFactor(0.9)
+                .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 0)
+
+            // 4) AP cost
             Text("\(card.cost) AP")
-                .font(.caption2)
+                .font(.caption)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(.systemGray5))
+                )
         }
-        .padding(12)
-        .frame(width: 96, height: 120)
-        .background(disabled ? Color.gray.opacity(0.3) : Color.blue.opacity(0.3))
-        .cornerRadius(12)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(.separator), lineWidth: 1)
+        )
+        .opacity(disabled ? 0.6 : 1.0)
     }
 
     private var title: String {
@@ -40,6 +73,15 @@ struct ActionCardView: View {
         case .defend: return "🛡️"
         case .doubleStrike: return "⚔️"
         case .counterStance: return "🔁"
+        }
+    }
+
+    private var descriptionText: String {
+        switch card.kind {
+        case .powerStrike: return "Deal damage."
+        case .defend: return "Gain block."
+        case .doubleStrike: return "Deal damage twice."
+        case .counterStance: return "Gain block and deal damage."
         }
     }
 }
