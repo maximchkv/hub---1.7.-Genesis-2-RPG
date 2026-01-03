@@ -227,7 +227,7 @@ final class GameStore: ObservableObject {
             enemyName: "Enemy",
             actionPoints: 2,
             hand: drawHand(),
-            enemyIntent: EnemyIntent(kind: .attack),
+            enemyIntent: EnemyIntent(kind: .attack, value: 5),
             log: [],
             enemyAttackedThisTurn: false,
             cardLevels: levels
@@ -301,30 +301,70 @@ final class GameStore: ObservableObject {
     }
 
     func endTurn() {
-        guard var battle = battle else { return }
+        guard var b = battle else { return }
 
-        // Короткая метка события
-        pushLog(&battle, side: .player, "End turn")
-        self.battle = battle
+        // 1) Закрыли ход игрока
+        pushLog(&b, side: .player, "End turn")
+        battle = b
 
-        // Между ходами — визуальный разделитель (маркер)
+        // 2) Разделитель перед ходом врага
         pushDivider()
 
-        // Enemy acts — лог фактического действия + применение
-        enemyTurn()
+        // 3) Ход врага = действие текущего intent
+        guard var b2 = battle else { return }
+        performEnemyTurn(&b2)
+        // if performEnemyTurn ended battle (player died), it will have called loseBattle()
+        if self.battle == nil { return }
+        battle = b2
 
-        // Между ходами — визуальный разделитель (маркер)
+        // 4) Разделитель после хода врага
         pushDivider()
 
-        // Новый ход игрока: восстановить AP и раздать новую руку
-        var b3 = self.battle ?? battle
+        // 5) Новый ход игрока: обновляем intent, AP, руку
+        guard var b3 = battle else { return }
+        b3.enemyIntent = rollEnemyIntent()
         b3.actionPoints = 2
         b3.hand = drawHand()
         pushLog(&b3, side: .system, "New turn: hand refreshed")
-        self.battle = b3
+        battle = b3
     }
 
-    // MARK: - Enemy turn
+    // MARK: - Enemy turn helpers
+    private func performEnemyTurn(_ b: inout BattleState) {
+        let intent = b.enemyIntent
+
+        switch intent.kind {
+        case .attack:
+            b.enemyAttackedThisTurn = true
+            let dmg = max(0, intent.value)
+            let r = applyDamage(dmg, toHP: &b.playerHP, block: &b.playerBlock)
+            pushLog(&b, side: .enemy, "Attack: dmg \(r.dealt) (blocked \(r.blocked))")
+            if b.playerHP <= 0 {
+                // commit before ending
+                self.battle = b
+                loseBattle()
+                return
+            }
+
+        case .defend:
+            let blockGain = max(0, intent.value)
+            b.enemyBlock += blockGain
+            pushLog(&b, side: .enemy, "Defend: block +\(blockGain)")
+
+        case .counter:
+            // Minimal implementation: preparation stance
+            pushLog(&b, side: .enemy, "Counter")
+        }
+    }
+
+    private func rollEnemyIntent() -> EnemyIntent {
+        let roll = Int.random(in: 0..<100)
+        if roll < 50 { return EnemyIntent(kind: .attack, value: 5) }
+        if roll < 80 { return EnemyIntent(kind: .defend, value: 5) }
+        return EnemyIntent(kind: .counter, value: 0)
+    }
+
+    // MARK: - Enemy turn (legacy, unused)
     private func enemyTurn() {
         guard var battle = battle else { return }
 

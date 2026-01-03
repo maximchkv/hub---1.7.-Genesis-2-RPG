@@ -8,6 +8,7 @@ enum EnemyIntentKind: String, Codable {
 
 struct EnemyIntent: Codable, Hashable {
     var kind: EnemyIntentKind
+    var value: Int = 0
 
     var icon: String {
         switch kind {
