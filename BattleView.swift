@@ -52,34 +52,45 @@ struct BattleView: View {
                 .frame(maxWidth: .infinity)
                 .frame(maxHeight: .infinity, alignment: .top)
 
-                // Bottom controls (cards centered)
+                // Bottom controls
                 VStack(spacing: 8) {
                     Text("Action Points: \(battle.actionPoints)")
                         .font(.caption)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            Spacer(minLength: 0)
+                    // ТЗ-ARCH-BOOT-015 — симметричные отступы слева/справа через фиксированную ширину ряда + два Spacer
+                    let cardWidth: CGFloat = 96
+                    let rowSpacing: CGFloat = 16
+                    let sideInset: CGFloat = 16
 
-                            HStack(spacing: 12) {
-                                ForEach(battle.hand) { card in
-                                    Button {
-                                        store.playCard(card)
-                                    } label: {
-                                        ActionCardView(
-                                            card: card,
-                                            disabled: battle.actionPoints < card.cost
-                                        )
-                                    }
-                                    .disabled(battle.actionPoints < card.cost)
+                    let count = battle.hand.count
+                    let totalWidth =
+                        CGFloat(count) * cardWidth +
+                        CGFloat(max(0, count - 1)) * rowSpacing
+
+                    HStack {
+                        Spacer(minLength: 0)
+
+                        HStack(spacing: rowSpacing) {
+                            ForEach(battle.hand, id: \.id) { card in
+                                Button {
+                                    store.playCard(card)
+                                } label: {
+                                    ActionCardView(
+                                        card: card,
+                                        disabled: battle.actionPoints < card.cost
+                                    )
                                 }
+                                .disabled(battle.actionPoints < card.cost)
+                                .frame(width: cardWidth)
                             }
-
-                            Spacer(minLength: 0)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal)
+                        .frame(width: totalWidth, alignment: .center)
+
+                        Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, sideInset)
+                    .frame(height: 120)
 
                     HStack(spacing: 16) {
                         Button("End Turn") {
