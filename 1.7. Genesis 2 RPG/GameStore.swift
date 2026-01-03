@@ -257,6 +257,11 @@ final class GameStore: ObservableObject {
     // MARK: - Cards (011B: все 4 карты)
     func playCard(_ card: ActionCard) {
         guard var battle = battle else { return }
+
+        // нельзя играть одну и ту же карту (по kind) больше 1 раза за ход
+        if battle.usedCardsThisTurn.contains(card.kind) { return }
+
+        // нельзя играть, если не хватает AP
         guard battle.actionPoints >= card.cost else { return }
 
         // тратим AP
@@ -290,6 +295,9 @@ final class GameStore: ObservableObject {
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(b)")
         }
 
+        // пометили карту как использованную в текущем ходу
+        battle.usedCardsThisTurn.insert(card.kind)
+
         // Commit state
         self.battle = battle
 
@@ -310,6 +318,11 @@ final class GameStore: ObservableObject {
         // 2) Разделитель перед ходом врага
         pushDivider()
 
+        // НАЧАЛО хода врага -> его Block обнуляется
+        guard var bEnemyStart = battle else { return }
+        bEnemyStart.enemyBlock = 0
+        battle = bEnemyStart
+
         // 3) Ход врага = действие текущего intent
         guard var b2 = battle else { return }
         performEnemyTurn(&b2)
@@ -320,11 +333,16 @@ final class GameStore: ObservableObject {
         // 4) Разделитель после хода врага
         pushDivider()
 
-        // 5) Новый ход игрока: обновляем intent, AP, руку
+        // НАЧАЛО нового хода игрока -> его Block обнуляется
         guard var b3 = battle else { return }
+        b3.playerBlock = 0
+
+        // 5) Новый ход игрока: обновляем intent, AP, руку
         b3.enemyIntent = rollEnemyIntent()
         b3.actionPoints = 2
         b3.hand = drawHand()
+        // Сброс “использованных карт за ход”
+        b3.usedCardsThisTurn.removeAll()
         pushLog(&b3, side: .system, "New turn: hand refreshed")
         battle = b3
     }
@@ -340,7 +358,6 @@ final class GameStore: ObservableObject {
             let r = applyDamage(dmg, toHP: &b.playerHP, block: &b.playerBlock)
             pushLog(&b, side: .enemy, "Attack: dmg \(r.dealt) (blocked \(r.blocked))")
             if b.playerHP <= 0 {
-                // commit before ending
                 self.battle = b
                 loseBattle()
                 return
@@ -352,7 +369,7 @@ final class GameStore: ObservableObject {
             pushLog(&b, side: .enemy, "Defend: block +\(blockGain)")
 
         case .counter:
-            // Minimal implementation: preparation stance
+            // Минимальная реализация: подготовка
             pushLog(&b, side: .enemy, "Counter")
         }
     }
@@ -381,11 +398,9 @@ final class GameStore: ObservableObject {
             pushLog(&battle, side: .enemy, "\(intent.text): block +5")
 
         case .counter:
-            // стойка/подготовка — без немедленного эффекта
             pushLog(&battle, side: .enemy, "\(intent.text): no effect")
         }
 
-        // Roll next intent (simple cycle)
         let nextKind: EnemyIntentKind
         switch battle.enemyIntent.kind {
         case .attack: nextKind = .defend

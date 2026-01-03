@@ -39,7 +39,8 @@ struct BattleView: View {
                                 Text(entry.text)
                                     .font(.caption2)
                                     .fontWeight(entry.isPlayer ? .bold : .regular)
-                                    .foregroundStyle(entry.isPlayer ? .primary : .secondary)
+                                    // Enemy logs should be black; only system should be gray.
+                                    .foregroundStyle(entry.kind == .system ? .secondary : .primary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
@@ -72,15 +73,20 @@ struct BattleView: View {
 
                         HStack(spacing: rowSpacing) {
                             ForEach(battle.hand, id: \.id) { card in
+                                let isUsed = battle.usedCardsThisTurn.contains(card.kind)
+                                let hasAP = card.cost <= battle.actionPoints
+                                let canPlay = hasAP && !isUsed
+
                                 Button {
                                     store.playCard(card)
                                 } label: {
                                     ActionCardView(
                                         card: card,
-                                        disabled: battle.actionPoints < card.cost
+                                        disabled: !canPlay
                                     )
                                 }
-                                .disabled(battle.actionPoints < card.cost)
+                                .disabled(!canPlay)
+                                .opacity(canPlay ? 1 : 0.35)
                                 .frame(width: cardWidth)
                             }
                         }

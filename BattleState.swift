@@ -22,4 +22,7 @@ struct BattleState {
 
     // 011B расширения (опционально можно будет хранить уровни карт)
     var cardLevels: [ActionCardKind: Int] = [:]
+
+    // 015: набор карт, уже использованных в текущем ходу (по kind)
+    var usedCardsThisTurn: Set<ActionCardKind> = []
 }
