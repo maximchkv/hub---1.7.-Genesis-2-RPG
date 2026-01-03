@@ -123,7 +123,7 @@ struct CastleView: View {
                                     .font(.caption)
                                     .foregroundStyle(.primary)
                                 }
-                                .contentShape(Rectangle())
+                                .contentShape(Rectangle()) // tap entire rectangle
                             }
                             .buttonStyle(.plain)
                         }
@@ -207,15 +207,26 @@ struct CastleView: View {
                                             .opacity({
                                                 switch store.castleModeUI {
                                                 case CastleUIMode.build:
-                                                    return (tile.building != nil) ? 0.4 : 1.0
+                                                    return (tile.building != nil) ? 0.35 : 1.0
                                                 case CastleUIMode.upgrade:
-                                                    return (tile.building == nil) ? 0.4 : 1.0
+                                                    return (tile.building == nil) ? 0.35 : 1.0
                                                 case CastleUIMode.idle:
                                                     return 1.0
                                                 }
                                             }())
+                                            .scaleEffect(isHighlighted ? 1.02 : 1.0)
                                         }
                                         .buttonStyle(.plain)
+                                        .allowsHitTesting({
+                                            switch store.castleModeUI {
+                                            case CastleUIMode.build:
+                                                return isEmpty
+                                            case CastleUIMode.upgrade:
+                                                return !isEmpty
+                                            case CastleUIMode.idle:
+                                                return true
+                                            }
+                                        }())
                                     }
                                 }
                                 .padding(innerPadding)
