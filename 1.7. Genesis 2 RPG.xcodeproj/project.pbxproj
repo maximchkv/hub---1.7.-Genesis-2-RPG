@@ -27,6 +27,7 @@
 		507E29E12F09654100BD8FBB /* CastleUpgradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */; };
 		507E29E32F09654100BD8FBB /* CastleRelicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E22F09654100BD8FBB /* CastleRelicsView.swift */; };
 		507E29E52F09678500BD8FBB /* CastleGridCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E42F09678500BD8FBB /* CastleGridCellView.swift */; };
+		507E29E72F09756700BD8FBB /* BuildPickerOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29E62F09756700BD8FBB /* BuildPickerOverlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +52,7 @@
 		507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleUpgradeView.swift; sourceTree = "<group>"; };
 		507E29E22F09654100BD8FBB /* CastleRelicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleRelicsView.swift; sourceTree = "<group>"; };
 		507E29E42F09678500BD8FBB /* CastleGridCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastleGridCellView.swift; sourceTree = "<group>"; };
+		507E29E62F09756700BD8FBB /* BuildPickerOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildPickerOverlay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -97,6 +99,7 @@
 				507E29E02F09654100BD8FBB /* CastleUpgradeView.swift */,
 				507E29E22F09654100BD8FBB /* CastleRelicsView.swift */,
 				507E29E42F09678500BD8FBB /* CastleGridCellView.swift */,
+				507E29E62F09756700BD8FBB /* BuildPickerOverlay.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -185,6 +188,7 @@
 				507E29E32F09654100BD8FBB /* CastleRelicsView.swift in Sources */,
 				507E299B2F07F17D00BD8FBB /* Route.swift in Sources */,
 				507E29AB2F07F51A00BD8FBB /* ChestView.swift in Sources */,
+				507E29E72F09756700BD8FBB /* BuildPickerOverlay.swift in Sources */,
 				507E29B32F07F6C600BD8FBB /* ActionCard.swift in Sources */,
 				507E29B52F07F6DD00BD8FBB /* ActionCardView.swift in Sources */,
 				507E299F2F07F18000BD8FBB /* CastleView.swift in Sources */,

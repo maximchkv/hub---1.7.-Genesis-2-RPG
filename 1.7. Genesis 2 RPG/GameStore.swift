@@ -85,21 +85,28 @@ final class GameStore: ObservableObject {
         toast = "\(mode.rawValue) mode"
     }
 
+    // Build specific kind on tile (used by overlay)
+    func buildOnTile(index: Int, kind: BuildingKind) {
+        guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return }
+        guard castleTiles[idx].building == nil else {
+            toast = "Tile is not empty"
+            return
+        }
+        castleTiles[idx].building = kind
+        castleTiles[idx].level = 1
+        toast = "Built \(kind.title)"
+    }
+
     func handleCastleTileTap(_ tileId: Int) {
         guard let idx = castleTiles.firstIndex(where: { $0.id == tileId }) else { return }
 
         switch castleMode {
         case .build:
+            // Overlay-driven; do not auto-build here
             if castleTiles[idx].building != nil {
+                // future: open details; for now, show toast
                 toast = "Tile is not empty"
-                return
             }
-            // MVP: ставим постройку (фикс: Mine)
-            let next: BuildingKind = .mine
-            castleTiles[idx].building = next
-            castleTiles[idx].level = 1
-            toast = "Built \(next.title)"
-
         case .upgrade:
             guard let b = castleTiles[idx].building else {
                 toast = "Nothing to upgrade"
