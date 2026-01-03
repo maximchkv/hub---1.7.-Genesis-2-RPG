@@ -33,6 +33,28 @@ final class GameStore: ObservableObject {
         self.init(meta: PlayerMeta())
     }
 
+    // MARK: - Log helpers (unified format)
+    private enum LogSide: String {
+        case player = "PLAYER"
+        case enemy  = "ENEMY"
+        case system = "SYSTEM"
+    }
+
+    private func logText(_ side: LogSide, _ message: String) -> String {
+        "[\(side.rawValue)] \(message)"
+    }
+
+    private func pushLog(_ battle: inout BattleState, side: LogSide, _ message: String) {
+        battle.log.append(CombatLogEntry(id: UUID(), text: logText(side, message), isPlayer: side == .player))
+    }
+
+    // Divider marker for UI (not a visible text)
+    private func pushDivider() {
+        guard var b = battle else { return }
+        b.log.append(CombatLogEntry(id: UUID(), text: "__DIVIDER__", isPlayer: false))
+        battle = b
+    }
+
     // MARK: - Navigation
     func goToStart() { route = .start }
     func goToHub() { route = .hub }
@@ -200,18 +222,19 @@ final class GameStore: ObservableObject {
         levels[.doubleStrike] = 1
         levels[.counterStance] = 1
 
-        battle = BattleState(
+        var newBattle = BattleState(
             floor: floor,
             enemyName: "Enemy",
             actionPoints: 2,
             hand: drawHand(),
             enemyIntent: EnemyIntent(kind: .attack),
-            log: [
-                CombatLogEntry(text: "New turn: hand refreshed", isPlayer: false, kind: .system)
-            ],
+            log: [],
             enemyAttackedThisTurn: false,
             cardLevels: levels
         )
+        // Start-of-first-turn system log
+        pushLog(&newBattle, side: .system, "New turn: hand refreshed")
+        battle = newBattle
         route = .battle
     }
 
@@ -245,32 +268,26 @@ final class GameStore: ObservableObject {
         case .powerStrike:
             let dmg = powerStrikeDamage(level: lvl)
             let r = applyDamage(dmg, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-            pushPlayer("Player: Power Strike — \(r.dealt) dmg (blocked \(r.blocked))")
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(r.dealt) (blocked \(r.blocked))")
 
         case .defend:
             let b = defendBlock(level: lvl)
             battle.playerBlock += b
-            pushPlayer("Player: Defend — +\(b) block")
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(b)")
 
         case .doubleStrike:
             let hit = doubleStrikeHit(level: lvl)
             let r1 = applyDamage(hit, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-            pushPlayer("Player: Double 1 — \(r1.dealt) dmg (blocked \(r1.blocked))")
             let r2 = applyDamage(hit, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-            pushPlayer("Player: Double 2 — \(r2.dealt) dmg (blocked \(r2.blocked))")
+            let totalDealt = r1.dealt + r2.dealt
+            let totalBlocked = r1.blocked + r2.blocked
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(totalDealt) (blocked \(totalBlocked))")
 
         case .counterStance:
             let b = counterBlock(level: lvl)
             battle.playerBlock += b
-            pushPlayer("Player: Counter Stance — +\(b) block")
-
-            if battle.enemyAttackedThisTurn {
-                let dmg = counterDamage(level: lvl)
-                let r = applyDamage(dmg, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-                pushPlayer("Player: Counter — \(r.dealt) dmg (blocked \(r.blocked))")
-            } else {
-                pushPlayer("Player: Counter — no trigger")
-            }
+            // В этом же ходе карта не наносит урон; эффект — блок
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(b)")
         }
 
         // Commit state
@@ -281,97 +298,54 @@ final class GameStore: ObservableObject {
             winBattle()
             return
         }
-
-        // Лог AP (сохраняем стиль)
-        pushPlayer("Player used \(cardTitle(card.kind)) (-\(card.cost) AP)")
     }
 
     func endTurn() {
         guard var battle = battle else { return }
 
-        pushPlayer("Player ended turn")
+        // Короткая метка события
+        pushLog(&battle, side: .player, "End turn")
+        self.battle = battle
 
-        // конец хода игрока
-        pushSeparator()
+        // Между ходами — визуальный разделитель (маркер)
+        pushDivider()
 
-        // Enemy acts — логируем фактическое действие + next intent
+        // Enemy acts — лог фактического действия + применение
         enemyTurn()
 
-        // конец хода врага
-        pushSeparator()
+        // Между ходами — визуальный разделитель (маркер)
+        pushDivider()
 
         // Новый ход игрока: восстановить AP и раздать новую руку
-        battle = self.battle ?? battle
-        battle.actionPoints = 2
-        battle.hand = drawHand()
-        self.battle = battle
-
-        // начало нового хода игрока
-        beginPlayerTurn()
+        var b3 = self.battle ?? battle
+        b3.actionPoints = 2
+        b3.hand = drawHand()
+        pushLog(&b3, side: .system, "New turn: hand refreshed")
+        self.battle = b3
     }
 
-    // MARK: - Log + Intent utilities
-    private func pushLog(_ entry: CombatLogEntry) {
-        guard var battle = battle else { return }
-        battle.log.append(entry)
-        self.battle = battle
-    }
-
-    private func pushSeparator() {
-        pushLog(.separator())
-    }
-
-    private func pushSystem(_ text: String) {
-        pushLog(.system(text))
-    }
-
-    private func pushPlayer(_ text: String) {
-        pushLog(CombatLogEntry(text: text, isPlayer: true))
-    }
-
-    private func pushEnemy(_ text: String) {
-        pushLog(CombatLogEntry(text: text, isPlayer: false))
-    }
-
-    private func beginPlayerTurn() {
-        guard let _ = battle else { return }
-        pushSystem("New turn: hand refreshed")
-    }
-
-    // Лог одного действия врага по текущему intent (только сообщение)
-    private func logEnemyActionForCurrentIntent(_ intent: EnemyIntent) {
-        switch intent.kind {
-        case .attack:
-            pushLog(CombatLogEntry(id: UUID(), text: "Enemy used Attack", isPlayer: false))
-        case .defend:
-            pushLog(CombatLogEntry(id: UUID(), text: "Enemy used Defend", isPlayer: false))
-        case .counter:
-            pushLog(CombatLogEntry(id: UUID(), text: "Enemy used Counter", isPlayer: false))
-        }
-    }
-
-    // Полный ход врага: лог действия -> применение -> next intent -> лог next intent
+    // MARK: - Enemy turn
     private func enemyTurn() {
         guard var battle = battle else { return }
 
-        let currentIntent = battle.enemyIntent
+        let intent = battle.enemyIntent
 
-        // 1) ЛОГ: враг сделал то, что было в intent
-        logEnemyActionForCurrentIntent(currentIntent)
-
-        // 2) ПРИМЕНЕНИЕ: реальный эффект по текущему intent
-        switch currentIntent.kind {
+        switch intent.kind {
         case .attack:
             battle.enemyAttackedThisTurn = true
-            _ = applyDamage(5, toHP: &battle.playerHP, block: &battle.playerBlock)
+            let r = applyDamage(5, toHP: &battle.playerHP, block: &battle.playerBlock)
+            pushLog(&battle, side: .enemy, "\(intent.text): dmg \(r.dealt) (blocked \(r.blocked))")
+
         case .defend:
             battle.enemyBlock += 5
+            pushLog(&battle, side: .enemy, "\(intent.text): block +5")
+
         case .counter:
             // стойка/подготовка — без немедленного эффекта
-            break
+            pushLog(&battle, side: .enemy, "\(intent.text): no effect")
         }
 
-        // 3) Теперь обновляем intent на следующий ход (после действия)
+        // Roll next intent (simple cycle)
         let nextKind: EnemyIntentKind
         switch battle.enemyIntent.kind {
         case .attack: nextKind = .defend
@@ -379,13 +353,6 @@ final class GameStore: ObservableObject {
         case .counter: nextKind = .attack
         }
         battle.enemyIntent = EnemyIntent(kind: nextKind)
-
-        // 4) Лог next intent (после обновления)
-        pushLog(CombatLogEntry(
-            id: UUID(),
-            text: "ENEMY next intent: \(battle.enemyIntent.text) \(battle.enemyIntent.icon)",
-            isPlayer: false
-        ))
 
         self.battle = battle
     }

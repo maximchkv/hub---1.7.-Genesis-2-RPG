@@ -31,14 +31,15 @@ struct BattleView: View {
                 // --- Log (scrollable, keeps full history) ---
                 ScrollView {
                     VStack(alignment: .leading, spacing: 6) {
-                        ForEach(battle.log) { entry in
-                            if entry.kind == .separator {
+                        ForEach(Array(battle.log.enumerated()), id: \.offset) { _, entry in
+                            if entry.text == "__DIVIDER__" {
                                 Divider()
+                                    .padding(.vertical, 6)
                             } else {
                                 Text(entry.text)
                                     .font(.caption2)
                                     .fontWeight(entry.isPlayer ? .bold : .regular)
-                                    .foregroundStyle(entry.kind == .system ? .secondary : .primary)
+                                    .foregroundStyle(entry.isPlayer ? .primary : .secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
@@ -51,35 +52,48 @@ struct BattleView: View {
                 .frame(maxWidth: .infinity)
                 .frame(maxHeight: .infinity, alignment: .top)
 
-                // Bottom controls (no Spacer above, so log can expand)
+                // Bottom controls (cards centered)
                 VStack(spacing: 8) {
                     Text("Action Points: \(battle.actionPoints)")
                         .font(.caption)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(battle.hand) { card in
-                                ActionCardView(
-                                    card: card,
-                                    disabled: battle.actionPoints < card.cost
-                                )
-                                .onTapGesture {
-                                    store.playCard(card)
+                        HStack {
+                            Spacer(minLength: 0)
+
+                            HStack(spacing: 12) {
+                                ForEach(battle.hand) { card in
+                                    Button {
+                                        store.playCard(card)
+                                    } label: {
+                                        ActionCardView(
+                                            card: card,
+                                            disabled: battle.actionPoints < card.cost
+                                        )
+                                    }
+                                    .disabled(battle.actionPoints < card.cost)
                                 }
                             }
+
+                            Spacer(minLength: 0)
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal)
                     }
 
-                    Button("End Turn") {
-                        store.endTurn()
+                    HStack(spacing: 16) {
+                        Button("End Turn") {
+                            store.endTurn()
+                        }
+                        Button("Surrender") {
+                            store.surrenderBattle()
+                        }
                     }
 
                     // Debug/flow controls
                     VStack(spacing: 12) {
                         Button("Win (debug)") { store.winBattle() }
                         Button("Lose (debug)") { store.loseBattle() }
-                        Button("Surrender") { store.surrenderBattle() }
                     }
                     .padding(.top, 8)
                 }
