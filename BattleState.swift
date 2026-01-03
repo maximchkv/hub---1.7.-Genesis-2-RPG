@@ -1,4 +1,4 @@
-struct BattleState: Codable {
+struct BattleState {
     var floor: Int
     var enemyName: String
 

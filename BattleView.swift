@@ -1,3 +1,4 @@
+// GPT_EDIT_TEST_001
 import SwiftUI
 
 struct BattleView: View {
@@ -7,6 +8,7 @@ struct BattleView: View {
         VStack(spacing: 16) {
             if let battle = store.battle {
                 VStack(spacing: 8) {
+                    // тетаоашмтоако
                     Text("Floor \(battle.floor)")
                         .font(.caption)
 
@@ -26,24 +28,30 @@ struct BattleView: View {
                     }
                 }
 
-                // Combat Log
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Log")
-                        .font(.caption)
-                        .opacity(0.7)
-
-                    ForEach(battle.log) { entry in
-                        Text("• \(entry.text)")
-                            .font(.caption2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                // --- Log (scrollable, keeps full history) ---
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(battle.log) { entry in
+                            if entry.kind == .separator {
+                                Divider()
+                            } else {
+                                Text(entry.text)
+                                    .font(.caption2)
+                                    .fontWeight(entry.isPlayer ? .bold : .regular)
+                                    .foregroundStyle(entry.kind == .system ? .secondary : .primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding()
+                .padding(12)
                 .background(.thinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: .infinity, alignment: .top)
 
-                Spacer()
-
+                // Bottom controls (no Spacer above, so log can expand)
                 VStack(spacing: 8) {
                     Text("Action Points: \(battle.actionPoints)")
                         .font(.caption)
