@@ -3,8 +3,10 @@ import SwiftUI
 struct CastleView: View {
     @EnvironmentObject private var store: GameStore
 
-    // 022B constants
+    // 022B constants (some will be overridden by 022D sizing inside GeometryReader)
     private let castleHorizontalPadding: CGFloat = 16
+
+    // These are retained for general spacing; visual stroke/radius updated below per 022D
     private let gridOuterCornerRadius: CGFloat = 18
     private let gridInnerPadding: CGFloat = 10
     private let gridSpacing: CGFloat = 8
@@ -107,27 +109,46 @@ struct CastleView: View {
             }
             .padding(.top, 6)
 
-            // Новый контейнер-грид 5×5 с фиксированной геометрией
+            // Новый контейнер-грид 5×5 с масштабированием 022D
             GeometryReader { geo in
-                let contentWidth = geo.size.width - (castleHorizontalPadding * 2)
-                let outerWidth = contentWidth
-                let outerHeight = outerWidth * gridAspect
+                // content width matches the info/relics content width
+                let usableWidth = geo.size.width - (castleHorizontalPadding * 2)
+                let usableHeight = geo.size.height
 
-                // 5 колонок, расстояния и внутренние отступы фиксированные
-                let cellWidth = (outerWidth - (gridInnerPadding * 2) - (gridSpacing * 4)) / 5
-                let cellHeight = cellWidth * gridAspect
+                // Scale targets:
+                // - width +5%
+                // - height +15%
+                let gridWidth = usableWidth * 1.05
+                let gridHeight = min(usableHeight, (usableWidth * gridAspect) * 1.15)
+
+                // 1.2 Safe cell sizing from scaled container
+                let cols: CGFloat = 5
+                let rows: CGFloat = 5
+
+                let innerPadding: CGFloat = 14 // increased to let content breathe
+                let cellSpacing: CGFloat = 10   // slightly larger spacing
+
+                let innerW = gridWidth - innerPadding * 2
+                let innerH = gridHeight - innerPadding * 2
+
+                let cellWidth = (innerW - cellSpacing * (cols - 1)) / cols
+                let cellHeight = (innerH - cellSpacing * (rows - 1)) / rows
 
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
 
-                    // GRID контейнер
-                    RoundedRectangle(cornerRadius: gridOuterCornerRadius)
-                        .strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1)
-                        .frame(width: outerWidth, height: outerHeight)
+                    // GRID контейнер with increased radius and stroke width
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(.thinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22)
+                                .stroke(Color.primary.opacity(0.12), lineWidth: 1.5)
+                        )
+                        .frame(width: gridWidth, height: gridHeight)
                         .overlay(
                             LazyVGrid(
-                                columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: gridSpacing), count: 5),
-                                spacing: gridSpacing
+                                columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: cellSpacing), count: Int(cols)),
+                                spacing: cellSpacing
                             ) {
                                 ForEach(store.castleTiles) { tile in
                                     CastleTileButton(
@@ -142,7 +163,7 @@ struct CastleView: View {
                                     }
                                 }
                             }
-                            .padding(gridInnerPadding)
+                            .padding(innerPadding)
                         )
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 12)
@@ -163,7 +184,7 @@ struct CastleView: View {
     }
 }
 
-// Компонент плитки (UI-only)
+// Компонент плитки (UI-only) — 022D reflow and sizing
 private struct CastleTileButton: View {
     let emoji: String
     let title: String
@@ -174,34 +195,46 @@ private struct CastleTileButton: View {
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 4) {
+        // Scaled paddings and typography for 022D
+        let pad: CGFloat = max(8, min(12, width * 0.08))
+        let iconBoxH: CGFloat = max(18, min(24, height * 0.22))
+        let titleSize: CGFloat = max(11, min(13, width * 0.12))
+        let statSize: CGFloat = max(9,  min(11, width * 0.10))
+        let levelSize: CGFloat = max(9, min(11, width * 0.10))
+        let lineSpacing: CGFloat = 2
+
+        return Button(action: onTap) {
+            VStack(spacing: 6) {
+                // Compact icon container
                 Text(emoji)
-                    .font(.system(size: 16))
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(height: iconBoxH)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.secondary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
+                // Title
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: titleSize, weight: .semibold))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity)
+                    .minimumScaleFactor(0.8)
 
+                // Stat line
                 Text(statLine)
-                    .font(.system(size: 10))
+                    .font(.system(size: statSize))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
 
+                // Level badge
                 Text(levelLine)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .font(.system(size: levelSize, weight: .semibold))
+                    .padding(.vertical, 6)
                     .frame(maxWidth: .infinity)
+                    .background(Color.primary.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 6)
+            .padding(pad)
             .frame(width: width, height: height)
             .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 10))
