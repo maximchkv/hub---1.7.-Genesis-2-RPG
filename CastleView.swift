@@ -248,11 +248,9 @@ struct CastleView: View {
         .sheet(isPresented: $store.isBuildSheetPresented) {
             CastleBuildSheetView(
                 onPickFarm: {
-                    // Use predefined candidate (Farm)
                     if let farm = store.buildCandidates.first(where: { $0.kind == .farm }) {
                         store.confirmBuild(farm)
                     } else {
-                        // Fallback: construct and confirm directly
                         store.confirmBuild(
                             BuildCandidate(kind: .farm, title: "Farm", emoji: "🌾", incomePerDay: 1, blurb: "+1 / day")
                         )
@@ -273,23 +271,29 @@ struct CastleView: View {
             )
             .presentationDetents([.medium])
         }
-        // Upgrade sheet (unchanged)
+        // Upgrade sheet (new minimal UI)
         .sheet(isPresented: $store.isUpgradeSheetPresented) {
-            VStack(spacing: 12) {
-                Text("Upgrade (stub)")
-                    .font(.title2)
-
-                if let idx = store.selectedCastleTileIndex {
-                    Text("Tile: \(idx)")
-                        .font(.headline)
-                }
-
-                Button("Close") {
-                    store.closeUpgradeSheet()
-                }
-                .padding(.top, 8)
+            if let idx = store.selectedCastleTileIndex,
+               let info = store.castleTileInfo(idx) {
+                CastleUpgradeSheetView(
+                    title: info.title,
+                    icon: info.icon,
+                    levelText: "Lv \(info.level)",
+                    incomeText: "+\(info.incomePerDay)/day",
+                    onUpgrade: {
+                        store.upgradeTile(index: idx)
+                        store.closeUpgradeSheet()
+                    },
+                    onClose: {
+                        store.closeUpgradeSheet()
+                    }
+                )
+                .presentationDetents([.medium])
+            } else {
+                // Fallback: close if state got out of sync
+                Color.clear
+                    .onAppear { store.closeUpgradeSheet() }
             }
-            .padding()
         }
     }
 }
@@ -415,5 +419,47 @@ private struct CastleBuildSheetView: View {
             .padding(.top, 4)
         }
         .padding(20)
+    }
+}
+
+// 023E: Minimal Upgrade sheet UI
+private struct CastleUpgradeSheetView: View {
+    let title: String
+    let icon: String
+    let levelText: String
+    let incomeText: String
+
+    let onUpgrade: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Upgrade")
+                .font(.title2)
+
+            HStack(spacing: 12) {
+                Text(icon)
+                    .font(.largeTitle)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                    Text("\(incomeText) • \(levelText)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
+
+            Button("Upgrade (stub)") {
+                onUpgrade()
+            }
+            .buttonStyle(.borderedProminent)
+
+            Button("Close") {
+                onClose()
+            }
+        }
+        .padding()
     }
 }
