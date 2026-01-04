@@ -577,6 +577,10 @@ final class GameStore: ObservableObject {
     private func enemyAttackValue() -> Int { 5 }
     private func enemyBlockValue() -> Int { 5 }
 
+    // Counter-Stance Lv1 constants (027C-A)
+    private func counterStanceBlockValue() -> Int { 4 }
+    private func counterStanceAttackValue() -> Int { 3 }
+
     private func intentFromPattern(_ battle: BattleState) -> EnemyIntent {
         guard !battle.enemyPattern.isEmpty else {
             return EnemyIntent(kind: .attack, value: 5)
@@ -675,9 +679,12 @@ final class GameStore: ObservableObject {
             let totalBlocked = r1.blocked + r2.blocked
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(totalDealt) (blocked \(totalBlocked))")
         case .counterStance:
-            let b = counterBlock(level: lvl)
-            battle.playerBlock += b
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(b)")
+            // 027C-A: Counter-Stance Lv1 values (player): +4 block, 3 dmg, single log line
+            let bVal = counterStanceBlockValue()
+            let dmgVal = counterStanceAttackValue()
+            battle.playerBlock += bVal
+            let r = applyDamage(dmgVal, toHP: &battle.enemyHP, block: &battle.enemyBlock)
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal), dmg \(dmgVal) (blocked \(r.blocked))")
         }
 
         battle.usedCardsThisTurn.insert(card.kind)
@@ -732,11 +739,12 @@ final class GameStore: ObservableObject {
             pushLog(&battle, side: .enemy, "Defend: block +\(block)")
 
         case .counterStance:
-            let block = enemyBlockValue()
-            let dmg = enemyAttackValue()
-            battle.enemyBlock += block
-            let r = applyDamage(dmg, toHP: &battle.playerHP, block: &battle.playerBlock)
-            pushLog(&battle, side: .enemy, "Counter Stance: block +\(block), dmg \(r.dealt) (blocked \(r.blocked))")
+            // 027C-A: Counter-Stance Lv1 values (enemy): +4 block, 3 dmg, single log line
+            let bVal = counterStanceBlockValue()
+            let dmgVal = counterStanceAttackValue()
+            battle.enemyBlock += bVal
+            let r = applyDamage(dmgVal, toHP: &battle.playerHP, block: &battle.playerBlock)
+            pushLog(&battle, side: .enemy, "Counter Stance: block +\(bVal), dmg \(dmgVal) (blocked \(r.blocked))")
             if battle.playerHP <= 0 {
                 self.battle = battle
                 loseBattle()
