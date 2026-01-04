@@ -338,6 +338,8 @@ private struct StatusPanel: View {
         case .attack: return "Attack"
         case .defend: return "Defend"
         case .counter: return "Counter"
+        case .counterStance: return "Counter Stance"
+        case .doubleStrikeFixed4: return "Double Strike"
         }
     }
 
@@ -346,6 +348,8 @@ private struct StatusPanel: View {
         case .attack: return "sword"
         case .defend: return "shield"
         case .counter: return "arrow.triangle.2.circlepath"
+        case .counterStance: return "arrow.triangle.2.circlepath"
+        case .doubleStrikeFixed4: return "suit.heart"
         }
     }
 }

@@ -4,6 +4,8 @@ enum EnemyIntentKind: String, Codable {
     case attack
     case defend
     case counter
+    case counterStance
+    case doubleStrikeFixed4
 }
 
 struct EnemyIntent: Codable, Hashable {
@@ -15,6 +17,8 @@ struct EnemyIntent: Codable, Hashable {
         case .attack: return "🗡️"
         case .defend: return "🛡️"
         case .counter: return "🔁"
+        case .counterStance: return "🔁"
+        case .doubleStrikeFixed4: return "⚔️"
         }
     }
 
@@ -23,6 +27,8 @@ struct EnemyIntent: Codable, Hashable {
         case .attack: return "Attack"
         case .defend: return "Defend"
         case .counter: return "Counter"
+        case .counterStance: return "Counter Stance"
+        case .doubleStrikeFixed4: return "Double Strike"
         }
     }
 }

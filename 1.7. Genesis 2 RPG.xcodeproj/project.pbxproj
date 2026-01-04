@@ -32,6 +32,7 @@
 		507E29EB2F09821C00BD8FBB /* RelicsListSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EA2F09821C00BD8FBB /* RelicsListSheetView.swift */; };
 		507E29ED2F09B82E00BD8FBB /* UIStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EC2F09B82E00BD8FBB /* UIStyle.swift */; };
 		507E29EF2F0A307F00BD8FBB /* Enemy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EE2F0A307F00BD8FBB /* Enemy.swift */; };
+		507E29F12F0A332100BD8FBB /* RuntimeEnemyCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +62,7 @@
 		507E29EA2F09821C00BD8FBB /* RelicsListSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelicsListSheetView.swift; sourceTree = "<group>"; };
 		507E29EC2F09B82E00BD8FBB /* UIStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIStyle.swift; sourceTree = "<group>"; };
 		507E29EE2F0A307F00BD8FBB /* Enemy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enemy.swift; sourceTree = "<group>"; };
+		507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeEnemyCatalog.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -112,6 +114,7 @@
 				507E29EA2F09821C00BD8FBB /* RelicsListSheetView.swift */,
 				507E29EC2F09B82E00BD8FBB /* UIStyle.swift */,
 				507E29EE2F0A307F00BD8FBB /* Enemy.swift */,
+				507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -217,6 +220,7 @@
 				507E29AD2F07F60F00BD8FBB /* BattleState.swift in Sources */,
 				507E29A52F07F2FB00BD8FBB /* TowerService.swift in Sources */,
 				507E29B92F07F7E400BD8FBB /* CombatLogEntry.swift in Sources */,
+				507E29F12F0A332100BD8FBB /* RuntimeEnemyCatalog.swift in Sources */,
 				507E29A12F07F18000BD8FBB /* CardLibraryView.swift in Sources */,
 				507E29EB2F09821C00BD8FBB /* RelicsListSheetView.swift in Sources */,
 				507E29992F07F0DA00BD8FBB /* PlayerMeta.swift in Sources */,

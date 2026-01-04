@@ -367,6 +367,23 @@ final class GameStore: ObservableObject {
         battle = b
     }
 
+    // Spec wrappers
+    private func pushSeparator() {
+        pushDivider()
+    }
+
+    private func pushSystem(_ text: String) {
+        guard var b = battle else { return }
+        pushLog(&b, side: .system, text)
+        battle = b
+    }
+
+    private func pushEnemy(_ text: String) {
+        guard var b = battle else { return }
+        pushLog(&b, side: .enemy, text)
+        battle = b
+    }
+
     // MARK: - Navigation
     func goToStart() { route = .start }
     func goToHub() { route = .hub }
@@ -556,30 +573,63 @@ final class GameStore: ObservableObject {
         Int((Double(defendBlock(level: level)) * 0.8).rounded())
     }
 
+    // MARK: - Runtime enemy helpers (spec)
+    private func enemyAttackValue() -> Int { 5 }
+    private func enemyBlockValue() -> Int { 5 }
+
+    private func intentFromPattern(_ battle: BattleState) -> EnemyIntent {
+        guard !battle.enemyPattern.isEmpty else {
+            return EnemyIntent(kind: .attack, value: 5)
+        }
+
+        let move = battle.enemyPattern[battle.enemyPatternIndex].kind
+        switch move {
+        case .attack:
+            return EnemyIntent(kind: .attack, value: 5)
+        case .defend:
+            return EnemyIntent(kind: .defend, value: 5)
+        case .counterStance:
+            return EnemyIntent(kind: .counterStance, value: 0)
+        case .doubleStrikeFixed4:
+            return EnemyIntent(kind: .doubleStrikeFixed4, value: 0)
+        }
+    }
+
     // MARK: - Battle
     func startBattle() {
-        let floor = run?.currentFloor ?? 1
-        var levels: [ActionCardKind: Int] = [:]
-        levels[.powerStrike] = 1
-        levels[.defend] = 1
-        levels[.doubleStrike] = 1
-        levels[.counterStance] = 1
+        let enemy = RuntimeEnemyCatalog.randomV1()
 
+        // Preserve your current initialization pattern but set runtime enemy fields
         var newBattle = BattleState(
-            floor: floor,
-            enemyName: "Enemy",
+            floor: run?.currentFloor ?? 1,
+            enemyName: enemy.name,
+            playerHP: 20,
+            playerBlock: 0,
+            enemyHP: 20,
+            enemyBlock: 0,
             actionPoints: 2,
             hand: drawHand(),
             enemyIntent: EnemyIntent(kind: .attack, value: 5),
             log: [],
             enemyAttackedThisTurn: false,
-            cardLevels: levels
+            cardLevels: [.powerStrike: 1, .defend: 1, .doubleStrike: 1, .counterStance: 1]
         )
         newBattle.phase = .player
 
-        pushLog(&newBattle, side: .system, "New turn: hand refreshed")
+        // Runtime enemy fields
+        newBattle.enemyRuntimeKind = enemy.kind
+        newBattle.enemyRole = enemy.role
+        newBattle.enemyPattern = enemy.pattern
+        newBattle.enemyPatternIndex = 0
+
+        // First intent from pattern
+        newBattle.enemyIntent = intentFromPattern(newBattle)
+
         battle = newBattle
         route = .battle
+
+        pushSeparator()
+        pushSystem("New turn: hand refreshed")
     }
 
     func winBattle() {
@@ -645,89 +695,78 @@ final class GameStore: ObservableObject {
         b.phase = .enemy
         battle = b
 
-        pushDivider()
+        // Enemy phase: per spec
+        pushSeparator()
+        performEnemyTurn()
+        cycleEnemyIntent()
+        pushSeparator()
 
-        guard var bEnemyStart = battle else { return }
-        bEnemyStart.enemyBlock = 0
-        battle = bEnemyStart
-
+        // Prepare next player turn
         guard var b2 = battle else { return }
-        performEnemyTurn(&b2)
-        if self.battle == nil { return }
+        b2.playerBlock = 0
+        b2.actionPoints = 2
+        b2.hand = drawHand()
+        b2.usedCardsThisTurn.removeAll()
+        b2.phase = .player
+        pushLog(&b2, side: .system, "New turn: hand refreshed")
         battle = b2
-
-        pushDivider()
-
-        guard var b3 = battle else { return }
-        b3.playerBlock = 0
-        b3.enemyIntent = rollEnemyIntent()
-        b3.actionPoints = 2
-        b3.hand = drawHand()
-        b3.usedCardsThisTurn.removeAll()
-        b3.phase = .player
-        pushLog(&b3, side: .system, "New turn: hand refreshed")
-        battle = b3
     }
 
-    private func performEnemyTurn(_ b: inout BattleState) {
-        let intent = b.enemyIntent
+    private func performEnemyTurn() {
+        guard var battle = battle else { return }
 
-        switch intent.kind {
+        switch battle.enemyIntent.kind {
         case .attack:
-            b.enemyAttackedThisTurn = true
-            let dmg = max(0, intent.value)
-            let r = applyDamage(dmg, toHP: &b.playerHP, block: &b.playerBlock)
-            pushLog(&b, side: .enemy, "Attack: dmg \(r.dealt) (blocked \(r.blocked))")
-            if b.playerHP <= 0 {
-                self.battle = b
+            let dmg = enemyAttackValue()
+            let r = applyDamage(dmg, toHP: &battle.playerHP, block: &battle.playerBlock)
+            pushLog(&battle, side: .enemy, "Attack: dmg \(r.dealt) (blocked \(r.blocked))")
+            if battle.playerHP <= 0 {
+                self.battle = battle
                 loseBattle()
                 return
             }
 
         case .defend:
-            let blockGain = max(0, intent.value)
-            b.enemyBlock += blockGain
-            pushLog(&b, side: .enemy, "Defend: block +\(blockGain)")
+            let block = enemyBlockValue()
+            battle.enemyBlock += block
+            pushLog(&battle, side: .enemy, "Defend: block +\(block)")
+
+        case .counterStance:
+            let block = enemyBlockValue()
+            let dmg = enemyAttackValue()
+            battle.enemyBlock += block
+            let r = applyDamage(dmg, toHP: &battle.playerHP, block: &battle.playerBlock)
+            pushLog(&battle, side: .enemy, "Counter Stance: block +\(block), dmg \(r.dealt) (blocked \(r.blocked))")
+            if battle.playerHP <= 0 {
+                self.battle = battle
+                loseBattle()
+                return
+            }
+
+        case .doubleStrikeFixed4:
+            let r1 = applyDamage(4, toHP: &battle.playerHP, block: &battle.playerBlock)
+            let r2 = applyDamage(4, toHP: &battle.playerHP, block: &battle.playerBlock)
+            let dealt = r1.dealt + r2.dealt
+            let blocked = r1.blocked + r2.blocked
+            pushLog(&battle, side: .enemy, "Double Strike: dmg \(dealt) (blocked \(blocked))")
+            if battle.playerHP <= 0 {
+                self.battle = battle
+                loseBattle()
+                return
+            }
 
         case .counter:
-            pushLog(&b, side: .enemy, "Counter")
-        }
-    }
-
-    private func rollEnemyIntent() -> EnemyIntent {
-        let roll = Int.random(in: 0..<100)
-        if roll < 50 { return EnemyIntent(kind: .attack, value: 5) }
-        if roll < 80 { return EnemyIntent(kind: .defend, value: 5) }
-        return EnemyIntent(kind: .counter, value: 0)
-    }
-
-    private func enemyTurn() {
-        guard var battle = battle else { return }
-
-        let intent = battle.enemyIntent
-
-        switch intent.kind {
-        case .attack:
-            battle.enemyAttackedThisTurn = true
-            let r = applyDamage(5, toHP: &battle.playerHP, block: &battle.playerBlock)
-            pushLog(&battle, side: .enemy, "\(intent.text): dmg \(r.dealt) (blocked \(r.blocked))")
-
-        case .defend:
-            battle.enemyBlock += 5
-            pushLog(&battle, side: .enemy, "\(intent.text): block +5")
-
-        case .counter:
+            // legacy no-op if encountered
             pushLog(&battle, side: .enemy, "Counter")
         }
 
-        let nextKind: EnemyIntentKind
-        switch battle.enemyIntent.kind {
-        case .attack: nextKind = .defend
-        case .defend: nextKind = .counter
-        case .counter: nextKind = .attack
-        }
-        battle.enemyIntent = EnemyIntent(kind: nextKind)
+        self.battle = battle
+    }
 
+    func cycleEnemyIntent() {
+        guard var battle = battle else { return }
+        battle.advanceEnemyPattern()
+        battle.enemyIntent = intentFromPattern(battle)
         self.battle = battle
     }
 

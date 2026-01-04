@@ -36,22 +36,32 @@ struct TowerView: View {
                     Button {
                         store.selectRoom(option)
                     } label: {
-                        HStack {
+                        HStack(spacing: 12) {
                             Text(option.icon)
-                            VStack(alignment: .leading, spacing: 4) {
+                                .font(.title2)
+
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text(option.title)
                                     .font(.headline)
+
+                                Text(option.kind == .combat ? "Combat • Random enemy" : "Chest • Relic")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
                                 if !option.subtitle.isEmpty {
                                     Text(option.subtitle)
-                                        .font(.caption)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
+
                             Spacer()
                         }
-                        .padding()
+                        .padding(.vertical, 18)
+                        .padding(.horizontal, 14)
                         .frame(maxWidth: .infinity)
                         .background(.thinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                         .opacity(option.isLocked ? 0.5 : 1.0)
                     }
                     .disabled(option.isLocked)

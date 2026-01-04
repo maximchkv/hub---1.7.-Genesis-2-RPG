@@ -14,6 +14,12 @@ struct BattleState {
     var enemyHP: Int = 20
     var enemyBlock: Int = 0
 
+    // Runtime enemy (pattern-based)
+    var enemyRuntimeKind: RuntimeEnemyKind = .punisher
+    var enemyRole: String = ""
+    var enemyPattern: [RuntimeEnemyMove] = []
+    var enemyPatternIndex: Int = 0
+
     // Карточная часть
     var actionPoints: Int
     var hand: [ActionCard]
@@ -33,4 +39,9 @@ struct BattleState {
 
     // 018A: текущая фаза хода
     var phase: Phase = .player
+
+    mutating func advanceEnemyPattern() {
+        guard !enemyPattern.isEmpty else { return }
+        enemyPatternIndex = (enemyPatternIndex + 1) % enemyPattern.count
+    }
 }
