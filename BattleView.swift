@@ -11,44 +11,50 @@ struct BattleView: View {
     private let panelsHeight: CGFloat = 92
 
     var body: some View {
-        GeometryReader { geo in
-            VStack(spacing: 12) {
-                if let battle = store.battle {
-                    // 1) Header (Floor) with fixed top padding
-                    Text("Floor \(battle.floor)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, topHeaderPad)
+        ZStack {
+            UIStyle.background
+                .ignoresSafeArea()
 
-                    // 2) Player/Enemy panels (fixed height + explicit top gap)
-                    playerEnemyPanels
-                        .frame(height: panelsHeight)
-                        .padding(.top, gapHeaderToPanels)
-                        .padding(.horizontal, 16)
+            // Existing content (unchanged)
+            GeometryReader { geo in
+                VStack(spacing: 12) {
+                    if let battle = store.battle {
+                        // 1) Header (Floor) with fixed top padding
+                        Text("Floor \(battle.floor)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, topHeaderPad)
 
-                    // 3) Logs: start below panels with explicit top gap, take remaining space
-                    battleLogView
-                        .padding(.top, gapPanelsToLog)
-                        .frame(maxWidth: .infinity)
-                        .frame(maxHeight: .infinity)
-                        .padding(.horizontal, 16)
+                        // 2) Player/Enemy panels (fixed height + explicit top gap)
+                        playerEnemyPanels
+                            .frame(height: panelsHeight)
+                            .padding(.top, gapHeaderToPanels)
+                            .padding(.horizontal, 16)
 
-                    // 4) Actions row (fixed)
-                    actionsRow
-                        .padding(.horizontal, 16)
+                        // 3) Logs: start below panels with explicit top gap, take remaining space
+                        battleLogView
+                            .padding(.top, gapPanelsToLog)
+                            .frame(maxWidth: .infinity)
+                            .frame(maxHeight: .infinity)
+                            .padding(.horizontal, 16)
 
-                    // 5) Bottom buttons (fixed, 2 rows)
-                    bottomButtons
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 10)
-                } else {
-                    Text("No battle state")
-                    Button("Back") { store.goToTower() }
+                        // 4) Actions row (fixed)
+                        actionsRow
+                            .padding(.horizontal, 16)
+
+                        // 5) Bottom buttons (fixed, 2 rows)
+                        bottomButtons
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 10)
+                    } else {
+                        Text("No battle state")
+                        Button("Back") { store.goToTower() }
+                    }
                 }
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
             }
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .padding(.vertical, 0)
         }
-        .padding(.vertical, 0)
     }
 
     // MARK: - Sections
@@ -140,7 +146,6 @@ struct BattleView: View {
                 .background(.thinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .frame(maxWidth: .infinity)
-                // Important: do not add negative offsets/overlays here
             } else {
                 EmptyView()
             }
@@ -280,7 +285,7 @@ private struct StatusPanel: View {
                 intentRow
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .layoutPriority(1) // text column has priority over avatar when space is tight
+            .layoutPriority(1)
 
             // Player avatar placeholder is on the RIGHT
             if side == .player {
@@ -288,7 +293,7 @@ private struct StatusPanel: View {
             }
         }
         .padding(12)
-        .frame(height: 120) // keeps internal layout consistent; outer container clamps to panelsHeight
+        .frame(height: 120)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(.secondarySystemBackground))
@@ -306,7 +311,6 @@ private struct StatusPanel: View {
             .accessibilityLabel("Avatar placeholder")
     }
 
-    // Reserve a consistent Intent row in both panels; enemy shows content, player shows empty row
     private var intentRow: some View {
         HStack(spacing: 6) {
             if side == .enemy, let k = intentKind {
@@ -319,7 +323,6 @@ private struct StatusPanel: View {
                     .multilineTextAlignment(.leading)
                     .minimumScaleFactor(0.85)
             } else {
-                // Reserve same vertical space in Player panel
                 Text(" ")
                     .font(.caption)
                     .lineLimit(2)

@@ -198,7 +198,8 @@ final class GameStore: ObservableObject {
         )
     }
 
-    // Build specific kind on tile (used by Build overlay) — now marks constructing (pending)
+    // Build specific kind on tile (used by Build overlay) — legacy immediate builder
+    // Kept for compatibility; prefer buildTile(tileIndex:type:) with cost and pending.
     func buildOnTile(index: Int, kind: BuildingKind) {
         guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return }
         switch castleTiles[idx].state {
@@ -212,18 +213,18 @@ final class GameStore: ObservableObject {
         castleRecomputeStats()
     }
 
-    // Upgrade tile by +1 level (used by Upgrade overlay) — now marks upgrading (pending)
-    // Legacy API kept for compatibility (delegates to 027A3 implementation)
+    // Upgrade tile by +1 level (used by Upgrade overlay) — legacy signature delegates to 027A3
     func upgradeTile(index: Int) {
         upgradeTile(tileIndex: index)
     }
 
-    // 027A3: Can upgrade check (gold + state)
+    // 027A3 + 027B: Can upgrade check (gold + state + max level)
     func canUpgradeTile(tileIndex: Int) -> Bool {
         guard castleTiles.indices.contains(tileIndex) else { return false }
         let tile = castleTiles[tileIndex]
         switch tile.state {
         case .built(let type, let level):
+            guard level < type.maxLevel else { return false }
             let cost = type.upgradeCost(fromLevel: level)
             return meta.gold >= cost
         default:
@@ -231,12 +232,18 @@ final class GameStore: ObservableObject {
         }
     }
 
-    // 027A3: Upgrade with cost, busy checks, and pending state
+    // 027A3 + 027B: Upgrade with cost, busy checks, max level, and pending state
     func upgradeTile(tileIndex: Int) {
         guard castleTiles.indices.contains(tileIndex) else { return }
 
         switch castleTiles[tileIndex].state {
         case .built(let type, let level):
+            // 027B: max level guard first
+            guard level < type.maxLevel else {
+                toast = "Max level reached"
+                return
+            }
+
             let cost = type.upgradeCost(fromLevel: level)
             guard meta.gold >= cost else {
                 toast = "Not enough gold"
@@ -261,6 +268,57 @@ final class GameStore: ObservableObject {
         case .upgrading:
             toast = "Busy: upgrading"
         }
+    }
+
+    // 027A4: Can build check (state + gold with scaling by existing built count)
+    func canBuildTile(tileIndex: Int, type: BuildingKind) -> Bool {
+        guard castleTiles.indices.contains(tileIndex) else { return false }
+
+        let tile = castleTiles[tileIndex]
+        // Only on empty tiles
+        guard case .empty = tile.state else { return false }
+
+        let builtCount = castleTiles.filter {
+            if case .built = $0.state { return true }
+            return false
+        }.count
+
+        let cost = type.buildCost(existingBuildings: builtCount)
+        return meta.gold >= cost
+    }
+
+    // 027A4: Build with cost, busy checks, pending construction, and scaling
+    func buildTile(tileIndex: Int, type: BuildingKind) {
+        guard castleTiles.indices.contains(tileIndex) else { return }
+
+        let tile = castleTiles[tileIndex]
+        guard case .empty = tile.state else {
+            toast = "Tile is busy"
+            return
+        }
+
+        let builtCount = castleTiles.filter {
+            if case .built = $0.state { return true }
+            return false
+        }.count
+
+        let cost = type.buildCost(existingBuildings: builtCount)
+
+        guard meta.gold >= cost else {
+            toast = "Not enough gold"
+            return
+        }
+
+        // Pay immediately
+        meta.gold -= cost
+
+        // Set pending construction
+        castleTiles[tileIndex].state = .constructing(type: type)
+
+        // Income does not change until Day Tick
+        castleRecomputeStats()
+
+        toast = "Construction started"
     }
 
     private let towerService = TowerService()
@@ -659,7 +717,7 @@ final class GameStore: ObservableObject {
             pushLog(&battle, side: .enemy, "\(intent.text): block +5")
 
         case .counter:
-            pushLog(&battle, side: .enemy, "\(intent.text): no effect")
+            pushLog(&battle, side: .enemy, "Counter")
         }
 
         let nextKind: EnemyIntentKind
@@ -757,8 +815,8 @@ final class GameStore: ObservableObject {
 
     func confirmBuild(_ candidate: BuildCandidate) {
         guard let index = selectedBuildTileIndex else { return }
-        // Use pending build logic
-        buildOnTile(index: index, kind: candidate.kind)
+        // Prefer cost-aware pending build
+        buildTile(tileIndex: index, type: candidate.kind)
         // Close and reset
         isBuildSheetPresented = false
         selectedBuildTileIndex = nil
@@ -822,7 +880,7 @@ final class GameStore: ObservableObject {
     }
 }
 
-// MARK: - BuildingKind income progression (027A1) + upgrade cost (027A3)
+// MARK: - BuildingKind income progression (027A1) + upgrade cost (027A3) + build cost (027A4) + max level (027B)
 extension GameStore.BuildingKind {
     var baseIncome: Int {
         switch self {
@@ -848,5 +906,26 @@ extension GameStore.BuildingKind {
         let lvl = max(1, fromLevel)
         // L1->L2: 20, L2->L3: 35, L3->L4: 55, L4->L5: 80 ...
         return 10 + (lvl * lvl * 5) + (lvl * 5)
+    }
+
+    // 027A4: build cost with simple scaling by number of existing built buildings
+    func buildCost(existingBuildings: Int) -> Int {
+        // MVP: base + 4 per existing built
+        return baseBuildCost + (existingBuildings * 4)
+    }
+
+    var baseBuildCost: Int {
+        switch self {
+        case .mine: return 20
+        case .farm: return 15
+        }
+    }
+
+    // 027B: max level per building type
+    var maxLevel: Int {
+        switch self {
+        case .mine: return 5
+        case .farm: return 5
+        }
     }
 }
