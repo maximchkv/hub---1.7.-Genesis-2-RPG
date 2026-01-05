@@ -333,7 +333,7 @@ private struct BattleParticipantCard: View {
 
             Spacer(minLength: 0)
 
-            // Portrait placeholder (elastic, pinned: L/R/B = 8)
+            // Portrait placeholder or player image (elastic, pinned: L/R/B = 8)
             ZStack {
                 RoundedRectangle(cornerRadius: portraitCorner)
                     .strokeBorder(.gray.opacity(0.20), lineWidth: 1)
@@ -342,9 +342,18 @@ private struct BattleParticipantCard: View {
                             .fill(.gray.opacity(0.08))
                     )
 
-                Image(systemName: "photo")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(.secondary)
+                if intentText == nil {
+                    // Player portrait
+                    Image("player")
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(RoundedRectangle(cornerRadius: portraitCorner))
+                } else {
+                    // Enemy placeholder (until enemy art arrives)
+                    Image(systemName: "photo")
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, portraitInset)
