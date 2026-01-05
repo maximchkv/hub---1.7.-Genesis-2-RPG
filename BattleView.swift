@@ -21,7 +21,7 @@ struct BattleView: View {
     private let participantGap: CGFloat = 12 // was 6; now larger gap between cards
     private let participantSideInset: CGFloat = 10 // squeeze row inside contentWidth for side/center air
     private let participantInnerPad: CGFloat = 0
-    private let participantCardHeight: CGFloat = 220 // taller participant cards (try 240–260 if needed)
+    private let participantCardHeight: CGFloat = 284 // taller participant cards (try 240–260 if needed)
 
     // Log sizing
     private let logMinHeight: CGFloat = 110
@@ -91,7 +91,7 @@ struct BattleView: View {
                         battleLogView
                             .frame(width: contentWidth, alignment: .center)
                             .frame(minHeight: logMinHeight)
-                            .frame(maxHeight: .infinity)
+                            .frame(maxHeight: max(0, geo.size.height - 64))
                             .layoutPriority(1)
 
                         Spacer().frame(height: logToCards)
@@ -280,6 +280,8 @@ private struct BattleParticipantCard: View {
 
     private let cardCorner: CGFloat = 16
     private let innerPad: CGFloat = 10
+    private let portraitInset: CGFloat = 8
+    private let portraitCorner: CGFloat = 14
 
     var body: some View {
         VStack(spacing: 6) {
@@ -326,12 +328,12 @@ private struct BattleParticipantCard: View {
 
             Spacer(minLength: 0)
 
-            // Square placeholder: height == card width (minus inner padding)
+            // Portrait placeholder (elastic, pinned: L/R/B = 8)
             ZStack {
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: portraitCorner)
                     .strokeBorder(.gray.opacity(0.20), lineWidth: 1)
                     .background(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: portraitCorner)
                             .fill(.gray.opacity(0.08))
                     )
 
@@ -339,8 +341,9 @@ private struct BattleParticipantCard: View {
                     .font(.system(size: 22, weight: .regular))
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 4)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, portraitInset)
+            .padding(.bottom, portraitInset)
             .aspectRatio(1, contentMode: .fit)
         }
         .padding(innerPad)
