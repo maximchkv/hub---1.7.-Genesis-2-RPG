@@ -7,156 +7,118 @@ struct BattleView: View {
     // MARK: - Layout constants (Contract v1.1)
     private let topHeaderPad: CGFloat = 10
 
-    // Single-source vertical gaps (fixed, non-stretching)
-    private let headerToParticipants: CGFloat = 48
-    private let participantsToLog: CGFloat = 48
+    // Fixed vertical gaps
+    private let headerToParticipants: CGFloat = 24
+    private let participantsToLog: CGFloat = 24
     private let logToActionPoints: CGFloat = 12
-    private let actionsToButtons: CGFloat = 12
+    private let actionsToButtons: CGFloat = 120
 
-    // Participants: soft-resizable in v1.1
+    // Participants sizing
     private let participantMinHeight: CGFloat = 200
-    private let participantMaxHeight: CGFloat = 260
+    private let participantMaxHeight: CGFloat = 400
 
-    // Log: primary stretchy block
-    private let logMinHeight: CGFloat = 88
-
-    // Legacy/unusued
-    private let participantExtraHeight: CGFloat = 0
+    // Log sizing (bounded, because we now allow vertical scroll)
+    private let logMinHeight: CGFloat = 120
+    private let logMaxHeight: CGFloat = 260
 
     var body: some View {
         ZStack {
-            UIStyle.background
+            UIStyle.background()
                 .ignoresSafeArea()
 
             GeometryReader { geo in
-                VStack(spacing: 0) {
-                    if let battle = store.battle {
+                let outerPad: CGFloat = 16
+                let available = max(0, geo.size.width - outerPad * 2)
+                let contentWidth = min(available, 380)
 
-                        // Header (never compresses)
-                        Text("Floor \(battle.floor)")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, topHeaderPad)
+                ScrollView(.vertical) {
+                    VStack(spacing: 0) {
+                        if let battle = store.battle {
 
-                        // Hard gap: Header → Participants
-                        VGap(h: headerToParticipants)
+                            // Header
+                            Text("Floor \(battle.floor)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, topHeaderPad)
+                                .frame(width: contentWidth, alignment: .center)
 
-                        // Participants (soft-resizable: min/max, priority 0)
-                        HStack(spacing: 12) {
-                            BattleParticipantCard(
-                                title: "Player",
-                                hp: battle.playerHP,
-                                block: battle.playerBlock,
-                                maxHP: 20,
-                                intentText: nil,
-                                isEnemy: false
-                            )
-                            .frame(minHeight: participantMinHeight)
-                            .frame(maxHeight: participantMaxHeight)
+                            VGap(h: headerToParticipants)
 
-                            BattleParticipantCard(
-                                title: battle.enemyName,
-                                hp: battle.enemyHP,
-                                block: battle.enemyBlock,
-                                maxHP: 20,
-                                intentText: battle.enemyIntent.text,
-                                isEnemy: true
-                            )
-                            .frame(minHeight: participantMinHeight)
-                            .frame(maxHeight: participantMaxHeight)
+                            // Participants — fixed width split to avoid horizontal drift
+                            let participantGap: CGFloat = 12
+                            let participantW = max(0, (contentWidth - participantGap) / 2)
+
+                            HStack(spacing: participantGap) {
+                                BattleParticipantCard(
+                                    title: "Player",
+                                    hp: battle.playerHP,
+                                    block: battle.playerBlock,
+                                    maxHP: 20,
+                                    intentText: nil,
+                                    isEnemy: false
+                                )
+                                .frame(width: participantW)
+                                .frame(minHeight: participantMinHeight)
+                                .frame(maxHeight: participantMaxHeight)
+
+                                BattleParticipantCard(
+                                    title: battle.enemyName,
+                                    hp: battle.enemyHP,
+                                    block: battle.enemyBlock,
+                                    maxHP: 20,
+                                    intentText: battle.enemyIntent.text,
+                                    isEnemy: true
+                                )
+                                .frame(width: participantW)
+                                .frame(minHeight: participantMinHeight)
+                                .frame(maxHeight: participantMaxHeight)
+                            }
+                            .frame(width: contentWidth, alignment: .center)
+
+                            VGap(h: participantsToLog)
+
+                            // Log — bounded height + full width
+                            battleLogView
+                                .frame(width: contentWidth, alignment: .center)
+                                .frame(minHeight: logMinHeight)
+                                .frame(maxHeight: logMaxHeight)
+
+                            Spacer().frame(height: logToActionPoints)
+
+                            // Actions — responsive card width (fixes horizontal overflow)
+                            actionsRow(contentWidth: contentWidth)
+                                .frame(width: contentWidth, alignment: .center)
+
+                            Spacer().frame(height: actionsToButtons)
+
+                            // Bottom buttons — full width
+                            bottomButtons
+                                .frame(width: contentWidth, alignment: .center)
+                                .padding(.bottom, 10)
+
+                        } else {
+                            VStack(spacing: 12) {
+                                Text("No battle state")
+                                Button("Back") { store.goToTower() }
+                            }
+                            .frame(width: contentWidth, alignment: .center)
+                            .padding(.top, 24)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 16)
-                        .layoutPriority(0) // explicit: participants compress after Log
-
-                        // Hard gap: Participants → Log
-                        VGap(h: participantsToLog)
-
-                        // Log (primary stretchy: min + infinity, highest priority)
-                        battleLogView
-                            .frame(minHeight: logMinHeight)
-                            .frame(maxHeight: .infinity)
-                            .padding(.horizontal, 16)
-                            .layoutPriority(1)
-
-                        // Gap: Log → Actions (fixed)
-                        Spacer().frame(height: logToActionPoints)
-
-                        // Actions (never compress)
-                        actionsRow
-                            .padding(.horizontal, 16)
-
-                        // Gap: Actions → Bottom buttons (fixed)
-                        Spacer().frame(height: actionsToButtons)
-
-                        // Bottom buttons (never compress)
-                        bottomButtons
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 10)
-
-                    } else {
-                        Text("No battle state")
-                        Button("Back") { store.goToTower() }
                     }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.horizontal, outerPad)
+                    .padding(.vertical, 0)
                 }
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                .scrollIndicators(.hidden)
             }
-            .padding(.vertical, 0)
         }
     }
 
     // MARK: - Sections
 
-    // Legacy panels (kept for compatibility)
-    private var playerEnemyPanels: some View {
-        HStack(spacing: 12) {
-            playerPanel
-                .frame(maxWidth: .infinity)
-
-            enemyPanel
-                .frame(maxWidth: .infinity)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var playerPanel: some View {
-        Group {
-            if let b = store.battle {
-                StatusPanel(
-                    side: .player,
-                    name: "Player",
-                    hp: b.playerHP,
-                    maxHP: 20,
-                    block: b.playerBlock,
-                    intentKind: nil
-                )
-            } else {
-                EmptyView()
-            }
-        }
-    }
-
-    private var enemyPanel: some View {
-        Group {
-            if let b = store.battle {
-                StatusPanel(
-                    side: .enemy,
-                    name: b.enemyName,
-                    hp: b.enemyHP,
-                    maxHP: 20,
-                    block: b.enemyBlock,
-                    intentKind: b.enemyIntent.kind
-                )
-            } else {
-                EmptyView()
-            }
-        }
-    }
-
     private var battleLogView: some View {
         Group {
             if let battle = store.battle {
-                // Log (auto-scroll to bottom)
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 6) {
@@ -175,7 +137,6 @@ struct BattleView: View {
                                 }
                             }
 
-                            // bottom anchor (stable id)
                             Color.clear
                                 .frame(height: 1)
                                 .id("LOG_BOTTOM")
@@ -201,7 +162,7 @@ struct BattleView: View {
         }
     }
 
-    private var actionsRow: some View {
+    private func actionsRow(contentWidth: CGFloat) -> some View {
         Group {
             if let battle = store.battle {
                 VStack(spacing: 8) {
@@ -209,10 +170,12 @@ struct BattleView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
-                    // Layout constants (kept contained)
-                    let cardWidth: CGFloat = 120
-                    let cardHeight: CGFloat = 170
                     let rowSpacing: CGFloat = 12
+                    let count = max(1, min(3, battle.hand.count))
+
+                    let maxCardW: CGFloat = 120
+                    let cardW = min(maxCardW, (contentWidth - rowSpacing * CGFloat(count - 1)) / CGFloat(count))
+                    let cardH = min(170, max(140, cardW * 1.42))
 
                     let isEnemyPhase = (battle.phase == .enemy)
 
@@ -229,11 +192,11 @@ struct BattleView: View {
                                     card: card,
                                     disabled: !canPlay
                                 )
-                                .frame(width: cardWidth, height: cardHeight)
+                                .frame(width: cardW, height: cardH)
                             }
                             .disabled(!canPlay)
                             .opacity(canPlay ? 1 : 0.35)
-                            .frame(width: cardWidth, height: cardHeight)
+                            .frame(width: cardW, height: cardH)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -250,7 +213,6 @@ struct BattleView: View {
                 let isEnemyPhase = (battle.phase == .enemy)
 
                 VStack(spacing: 8) {
-                    // Row 1: End Turn / Surrender
                     HStack(spacing: 12) {
                         Button("End Turn") { store.endTurn() }
                             .disabled(isEnemyPhase)
@@ -260,170 +222,20 @@ struct BattleView: View {
                             .frame(maxWidth: .infinity)
                     }
 
-                    // Row 2: win_debug / lose_debug
                     HStack(spacing: 12) {
-                        Button("win_debug") {
-                            store.winBattle()
-                        }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.bordered)
+                        Button("win_debug") { store.winBattle() }
+                            .frame(maxWidth: .infinity)
+                            .buttonStyle(.bordered)
 
-                        Button("lose_debug") {
-                            store.loseBattle()
-                        }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.bordered)
+                        Button("lose_debug") { store.loseBattle() }
+                            .frame(maxWidth: .infinity)
+                            .buttonStyle(.bordered)
                     }
                 }
             } else {
                 EmptyView()
             }
         }
-    }
-}
-
-// T3-ARCH-BOOT-019A — Status Area building blocks
-
-private enum StatusSide {
-    case player
-    case enemy
-}
-
-private struct StatusPanel: View {
-    let side: StatusSide
-    let name: String
-    let hp: Int
-    let maxHP: Int
-    let block: Int
-    let intentKind: EnemyIntentKind?
-
-    var body: some View {
-        HStack(spacing: 12) {
-
-            // Enemy avatar placeholder is on the LEFT
-            if side == .enemy {
-                avatarPlaceholder
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-
-                Text(name)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("HP: \(hp) / \(maxHP)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-
-                    HPBar(value: hp, maxValue: maxHP)
-                        .frame(height: 6)
-                }
-
-                Text("Block: \(block)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-
-                // Fixed Intent row (reserved space in both panels to prevent jumping)
-                intentRow
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .layoutPriority(1)
-
-            // Player avatar placeholder is on the RIGHT
-            if side == .player {
-                avatarPlaceholder
-            }
-        }
-        .padding(12)
-        .frame(height: 120)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.secondarySystemBackground))
-        )
-    }
-
-    private var avatarPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .stroke(Color(.tertiaryLabel), lineWidth: 1)
-            .frame(width: 54, height: 54)
-            .overlay(
-                Image(systemName: "person.crop.square")
-                    .foregroundStyle(.tertiary)
-            )
-            .accessibilityLabel("Avatar placeholder")
-    }
-
-    private var intentRow: some View {
-        HStack(spacing: 6) {
-            if side == .enemy, let k = intentKind {
-                Image(systemName: intentSymbol(k))
-                    .font(.caption)
-
-                Text("Intent: \(intentTitle(k))")
-                    .font(.caption)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .minimumScaleFactor(0.85)
-            } else {
-                Text(" ")
-                    .font(.caption)
-                    .lineLimit(2)
-            }
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(.secondary)
-        .frame(minHeight: 28, alignment: .topLeading)
-    }
-
-    private func intentTitle(_ k: EnemyIntentKind) -> String {
-        switch k {
-        case .attack: return "Attack"
-        case .defend: return "Defend"
-        case .counter: return "Counter"
-        case .counterStance: return "Counter Stance"
-        case .doubleStrikeFixed4: return "Double Strike"
-        }
-    }
-
-    private func intentSymbol(_ k: EnemyIntentKind) -> String {
-        switch k {
-        case .attack: return "sword"
-        case .defend: return "shield"
-        case .counter: return "arrow.triangle.2.circlepath"
-        case .counterStance: return "arrow.triangle.2.circlepath"
-        case .doubleStrikeFixed4: return "suit.heart"
-        }
-    }
-}
-
-private struct HPBar: View {
-    let value: Int
-    let maxValue: Int
-
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let ratio = maxValue > 0 ? CGFloat(value) / CGFloat(maxValue) : 0
-            let fillW = max(0, min(1, ratio)) * w
-
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(.systemGray5))
-
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(.systemGreen))
-                    .frame(width: fillW)
-            }
-        }
-        .frame(height: 6)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }
 
@@ -434,7 +246,7 @@ private struct VGap: View {
         Color.clear
             .frame(height: h)
             .fixedSize(horizontal: false, vertical: true)
-            .layoutPriority(10) // keep gaps from collapsing first
+            .layoutPriority(10)
     }
 }
 
@@ -445,19 +257,17 @@ private struct BattleParticipantCard: View {
     let block: Int
     let maxHP: Int
 
-    let intentText: String?          // nil for player
+    let intentText: String?
     let isEnemy: Bool
 
     var body: some View {
         VStack(spacing: 10) {
-            // 1) Name (reserve space for 2 lines to avoid height jumps)
             Text(title)
                 .font(.headline)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .frame(minHeight: 44)
 
-            // 2) HP bar + numbers + block
             VStack(spacing: 6) {
                 ProgressView(value: Double(hp), total: Double(maxHP))
                     .frame(maxWidth: .infinity)
@@ -472,7 +282,6 @@ private struct BattleParticipantCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
-            // 3) Intent row (enemy) / empty row (player)
             Group {
                 if let intentText {
                     Text("Intent: \(intentText)")
@@ -486,7 +295,6 @@ private struct BattleParticipantCard: View {
                 }
             }
 
-            // 4) Big image placeholder
             ZStack {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(.gray.opacity(0.25), lineWidth: 1)

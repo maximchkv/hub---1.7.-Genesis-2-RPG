@@ -2,12 +2,25 @@ import SwiftUI
 
 struct CastleView: View {
     @EnvironmentObject private var store: GameStore
+    @Environment(\.horizontalSizeClass) private var hSizeClass
 
     // Relics sheet state (022J)
     @State private var isRelicsSheetPresented: Bool = false
 
     // Layout constants
     private let gridAspect: CGFloat = 1.25 // height = width * 1.25
+
+    // Width cap helper (028B)
+    private func widthCap(for sizeClass: UserInterfaceSizeClass?, windowWidth: CGFloat) -> CGFloat {
+        switch sizeClass {
+        case .compact:
+            return 360
+        case .regular:
+            return windowWidth < 900 ? 600 : 720
+        default:
+            return 360
+        }
+    }
 
     // 022H: Mode button helper
     private func modePill(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
@@ -37,243 +50,251 @@ struct CastleView: View {
 
     var body: some View {
         ZStack {
-            UIStyle.background
+            UIStyle.background()
                 .ignoresSafeArea()
 
             // Existing content (unchanged)
             GeometryReader { geo in
                 ScrollView {
-                    // Fixed-width wrapper centered via contentWidth
-                    let contentWidth = min(geo.size.width - 32, 520)
+                    let horizontalPadding: CGFloat = 24
+                    let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
+                    let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
+                    let contentWidth = min(availableWidth, cap)
 
-                    VStack(spacing: 12) {
-                        // Header — bottom divider + clamp to contentWidth
-                        VStack(spacing: 0) {
-                            HStack {
-                                Text("Best: \(store.meta.bestFloor)")
-                                    .lineLimit(1).minimumScaleFactor(0.85)
-                                Spacer()
-                                Text("Day: \(store.meta.days)")
-                                    .lineLimit(1).minimumScaleFactor(0.85)
-                                Spacer()
-                                Text("+\(store.castleIncomePerDay) / day")
-                                    .lineLimit(1).minimumScaleFactor(0.85)
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+
+                        VStack(spacing: 12) {
+                            // Header — bottom divider + clamp to contentWidth
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Text("Best: \(store.meta.bestFloor)")
+                                        .lineLimit(1).minimumScaleFactor(0.85)
+                                    Spacer()
+                                    Text("Day: \(store.meta.days)")
+                                        .lineLimit(1).minimumScaleFactor(0.85)
+                                    Spacer()
+                                    Text("+\(store.castleIncomePerDay) / day")
+                                        .lineLimit(1).minimumScaleFactor(0.85)
+                                }
+                                .font(.caption)
+                                .padding(.horizontal)
+                                .padding(.vertical, 10)
+
+                                Rectangle()
+                                    .fill(Color.primary.opacity(0.12))
+                                    .frame(height: 1)
                             }
-                            .font(.caption)
-                            .padding(.horizontal)
-                            .padding(.vertical, 10)
+                            .background(.thinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .frame(width: contentWidth, alignment: .center)
 
-                            Rectangle()
-                                .fill(Color.primary.opacity(0.12))
-                                .frame(height: 1)
-                        }
-                        .background(.thinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .frame(width: contentWidth, alignment: .center)
+                            // Top block with computed fixed widths per contentWidth
+                            let imageBox: CGFloat = 120
+                            let gap: CGFloat = 12
+                            let rightCol: CGFloat = 70
+                            let leftCol: CGFloat = max(120, contentWidth - imageBox - rightCol - gap*2)
 
-                        // Top block with computed fixed widths per contentWidth
-                        let imageBox: CGFloat = 120
-                        let gap: CGFloat = 12
-                        let rightCol: CGFloat = 70
-                        let leftCol: CGFloat = max(120, contentWidth - imageBox - rightCol - gap*2)
+                            // REPLACED: three-column symmetric HStack (center fixed width)
+                            HStack(alignment: .top, spacing: 12) {
 
-                        // REPLACED: three-column symmetric HStack (center fixed width)
-                        HStack(alignment: .top, spacing: 12) {
+                                // LEFT (stats)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Buildings: \(store.castleBuildingsCount)")
+                                    Text("Income: +\(store.castleIncomePerDay)/day")
+                                    Text("Free tiles: \(store.castleFreeTilesCount)")
+                                }
+                                .font(.caption)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                            // LEFT (stats)
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Buildings: \(store.castleBuildingsCount)")
-                                Text("Income: +\(store.castleIncomePerDay)/day")
-                                Text("Free tiles: \(store.castleFreeTilesCount)")
+                                // CENTER (castle image placeholder) — всегда по центру
+                                VStack(spacing: 8) {
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(.thinMaterial)
+                                        .overlay(
+                                            VStack(spacing: 6) {
+                                                Text("🏰")
+                                                    .font(.title2)
+                                                Text("Castle Image")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+                                        )
+                                        .frame(width: 140, height: 110)
+                                }
+                                .frame(width: 140)
+
+                                // RIGHT (relics)
+                                VStack(alignment: .trailing, spacing: 6) {
+                                    Button {
+                                        isRelicsSheetPresented = true
+                                    } label: {
+                                        VStack(alignment: .trailing, spacing: 6) {
+                                            Text("Relics")
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                                .foregroundStyle(.primary)
+                                            HStack(spacing: 6) {
+                                                Text("🗿")
+                                                Text("🗝️")
+                                                Text("—")
+                                            }
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                        }
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .trailing)
                             }
-                            .font(.caption)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(width: contentWidth, alignment: .center)
 
-                            // CENTER (castle image placeholder) — всегда по центру
-                            VStack(spacing: 8) {
-                                RoundedRectangle(cornerRadius: 14)
+                            // Mode buttons — store-driven with toggle idle behavior
+                            HStack(spacing: 12) {
+                                modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                                        store.setCastleMode(CastleUIMode.build)
+                                    }
+                                }
+
+                                modePill("Upgrade", isActive: store.castleModeUI == CastleUIMode.upgrade) {
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                                        store.setCastleMode(CastleUIMode.upgrade)
+                                    }
+                                }
+                            }
+                            .frame(width: contentWidth, alignment: .center)
+
+                            #if DEBUG
+                            Button("Next Day (debug)") {
+                                store.castleAdvanceDay()
+                            }
+                            .buttonStyle(.bordered)
+                            .padding(.top, 6)
+                            .frame(width: contentWidth, alignment: .center)
+                            #endif
+
+                            // Grid container (derived from contentWidth)
+                            let gridWidth = contentWidth
+                            let gridHeight = gridWidth * gridAspect
+
+                            // Derived cell sizing
+                            let cols: CGFloat = 5
+                            let rows: CGFloat = 5
+                            let innerPadding: CGFloat = 14
+                            let cellSpacing: CGFloat = 10
+
+                            let innerW = gridWidth - innerPadding * 2
+                            let innerH = gridHeight - innerPadding * 2
+
+                            let cellWidth = (innerW - cellSpacing * (cols - 1)) / cols
+                            let cellHeight = (innerH - cellSpacing * (rows - 1)) / rows
+
+                            VStack(spacing: 0) {
+                                RoundedRectangle(cornerRadius: 22)
                                     .fill(.thinMaterial)
                                     .overlay(
-                                        VStack(spacing: 6) {
-                                            Text("🏰")
-                                                .font(.title2)
-                                            Text("Castle Image")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
+                                        RoundedRectangle(cornerRadius: 22)
+                                            .stroke(Color.primary.opacity(0.12), lineWidth: 1.5)
                                     )
+                                    .frame(width: gridWidth, height: gridHeight)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .stroke(Color.primary.opacity(0.10), lineWidth: 1)
-                                    )
-                                    .frame(width: 140, height: 110)
-                            }
-                            .frame(width: 140)
+                                        LazyVGrid(
+                                            columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: cellSpacing), count: Int(cols)),
+                                            spacing: cellSpacing
+                                        ) {
+                                            ForEach(store.castleTiles) { tile in
+                                                let isMaxLevel: Bool = {
+                                                    if case .built(let type, let level) = tile.state {
+                                                        return level >= type.maxLevel
+                                                    }
+                                                    return false
+                                                }()
 
-                            // RIGHT (relics)
-                            VStack(alignment: .trailing, spacing: 6) {
-                                Button {
-                                    isRelicsSheetPresented = true
-                                } label: {
-                                    VStack(alignment: .trailing, spacing: 6) {
-                                        Text("Relics")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.primary)
-                                        HStack(spacing: 6) {
-                                            Text("🗿")
-                                            Text("🗝️")
-                                            Text("—")
-                                        }
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
-                                    }
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                        .frame(width: contentWidth, alignment: .center)
+                                                let isEmpty = (tile.building == nil)
+                                                let isHighlighted: Bool = {
+                                                    switch store.castleModeUI {
+                                                    case CastleUIMode.build: return isEmpty
+                                                    case CastleUIMode.upgrade:
+                                                        return !isEmpty && !isMaxLevel
+                                                    case CastleUIMode.idle: return false
+                                                    }
+                                                }()
 
-                        // Mode buttons — store-driven with toggle idle behavior
-                        HStack(spacing: 12) {
-                            modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                    store.setCastleMode(CastleUIMode.build)
-                                }
-                            }
-
-                            modePill("Upgrade", isActive: store.castleModeUI == CastleUIMode.upgrade) {
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                    store.setCastleMode(CastleUIMode.upgrade)
-                                }
-                            }
-                        }
-                        .frame(width: contentWidth, alignment: .center)
-
-                        #if DEBUG
-                        Button("Next Day (debug)") {
-                            store.castleAdvanceDay()
-                        }
-                        .buttonStyle(.bordered)
-                        .padding(.top, 6)
-                        .frame(width: contentWidth, alignment: .center)
-                        #endif
-
-                        // Grid container (derived from contentWidth)
-                        let gridWidth = contentWidth
-                        let gridHeight = gridWidth * gridAspect
-
-                        // Derived cell sizing
-                        let cols: CGFloat = 5
-                        let rows: CGFloat = 5
-                        let innerPadding: CGFloat = 14
-                        let cellSpacing: CGFloat = 10
-
-                        let innerW = gridWidth - innerPadding * 2
-                        let innerH = gridHeight - innerPadding * 2
-
-                        let cellWidth = (innerW - cellSpacing * (cols - 1)) / cols
-                        let cellHeight = (innerH - cellSpacing * (rows - 1)) / rows
-
-                        VStack(spacing: 0) {
-                            RoundedRectangle(cornerRadius: 22)
-                                .fill(.thinMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 22)
-                                        .stroke(Color.primary.opacity(0.12), lineWidth: 1.5)
-                                )
-                                .frame(width: gridWidth, height: gridHeight)
-                                .overlay(
-                                    LazyVGrid(
-                                        columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: cellSpacing), count: Int(cols)),
-                                        spacing: cellSpacing
-                                    ) {
-                                        ForEach(store.castleTiles) { tile in
-                                            let isMaxLevel: Bool = {
-                                                if case .built(let type, let level) = tile.state {
-                                                    return level >= type.maxLevel
+                                                Button {
+                                                    store.onTileTapped(tile)
+                                                } label: {
+                                                    CastleTileContentView(
+                                                        iconText: tile.building?.emoji ?? "⬜️",
+                                                        titleText: tile.building?.title ?? "Empty",
+                                                        statText: tile.building == nil
+                                                            ? "Tap to build"
+                                                            : "+\((tile.building?.incomePerDay(level: max(1, tile.level)) ?? 0))/day",
+                                                        levelText: {
+                                                            if tile.building == nil { return "—" }
+                                                            return isMaxLevel ? "MAX" : "Lv \(max(1, tile.level))"
+                                                        }(),
+                                                        width: cellWidth,
+                                                        height: cellHeight
+                                                    )
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .stroke(isHighlighted ? Color.accentColor.opacity(0.9) : Color.clear, lineWidth: 3)
+                                                    )
+                                                    .opacity({
+                                                        switch store.castleModeUI {
+                                                        case CastleUIMode.build:
+                                                            return (tile.building != nil) ? 0.35 : 1.0
+                                                        case CastleUIMode.upgrade:
+                                                            if tile.building == nil { return 0.35 }
+                                                            return isMaxLevel ? 0.35 : 1.0
+                                                        case CastleUIMode.idle:
+                                                            return 1.0
+                                                        }
+                                                    }())
+                                                    .scaleEffect(isHighlighted ? 1.02 : 1.0)
                                                 }
-                                                return false
-                                            }()
-
-                                            let isEmpty = (tile.building == nil)
-                                            let isHighlighted: Bool = {
-                                                switch store.castleModeUI {
-                                                case CastleUIMode.build: return isEmpty
-                                                case CastleUIMode.upgrade:
-                                                    return !isEmpty && !isMaxLevel
-                                                case CastleUIMode.idle: return false
-                                                }
-                                            }()
-
-                                            Button {
-                                                store.onTileTapped(tile)
-                                            } label: {
-                                                CastleTileContentView(
-                                                    iconText: tile.building?.emoji ?? "⬜️",
-                                                    titleText: tile.building?.title ?? "Empty",
-                                                    statText: tile.building == nil
-                                                        ? "Tap to build"
-                                                        : "+\((tile.building?.incomePerDay(level: max(1, tile.level)) ?? 0))/day",
-                                                    levelText: {
-                                                        if tile.building == nil { return "—" }
-                                                        return isMaxLevel ? "MAX" : "Lv \(max(1, tile.level))"
-                                                    }(),
-                                                    width: cellWidth,
-                                                    height: cellHeight
-                                                )
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(isHighlighted ? Color.accentColor.opacity(0.9) : Color.clear, lineWidth: 3)
-                                                )
-                                                .opacity({
+                                                .buttonStyle(.plain)
+                                                .allowsHitTesting({
                                                     switch store.castleModeUI {
                                                     case CastleUIMode.build:
-                                                        return (tile.building != nil) ? 0.35 : 1.0
+                                                        return isEmpty
                                                     case CastleUIMode.upgrade:
-                                                        if tile.building == nil { return 0.35 }
-                                                        return isMaxLevel ? 0.35 : 1.0
+                                                        return (!isEmpty && !isMaxLevel)
                                                     case CastleUIMode.idle:
-                                                        return 1.0
+                                                        return true
                                                     }
                                                 }())
-                                                .scaleEffect(isHighlighted ? 1.02 : 1.0)
                                             }
-                                            .buttonStyle(.plain)
-                                            .allowsHitTesting({
-                                                switch store.castleModeUI {
-                                                case CastleUIMode.build:
-                                                    return isEmpty
-                                                case CastleUIMode.upgrade:
-                                                    return (!isEmpty && !isMaxLevel)
-                                                case CastleUIMode.idle:
-                                                    return true
-                                                }
-                                            }())
                                         }
-                                    }
-                                    .padding(innerPadding)
-                                )
-                                .frame(maxWidth: .infinity, alignment: .center)
+                                        .padding(innerPadding)
+                                    )
+                                    .frame(maxWidth: .infinity, alignment: .center)
 
-                            // Back to Hub
-                            Button("Back to Hub") {
-                                store.goToHub()
+                                // Back to Hub
+                                Button("Back to Hub") {
+                                    store.goToHub()
+                                }
+                                .padding(.top, 12)
+                                .padding(.bottom, 8)
                             }
-                            .padding(.top, 12)
-                            .padding(.bottom, 8)
+                            .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: .infinity)
+                        .frame(width: contentWidth, alignment: .center)
+                        .padding(.top, 12)
+                        .padding(.bottom, 18)
+
+                        Spacer(minLength: 0)
                     }
-                    .frame(width: contentWidth, alignment: .center)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 12)
-                    .padding(.bottom, 18)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, horizontalPadding)
                 }
                 .scrollIndicators(.hidden)
-                .background(Color(.systemBackground))
             }
             .onAppear {
                 store.castleRecomputeStats()
