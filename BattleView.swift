@@ -283,6 +283,11 @@ private struct BattleParticipantCard: View {
     private let portraitInset: CGFloat = 8
     private let portraitCorner: CGFloat = 14
 
+    // Participant card visual tokens (UI-KIT v1.x)
+    private let participantBgOpacity: CGFloat = 0.55        // высокая прозрачность (виден фон)
+    private let participantStrokeOpacity: CGFloat = 0.12    // мягкий контур
+    private var participantBgTint: Color { Color(.systemGray5) } // сероватый, блеклый
+
     var body: some View {
         VStack(spacing: 6) {
 
@@ -349,11 +354,11 @@ private struct BattleParticipantCard: View {
         .padding(innerPad)
         .background(
             RoundedRectangle(cornerRadius: cardCorner)
-                .fill(Color(.secondarySystemBackground))
+                .fill(participantBgTint.opacity(participantBgOpacity))
         )
         .overlay(
             RoundedRectangle(cornerRadius: cardCorner)
-                .strokeBorder(.gray.opacity(0.14), lineWidth: 1)
+                .strokeBorder(.gray.opacity(participantStrokeOpacity), lineWidth: 1)
         )
     }
 }
