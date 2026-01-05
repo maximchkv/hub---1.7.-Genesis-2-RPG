@@ -31,44 +31,46 @@ struct TowerView: View {
                 let available = max(0, geo.size.width - outerPad * 2)
                 let contentWidth = min(available, contentCap)
 
-                ScrollView(.vertical) {
+                VStack(spacing: 0) {
+
+                    // Header
+                    headerRow
+                        .frame(width: contentWidth, alignment: .center)
+                        .padding(.top, topPad)
+
+                    Spacer().frame(height: headerToToast)
+
+                    // Toast
+                    toastView
+                        .frame(width: contentWidth, alignment: .center)
+
+                    Spacer().frame(height: toastToMeta)
+
+                    // Meta (Floor / Run streak)
+                    metaRow
+                        .frame(width: contentWidth, alignment: .center)
+
+                    Spacer().frame(height: metaToRooms)
+
+                    // Center area (roomsList centered vertically)
                     VStack(spacing: 0) {
+                        Spacer(minLength: 0)
 
-                        // Header
-                        headerRow
-                            .frame(width: contentWidth, alignment: .center)
-                            .padding(.top, topPad)
-
-                        Spacer().frame(height: headerToToast)
-
-                        // Toast
-                        toastView
-                            .frame(width: contentWidth, alignment: .center)
-
-                        Spacer().frame(height: toastToMeta)
-
-                        // Meta (Floor / Streak)
-                        metaRow
-                            .frame(width: contentWidth, alignment: .center)
-
-                        Spacer().frame(height: metaToRooms)
-
-                        // Rooms list
                         roomsList
                             .frame(width: contentWidth, alignment: .center)
 
-                        Spacer().frame(height: 16)
-
-                        // Back
-                        Button("Back to Hub") {
-                            store.goToHub()
-                        }
-                        .frame(width: contentWidth, alignment: .center)
-
-                        Spacer().frame(height: bottomPad)
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    // Bottom button pinned to screen bottom
+                    Button("Back to Hub") {
+                        store.goToHub()
+                    }
+                    .padding(.bottom, bottomPad)
+                    .frame(width: contentWidth, alignment: .center)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
                 .padding(.horizontal, outerPad)
             }
@@ -127,8 +129,10 @@ struct TowerView: View {
 
         return HStack(spacing: 12) {
             metaChip(title: "Floor", value: "\(floor)")
-            metaChip(title: "Streak", value: "\(streak)")
-            Spacer(minLength: 0)
+                .frame(maxWidth: .infinity)
+
+            metaChip(title: "Run streak", value: "\(streak)")
+                .frame(maxWidth: .infinity)
         }
         .padding(12)
         .background(.thinMaterial)
@@ -140,17 +144,19 @@ struct TowerView: View {
     }
 
     private func metaChip(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(spacing: 2) {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
 
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
-        .frame(minWidth: 70, alignment: .leading)
+        .frame(minWidth: 0)
     }
 
     // MARK: - Rooms
