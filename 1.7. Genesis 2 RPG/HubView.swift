@@ -5,7 +5,7 @@ struct HubView: View {
 
     var body: some View {
         ZStack {
-            UIStyle.background
+            UIStyle.background()
                 .ignoresSafeArea()
 
             // Existing content (unchanged)

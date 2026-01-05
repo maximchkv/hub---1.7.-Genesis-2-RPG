@@ -33,6 +33,8 @@
 		507E29ED2F09B82E00BD8FBB /* UIStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EC2F09B82E00BD8FBB /* UIStyle.swift */; };
 		507E29EF2F0A307F00BD8FBB /* Enemy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EE2F0A307F00BD8FBB /* Enemy.swift */; };
 		507E29F12F0A332100BD8FBB /* RuntimeEnemyCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */; };
+		507E29F32F0BB5F700BD8FBB /* UITypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29F22F0BB5F700BD8FBB /* UITypography.swift */; };
+		507E29F52F0BB5F800BD8FBB /* UIComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29F42F0BB5F800BD8FBB /* UIComponents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +65,8 @@
 		507E29EC2F09B82E00BD8FBB /* UIStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIStyle.swift; sourceTree = "<group>"; };
 		507E29EE2F0A307F00BD8FBB /* Enemy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enemy.swift; sourceTree = "<group>"; };
 		507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeEnemyCatalog.swift; sourceTree = "<group>"; };
+		507E29F22F0BB5F700BD8FBB /* UITypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITypography.swift; sourceTree = "<group>"; };
+		507E29F42F0BB5F800BD8FBB /* UIComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIComponents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -115,6 +119,8 @@
 				507E29EC2F09B82E00BD8FBB /* UIStyle.swift */,
 				507E29EE2F0A307F00BD8FBB /* Enemy.swift */,
 				507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */,
+				507E29F22F0BB5F700BD8FBB /* UITypography.swift */,
+				507E29F42F0BB5F800BD8FBB /* UIComponents.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -212,6 +218,7 @@
 				507E299D2F07F18000BD8FBB /* TowerView.swift in Sources */,
 				507E29A72F07F51500BD8FBB /* Artifact.swift in Sources */,
 				507E29B72F07F7E300BD8FBB /* EnemyIntent.swift in Sources */,
+				507E29F32F0BB5F700BD8FBB /* UITypography.swift in Sources */,
 				507E29A32F07F2F800BD8FBB /* RoomOption.swift in Sources */,
 				507E29E52F09678500BD8FBB /* CastleGridCellView.swift in Sources */,
 				507E29E12F09654100BD8FBB /* CastleUpgradeView.swift in Sources */,
@@ -225,6 +232,7 @@
 				507E29EB2F09821C00BD8FBB /* RelicsListSheetView.swift in Sources */,
 				507E29992F07F0DA00BD8FBB /* PlayerMeta.swift in Sources */,
 				507E29AF2F07F61E00BD8FBB /* BattleView.swift in Sources */,
+				507E29F52F0BB5F800BD8FBB /* UIComponents.swift in Sources */,
 				507E29B12F07F62000BD8FBB /* DefeatView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
