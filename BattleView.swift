@@ -4,48 +4,93 @@ import SwiftUI
 struct BattleView: View {
     @EnvironmentObject private var store: GameStore
 
-    // Spacing/layout constants for 019C3
+    // MARK: - Layout constants (027C-E/F)
     private let topHeaderPad: CGFloat = 10
-    private let gapHeaderToPanels: CGFloat = 10
-    private let gapPanelsToLog: CGFloat = 12
-    private let panelsHeight: CGFloat = 92
+
+    // Required spacings (single-source gaps)
+    private let headerToParticipants: CGFloat = 32
+    private let participantsToLog: CGFloat = 32   // ВИДИМЫЙ зазор между Participants и Log
+    private let logToActionPoints: CGFloat = 12
+    private let actionsToButtons: CGFloat = 12
+
+    // Participant cards: растягиваем в первую очередь (уменьшаем “пустоту” по центру)
+    private let participantCardHeight: CGFloat = 240
+
+    // Log: compact baseline; now expands to fill remaining height
+    private let logHeight: CGFloat = 104 // 120 - 16, освобождаем место под зазор
+
+    // No longer used for outer height bumps per 027C v3
+    private let participantExtraHeight: CGFloat = 0
 
     var body: some View {
         ZStack {
             UIStyle.background
                 .ignoresSafeArea()
 
-            // Existing content (unchanged)
             GeometryReader { geo in
-                VStack(spacing: 12) {
+                VStack(spacing: 0) {
                     if let battle = store.battle {
-                        // 1) Header (Floor) with fixed top padding
+
                         Text("Floor \(battle.floor)")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.top, topHeaderPad)
 
-                        // 2) Player/Enemy panels (fixed height + explicit top gap)
-                        playerEnemyPanels
-                            .frame(height: panelsHeight)
-                            .padding(.top, gapHeaderToPanels)
-                            .padding(.horizontal, 16)
+                        // жёсткий gap: Header → Participants (единственный источник отступа)
+                        Spacer()
+                            .frame(height: headerToParticipants)
 
-                        // 3) Logs: start below panels with explicit top gap, take remaining space
+                        // Participants
+                        HStack(spacing: 12) {
+                            BattleParticipantCard(
+                                title: "Player",
+                                hp: battle.playerHP,
+                                block: battle.playerBlock,
+                                maxHP: 20,
+                                intentText: nil,
+                                isEnemy: false
+                            )
+                            .frame(height: participantCardHeight)
+
+                            BattleParticipantCard(
+                                title: battle.enemyName,
+                                hp: battle.enemyHP,
+                                block: battle.enemyBlock,
+                                maxHP: 20,
+                                intentText: battle.enemyIntent.text,
+                                isEnemy: true
+                            )
+                            .frame(height: participantCardHeight)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 0)
+
+                        // ЖЁСТКИЙ зазор между Participants и Log (не через padding, а через Spacer)
+                        Spacer()
+                            .frame(height: participantsToLog)
+
+                        // Log: eats remaining height to keep bottom anchored and gaps fixed
                         battleLogView
-                            .padding(.top, gapPanelsToLog)
-                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: logHeight)
                             .frame(maxHeight: .infinity)
                             .padding(.horizontal, 16)
+                            .layoutPriority(1)
 
-                        // 4) Actions row (fixed)
+                        // Fixed gap to Action Points
+                        Spacer()
+                            .frame(height: logToActionPoints)
+
                         actionsRow
                             .padding(.horizontal, 16)
 
-                        // 5) Bottom buttons (fixed, 2 rows)
+                        Spacer()
+                            .frame(height: actionsToButtons)
+
                         bottomButtons
                             .padding(.horizontal, 16)
                             .padding(.bottom, 10)
+
                     } else {
                         Text("No battle state")
                         Button("Back") { store.goToTower() }
@@ -59,6 +104,7 @@ struct BattleView: View {
 
     // MARK: - Sections
 
+    // Legacy panels replaced by new big cards, but we leave these helpers in case other views rely on them.
     private var playerEnemyPanels: some View {
         HStack(spacing: 12) {
             playerPanel
@@ -162,7 +208,7 @@ struct BattleView: View {
 
                     // Layout constants (kept contained)
                     let cardWidth: CGFloat = 120
-                    let cardHeight: CGFloat = 180
+                    let cardHeight: CGFloat = 170
                     let rowSpacing: CGFloat = 12
 
                     let isEnemyPhase = (battle.phase == .enemy)
@@ -375,5 +421,81 @@ private struct HPBar: View {
         }
         .frame(height: 6)
         .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+// MARK: - New big participant card for top area
+private struct BattleParticipantCard: View {
+    let title: String
+    let hp: Int
+    let block: Int
+    let maxHP: Int
+
+    let intentText: String?          // nil for player
+    let isEnemy: Bool
+
+    var body: some View {
+        VStack(spacing: 10) {
+            // 1) Name (reserve space for 2 lines to avoid height jumps)
+            Text(title)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(minHeight: 44) // резерв под 2 строки, стабилизирует высоту
+
+            // 2) HP bar + numbers + block
+            VStack(spacing: 6) {
+                ProgressView(value: Double(hp), total: Double(maxHP))
+                    .frame(maxWidth: .infinity)
+
+                Text("HP: \(hp)/\(maxHP)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("Block: \(block)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            // 3) Intent row (enemy) / empty row (player)
+            Group {
+                if let intentText {
+                    Text("Intent: \(intentText)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    Text(" ")
+                        .font(.caption)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+
+            // 4) Big image placeholder (+10 participates in the card bump)
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(.gray.opacity(0.25), lineWidth: 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.gray.opacity(0.08))
+                    )
+
+                Image(systemName: "photo")
+                    .font(.system(size: 26, weight: .regular))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 120) // compact; if previous was 110, this is +10
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemBackground)) // непрозрачно, убирает “просвет”
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(.gray.opacity(0.18), lineWidth: 1)
+        )
     }
 }
