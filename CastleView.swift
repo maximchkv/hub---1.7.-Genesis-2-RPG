@@ -37,7 +37,7 @@ struct CastleView: View {
 
     var body: some View {
         ZStack {
-            UIStyle.background()
+            UIStyle.backgroundImage()
                 .ignoresSafeArea()
 
             // Existing content (unchanged)

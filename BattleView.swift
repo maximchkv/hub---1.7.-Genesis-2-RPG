@@ -8,7 +8,7 @@ struct BattleView: View {
 
     var body: some View {
         ZStack {
-            UIStyle.background()
+            UIStyle.backgroundImage()
                 .ignoresSafeArea()
 
             GeometryReader { geo in
