@@ -18,8 +18,10 @@ struct BattleView: View {
     private let cardsToAP: CGFloat = 12
 
     // Participants sizing
-    private let participantGap: CGFloat = 6 // was 12; now ~2x tighter
+    private let participantGap: CGFloat = 12 // was 6; now larger gap between cards
+    private let participantSideInset: CGFloat = 10 // squeeze row inside contentWidth for side/center air
     private let participantInnerPad: CGFloat = 0
+    private let participantCardHeight: CGFloat = 220 // taller participant cards (try 240–260 if needed)
 
     // Log sizing
     private let logMinHeight: CGFloat = 110
@@ -41,7 +43,10 @@ struct BattleView: View {
             GeometryReader { geo in
                 let available = max(0, geo.size.width - outerPad * 2)
                 let contentWidth = min(available, contentCap)
-                let participantW = max(0, (contentWidth - participantGap) / 2)
+
+                // Participants width calculation with side inset
+                let participantRowWidth = max(0, contentWidth - participantSideInset * 2)
+                let participantW = max(0, (participantRowWidth - participantGap) / 2)
 
                 VStack(spacing: 0) {
                     if let battle = store.battle {
@@ -63,6 +68,7 @@ struct BattleView: View {
                                 intentText: nil
                             )
                             .frame(width: participantW)
+                            .frame(height: participantCardHeight) // fixed participant card height
                             .padding(.horizontal, participantInnerPad)
 
                             BattleParticipantCard(
@@ -73,8 +79,10 @@ struct BattleView: View {
                                 intentText: battle.enemyIntent.text
                             )
                             .frame(width: participantW)
+                            .frame(height: participantCardHeight) // fixed participant card height
                             .padding(.horizontal, participantInnerPad)
                         }
+                        .padding(.horizontal, participantSideInset) // side inset for the row
                         .frame(width: contentWidth, alignment: .center)
 
                         Spacer().frame(height: participantsToLog)
