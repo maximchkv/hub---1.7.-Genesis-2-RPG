@@ -4,22 +4,22 @@ import SwiftUI
 struct BattleView: View {
     @EnvironmentObject private var store: GameStore
 
-    // MARK: - Layout constants (027C-E/F)
+    // MARK: - Layout constants (Contract v1.0)
     private let topHeaderPad: CGFloat = 10
 
-    // Required spacings (single-source gaps)
+    // Single-source vertical gaps
     private let headerToParticipants: CGFloat = 32
-    private let participantsToLog: CGFloat = 32   // ВИДИМЫЙ зазор между Participants и Log
+    private let participantsToLog: CGFloat = 32
     private let logToActionPoints: CGFloat = 12
     private let actionsToButtons: CGFloat = 12
 
-    // Participant cards: растягиваем в первую очередь (уменьшаем “пустоту” по центру)
+    // Participant cards: fixed height only
     private let participantCardHeight: CGFloat = 240
 
-    // Log: compact baseline; now expands to fill remaining height
-    private let logHeight: CGFloat = 104 // 120 - 16, освобождаем место под зазор
+    // Log: the only stretchy block
+    private let logHeight: CGFloat = 104
 
-    // No longer used for outer height bumps per 027C v3
+    // No longer used for outer height bumps
     private let participantExtraHeight: CGFloat = 0
 
     var body: some View {
@@ -31,16 +31,16 @@ struct BattleView: View {
                 VStack(spacing: 0) {
                     if let battle = store.battle {
 
+                        // Header
                         Text("Floor \(battle.floor)")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.top, topHeaderPad)
 
-                        // жёсткий gap: Header → Participants (единственный источник отступа)
-                        Spacer()
-                            .frame(height: headerToParticipants)
+                        // Gap: Header → Participants
+                        Spacer().frame(height: headerToParticipants)
 
-                        // Participants
+                        // Participants block (no vertical paddings)
                         HStack(spacing: 12) {
                             BattleParticipantCard(
                                 title: "Player",
@@ -64,29 +64,28 @@ struct BattleView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 16)
-                        .padding(.top, 0)
 
-                        // ЖЁСТКИЙ зазор между Participants и Log (не через padding, а через Spacer)
-                        Spacer()
-                            .frame(height: participantsToLog)
+                        // Gap: Participants → Log
+                        Spacer().frame(height: participantsToLog)
 
-                        // Log: eats remaining height to keep bottom anchored and gaps fixed
+                        // Log (only stretchy block)
                         battleLogView
                             .frame(minHeight: logHeight)
                             .frame(maxHeight: .infinity)
                             .padding(.horizontal, 16)
                             .layoutPriority(1)
 
-                        // Fixed gap to Action Points
-                        Spacer()
-                            .frame(height: logToActionPoints)
+                        // Gap: Log → Action Points
+                        Spacer().frame(height: logToActionPoints)
 
+                        // Actions row
                         actionsRow
                             .padding(.horizontal, 16)
 
-                        Spacer()
-                            .frame(height: actionsToButtons)
+                        // Gap: Actions → Bottom buttons
+                        Spacer().frame(height: actionsToButtons)
 
+                        // Bottom buttons
                         bottomButtons
                             .padding(.horizontal, 16)
                             .padding(.bottom, 10)
@@ -104,7 +103,7 @@ struct BattleView: View {
 
     // MARK: - Sections
 
-    // Legacy panels replaced by new big cards, but we leave these helpers in case other views rely on them.
+    // Legacy panels (kept for compatibility)
     private var playerEnemyPanels: some View {
         HStack(spacing: 12) {
             playerPanel
@@ -153,7 +152,7 @@ struct BattleView: View {
     private var battleLogView: some View {
         Group {
             if let battle = store.battle {
-                // --- Log (auto-scroll to bottom) ---
+                // Log (auto-scroll to bottom)
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 6) {
@@ -441,7 +440,7 @@ private struct BattleParticipantCard: View {
                 .font(.headline)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .frame(minHeight: 44) // резерв под 2 строки, стабилизирует высоту
+                .frame(minHeight: 44)
 
             // 2) HP bar + numbers + block
             VStack(spacing: 6) {
@@ -472,7 +471,7 @@ private struct BattleParticipantCard: View {
                 }
             }
 
-            // 4) Big image placeholder (+10 participates in the card bump)
+            // 4) Big image placeholder
             ZStack {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(.gray.opacity(0.25), lineWidth: 1)
@@ -486,12 +485,12 @@ private struct BattleParticipantCard: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 120) // compact; if previous was 110, this is +10
+            .frame(height: 120)
         }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground)) // непрозрачно, убирает “просвет”
+                .fill(Color(.secondarySystemBackground))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
