@@ -4,22 +4,23 @@ import SwiftUI
 struct BattleView: View {
     @EnvironmentObject private var store: GameStore
 
-    // MARK: - Layout constants (Contract v1.0)
+    // MARK: - Layout constants (Contract v1.1)
     private let topHeaderPad: CGFloat = 10
 
-    // Single-source vertical gaps
-    private let headerToParticipants: CGFloat = 32
-    private let participantsToLog: CGFloat = 32
+    // Single-source vertical gaps (fixed, non-stretching)
+    private let headerToParticipants: CGFloat = 48
+    private let participantsToLog: CGFloat = 48
     private let logToActionPoints: CGFloat = 12
     private let actionsToButtons: CGFloat = 12
 
-    // Participant cards: fixed height only
-    private let participantCardHeight: CGFloat = 240
+    // Participants: soft-resizable in v1.1
+    private let participantMinHeight: CGFloat = 200
+    private let participantMaxHeight: CGFloat = 260
 
-    // Log: the only stretchy block
-    private let logHeight: CGFloat = 104
+    // Log: primary stretchy block
+    private let logMinHeight: CGFloat = 88
 
-    // No longer used for outer height bumps
+    // Legacy/unusued
     private let participantExtraHeight: CGFloat = 0
 
     var body: some View {
@@ -31,16 +32,16 @@ struct BattleView: View {
                 VStack(spacing: 0) {
                     if let battle = store.battle {
 
-                        // Header
+                        // Header (never compresses)
                         Text("Floor \(battle.floor)")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.top, topHeaderPad)
 
-                        // Gap: Header → Participants
-                        Spacer().frame(height: headerToParticipants)
+                        // Hard gap: Header → Participants
+                        VGap(h: headerToParticipants)
 
-                        // Participants block (no vertical paddings)
+                        // Participants (soft-resizable: min/max, priority 0)
                         HStack(spacing: 12) {
                             BattleParticipantCard(
                                 title: "Player",
@@ -50,7 +51,8 @@ struct BattleView: View {
                                 intentText: nil,
                                 isEnemy: false
                             )
-                            .frame(height: participantCardHeight)
+                            .frame(minHeight: participantMinHeight)
+                            .frame(maxHeight: participantMaxHeight)
 
                             BattleParticipantCard(
                                 title: battle.enemyName,
@@ -60,32 +62,34 @@ struct BattleView: View {
                                 intentText: battle.enemyIntent.text,
                                 isEnemy: true
                             )
-                            .frame(height: participantCardHeight)
+                            .frame(minHeight: participantMinHeight)
+                            .frame(maxHeight: participantMaxHeight)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 16)
+                        .layoutPriority(0) // explicit: participants compress after Log
 
-                        // Gap: Participants → Log
-                        Spacer().frame(height: participantsToLog)
+                        // Hard gap: Participants → Log
+                        VGap(h: participantsToLog)
 
-                        // Log (only stretchy block)
+                        // Log (primary stretchy: min + infinity, highest priority)
                         battleLogView
-                            .frame(minHeight: logHeight)
+                            .frame(minHeight: logMinHeight)
                             .frame(maxHeight: .infinity)
                             .padding(.horizontal, 16)
                             .layoutPriority(1)
 
-                        // Gap: Log → Action Points
+                        // Gap: Log → Actions (fixed)
                         Spacer().frame(height: logToActionPoints)
 
-                        // Actions row
+                        // Actions (never compress)
                         actionsRow
                             .padding(.horizontal, 16)
 
-                        // Gap: Actions → Bottom buttons
+                        // Gap: Actions → Bottom buttons (fixed)
                         Spacer().frame(height: actionsToButtons)
 
-                        // Bottom buttons
+                        // Bottom buttons (never compress)
                         bottomButtons
                             .padding(.horizontal, 16)
                             .padding(.bottom, 10)
@@ -420,6 +424,17 @@ private struct HPBar: View {
         }
         .frame(height: 6)
         .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+// MARK: - Hard vertical gap mini-component
+private struct VGap: View {
+    let h: CGFloat
+    var body: some View {
+        Color.clear
+            .frame(height: h)
+            .fixedSize(horizontal: false, vertical: true)
+            .layoutPriority(10) // keep gaps from collapsing first
     }
 }
 
