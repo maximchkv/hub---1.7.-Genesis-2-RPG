@@ -8,6 +8,15 @@ struct HubView: View {
     private let horizontalPadding: CGFloat = 24
     private let verticalPadding: CGFloat = 24
 
+    // Fixed header (028C/028D/028E)
+    private let headerHeight: CGFloat = 92      // увеличено под 2 строки лейблов
+    private let headerTopPad: CGFloat = 10
+    private let headerBottomGap: CGFloat = 14
+
+    // Metric slots (028E)
+    private let metricLabelHeight: CGFloat = 28  // место под 2 строки caption2
+    private let metricValueHeight: CGFloat = 22  // место под headline
+
     // Toast slot (фикс. высота, без сдвигов)
     private let toastSlotHeight: CGFloat = 34
     private let toastHideDelay: Double = 1.2
@@ -22,17 +31,37 @@ struct HubView: View {
                 let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
                 let contentWidth = min(availableWidth, cap)
 
-                // Основной контент
-                content(contentWidth: contentWidth)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                    .padding(.horizontal, horizontalPadding)
-                    .padding(.vertical, verticalPadding)
-                    .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
-                    .overlay(alignment: .topTrailing) {
-                        debugButton
-                            .padding(.top, 8)
-                            .padding(.trailing, 8)
+                ZStack(alignment: .top) {
+
+                    // CONTENT (scrollable) — ниже fixed header
+                    ScrollView(.vertical) {
+                        VStack(spacing: 16) {
+                            toastSlot
+                                .frame(width: contentWidth)
+
+                            navGrid
+                                .frame(width: contentWidth)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.bottom, verticalPadding)
+                        .padding(.top, headerHeight + headerTopPad + headerBottomGap) // чтобы не залезать под header
                     }
+                    .scrollIndicators(.hidden)
+
+                    // HEADER (fixed)
+                    headerCard
+                        .frame(width: contentWidth, height: headerHeight)
+                        .padding(.top, headerTopPad)
+                        .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(.horizontal, horizontalPadding)
+
+                    // DEBUG (fixed)
+                    debugButton
+                        .padding(.top, 8)
+                        .padding(.trailing, 8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
             }
         }
         .onAppear { store.goToHub() }
@@ -53,31 +82,15 @@ struct HubView: View {
 
     // MARK: - Content
 
-    private func content(contentWidth: CGFloat) -> some View {
-        VStack(spacing: 16) {
-            headerCard
-                .frame(width: contentWidth)
-
-            toastSlot
-                .frame(width: contentWidth)
-
-            navGrid
-                .frame(width: contentWidth)
-        }
-    }
-
-    // MARK: - Header
-
     private var headerCard: some View {
         VStack(spacing: 10) {
-
             // 5 колонок в одном блоке
             HStack(alignment: .top, spacing: 10) {
                 metricCell(title: "Gold", value: "\(store.meta.gold)")
-                metricCell(title: "Best", value: "\(store.meta.bestFloor)")
-                metricCell(title: "Current", value: "\(store.run?.currentFloor ?? 0)")
+                metricCell(title: "Best floor", value: "\(store.meta.bestFloor)")
+                metricCell(title: "Current floor", value: "\(store.run?.currentFloor ?? 0)")
                 metricCell(title: "Days", value: "\(store.meta.days)")
-                metricCell(title: "Streak", value: "\(store.run?.nonCombatStreak ?? 0)")
+                metricCell(title: "Run streak", value: "\(store.run?.nonCombatStreak ?? 0)")
             }
         }
         .padding(14)
@@ -90,20 +103,24 @@ struct HubView: View {
     }
 
     private func metricCell(title: String, value: String) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
+            // LABEL SLOT — фикс. высота, перенос до 2 строк, прижат вверх
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(UIStyle.Color.inkSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(height: metricLabelHeight, alignment: .top)
 
+            // VALUE SLOT — фикс. высота, все значения на одной линии
             Text(value)
                 .font(.headline)
                 .foregroundStyle(UIStyle.Color.inkPrimary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.8)
+                .frame(height: metricValueHeight, alignment: .top)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     // MARK: - Toast Slot (fixed height, no layout shifts)
@@ -143,35 +160,32 @@ struct HubView: View {
     // MARK: - Navigation cards (2 + 1)
 
     private var navGrid: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
+        VStack(spacing: 18) { // зазор между верхним рядом и Cards
+            HStack(spacing: 8) { // узкий gap, но ширина ряда = contentWidth
                 hubCardButton(
                     title: "Tower",
                     subtitle: "Climb the floors",
                     systemImage: "arrow.up.right.circle",
-                    isEnabled: store.run != nil
-                ) {
-                    store.goToTower()
-                }
+                    isEnabled: store.run != nil,
+                    showsPlaceholder: true
+                ) { store.goToTower() }
 
                 hubCardButton(
                     title: "Castle",
                     subtitle: "Build between runs",
                     systemImage: "building.columns",
-                    isEnabled: true
-                ) {
-                    store.goToCastle()
-                }
+                    isEnabled: true,
+                    showsPlaceholder: true
+                ) { store.goToCastle() }
             }
 
             hubCardButton(
                 title: "Cards",
                 subtitle: "Library & collection",
                 systemImage: "square.grid.2x2",
-                isEnabled: true
-            ) {
-                store.goToCardLibrary()
-            }
+                isEnabled: true,
+                showsPlaceholder: false
+            ) { store.goToCardLibrary() }
         }
     }
 
@@ -180,6 +194,7 @@ struct HubView: View {
         subtitle: String,
         systemImage: String,
         isEnabled: Bool,
+        showsPlaceholder: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         Button {
@@ -205,14 +220,16 @@ struct HubView: View {
                     Spacer(minLength: 0)
                 }
 
-                // Плейсхолдер под будущую картинку/арт
-                RoundedRectangle(cornerRadius: UIStyle.cardRadius)
-                    .fill(SwiftUI.Color.black.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: UIStyle.cardRadius)
-                            .stroke(UIStyle.Color.cardStroke, lineWidth: 1)
-                    )
-                    .frame(height: 84)
+                if showsPlaceholder {
+                    // Плейсхолдер остаётся высоким (168), ширина карточек не меняется
+                    RoundedRectangle(cornerRadius: UIStyle.cardRadius)
+                        .fill(SwiftUI.Color.black.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: UIStyle.cardRadius)
+                                .stroke(UIStyle.Color.cardStroke, lineWidth: 1)
+                        )
+                        .frame(height: 168)
+                }
             }
             .padding(14)
             .frame(maxWidth: .infinity)
