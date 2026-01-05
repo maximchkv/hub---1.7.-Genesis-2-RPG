@@ -14,6 +14,11 @@ struct TowerView: View {
     private let roomsSpacing: CGFloat = 12
     private let bottomPad: CGFloat = 14
 
+    // Hero image (Tower)
+    private let towerHeroCorner: CGFloat = 16
+    private let headerToHero: CGFloat = 10
+    private let heroToToast: CGFloat = 10
+
     // Card styling
     private let cardCorner: CGFloat = 16
     private let cardHPad: CGFloat = 14
@@ -33,12 +38,18 @@ struct TowerView: View {
 
                 VStack(spacing: 0) {
 
-                    // Header
+                    // Header (только заголовок)
                     headerRow
                         .frame(width: contentWidth, alignment: .center)
                         .padding(.top, topPad)
 
-                    Spacer().frame(height: headerToToast)
+                    Spacer().frame(height: headerToHero)
+
+                    // Hero image block (square 1:1)
+                    towerHero(contentWidth: contentWidth)
+                        .frame(width: contentWidth, alignment: .center)
+
+                    Spacer().frame(height: heroToToast)
 
                     // Toast
                     toastView
@@ -85,12 +96,24 @@ struct TowerView: View {
     // MARK: - Header
 
     private var headerRow: some View {
-        ZStack {
-            Text("Tower")
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .center)
-        }
+        Text("Tower")
+            .font(.headline)
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func towerHero(contentWidth: CGFloat) -> some View {
+        Image("tower")
+            .resizable()
+            .scaledToFill()
+            .frame(width: contentWidth, height: contentWidth) // квадрат
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: towerHeroCorner))
+            .overlay(
+                RoundedRectangle(cornerRadius: towerHeroCorner)
+                    .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+            )
+            .accessibilityLabel("Tower illustration")
     }
 
     // MARK: - Toast

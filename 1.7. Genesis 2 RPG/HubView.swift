@@ -21,6 +21,12 @@ struct HubView: View {
     private let toastSlotHeight: CGFloat = 34
     private let toastHideDelay: Double = 1.2
 
+    // Shared card sizing/background (PATCH 032D/032 Castle image)
+    private let hubCardHeight: CGFloat = 220
+    private let hubThumbHeight: CGFloat = 132
+    private let hubImageCorner: CGFloat = 16
+    private let hubCardBgOpacity: Double = 0.85
+
     var body: some View {
         ZStack {
             UIStyle.background()
@@ -64,7 +70,7 @@ struct HubView: View {
                 }
             }
         }
-        .onAppear { store.goToHub() }
+        // Удалено store.goToHub() из onAppear по T3-ARCH-BOOT-032E
     }
 
     // MARK: - Width cap
@@ -161,22 +167,98 @@ struct HubView: View {
 
     private var navGrid: some View {
         VStack(spacing: 18) { // зазор между верхним рядом и Cards
-            HStack(spacing: 8) { // узкий gap, ширина ряда = contentWidth
-                hubCardButton(
-                    title: "Tower",
-                    subtitle: "Climb the floors",
-                    systemImage: "arrow.up.right.circle",
-                    isEnabled: store.run != nil,
-                    showsPlaceholder: true
-                ) { store.goToTower() }
+            HStack(spacing: 12) {
+                // Tower card
+                Button {
+                    store.goToTower()
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .center, spacing: 10) {
+                            Image(systemName: "arrow.up.right.circle")
+                                .font(.title3)
 
-                hubCardButton(
-                    title: "Castle",
-                    subtitle: "Build between runs",
-                    systemImage: "building.columns",
-                    isEnabled: true,
-                    showsPlaceholder: true
-                ) { store.goToCastle() }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Tower")
+                                    .font(.headline)
+                                    .lineLimit(1)
+
+                                Text("Climb the floors")
+                                    .font(.caption)
+                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                            }
+
+                            Spacer(minLength: 0)
+                        }
+
+                        // Fixed thumbnail slot (unified with Castle)
+                        Image("tower")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: hubThumbHeight)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: hubImageCorner))
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: hubCardHeight) // equal height for Tower/Castle
+                    .background(.regularMaterial) // denser material without opacity
+                    .clipShape(RoundedRectangle(cornerRadius: UIStyle.cardRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: UIStyle.cardRadius)
+                            .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                    )
+                    .opacity(store.run != nil ? 1.0 : 0.35)
+                }
+                .disabled(store.run == nil)
+                .buttonStyle(.plain)
+
+                // Castle card — same internal grid and thumbnail slot
+                Button {
+                    store.goToCastle()
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .center, spacing: 10) {
+                            Image(systemName: "building.columns")
+                                .font(.title3)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Castle")
+                                    .font(.headline)
+                                    .lineLimit(1)
+
+                                Text("Build between runs")
+                                    .font(.caption)
+                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                            }
+
+                            Spacer(minLength: 0)
+                        }
+
+                        // Fixed thumbnail slot (unified with Tower)
+                        Image("castle")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: hubThumbHeight)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: hubImageCorner))
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: hubCardHeight) // equal height for Tower/Castle
+                    .background(.regularMaterial) // denser material without opacity
+                    .clipShape(RoundedRectangle(cornerRadius: UIStyle.cardRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: UIStyle.cardRadius)
+                            .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
             }
 
             hubCardButton(
