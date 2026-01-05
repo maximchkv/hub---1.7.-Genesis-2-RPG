@@ -15,7 +15,7 @@ struct BattleView: View {
 
     // Participants sizing
     private let participantMinHeight: CGFloat = 200
-    private let participantMaxHeight: CGFloat = 400
+    private let participantMaxHeight: CGFloat = 260
 
     // Log sizing (bounded, because we now allow vertical scroll)
     private let logMinHeight: CGFloat = 120
