@@ -333,8 +333,9 @@ private struct BattleParticipantCard: View {
 
             Spacer(minLength: 0)
 
-            // Portrait placeholder or player image (elastic, pinned: L/R/B = 8)
+            // Portrait area (elastic, pinned: L/R/B = 8)
             ZStack {
+                // Keep the subtle frame/placeholder background
                 RoundedRectangle(cornerRadius: portraitCorner)
                     .strokeBorder(.gray.opacity(0.20), lineWidth: 1)
                     .background(
@@ -343,16 +344,23 @@ private struct BattleParticipantCard: View {
                     )
 
                 if intentText == nil {
-                    // Player portrait
+                    // Player portrait (untouched in this task)
                     Image("player")
                         .resizable()
                         .scaledToFill()
                         .clipShape(RoundedRectangle(cornerRadius: portraitCorner))
                 } else {
-                    // Enemy placeholder (until enemy art arrives)
-                    Image(systemName: "photo")
-                        .font(.system(size: 22, weight: .regular))
-                        .foregroundStyle(.secondary)
+                    // Enemy portrait by name mapping, fallback to placeholder
+                    if let asset = enemyPortraitAssetName(for: title) {
+                        Image(asset)
+                            .resizable()
+                            .scaledToFill()
+                            .clipShape(RoundedRectangle(cornerRadius: portraitCorner))
+                    } else {
+                        Image(systemName: "photo")
+                            .font(.system(size: 22, weight: .regular))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .frame(maxWidth: .infinity)
@@ -369,6 +377,18 @@ private struct BattleParticipantCard: View {
             RoundedRectangle(cornerRadius: cardCorner)
                 .strokeBorder(.gray.opacity(participantStrokeOpacity), lineWidth: 1)
         )
+    }
+
+    // FIX-BOOT-033: enemy portrait asset resolver with normalization
+    private func enemyPortraitAssetName(for name: String) -> String? {
+        let key = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch key {
+        case "феянча": return "feyancha"
+        case "графитовый голем": return "graphite_golem"
+        case "каратель": return "punisher"
+        case "монахи зесуруми": return "zesurumi_monks"
+        default: return nil
+        }
     }
 }
 
