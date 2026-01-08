@@ -13,12 +13,9 @@ struct CastleView: View {
     // Width cap helper (028B)
     private func widthCap(for sizeClass: UserInterfaceSizeClass?, windowWidth: CGFloat) -> CGFloat {
         switch sizeClass {
-        case .compact:
-            return 360
-        case .regular:
-            return windowWidth < 900 ? 600 : 720
-        default:
-            return 360
+        case .compact: return 360
+        case .regular: return windowWidth < 900 ? 600 : 720
+        default: return 360
         }
     }
 
@@ -53,237 +50,28 @@ struct CastleView: View {
             UIStyle.background()
                 .ignoresSafeArea()
 
-            // Existing content (unchanged)
             GeometryReader { geo in
-                ScrollView {
-                    let horizontalPadding: CGFloat = 24
-                    let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
-                    let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
-                    let contentWidth = min(availableWidth, cap)
+                let horizontalPadding: CGFloat = 24
+                let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
+                let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
+                let contentWidth = min(availableWidth, cap)
 
+                ScrollView {
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
 
                         VStack(spacing: 12) {
-                            // Header — bottom divider + clamp to contentWidth
-                            VStack(spacing: 0) {
-                                HStack {
-                                    Text("Best: \(store.meta.bestFloor)")
-                                        .lineLimit(1).minimumScaleFactor(0.85)
-                                    Spacer()
-                                    Text("Day: \(store.meta.days)")
-                                        .lineLimit(1).minimumScaleFactor(0.85)
-                                    Spacer()
-                                    Text("+\(store.castleIncomePerDay) / day")
-                                        .lineLimit(1).minimumScaleFactor(0.85)
-                                }
-                                .font(.caption)
-                                .padding(.horizontal)
-                                .padding(.vertical, 10)
-
-                                Rectangle()
-                                    .fill(Color.primary.opacity(0.12))
-                                    .frame(height: 1)
-                            }
-                            .background(.thinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .frame(width: contentWidth, alignment: .center)
-
-                            // Top block with computed fixed widths per contentWidth
-                            let imageBox: CGFloat = 120
-                            let gap: CGFloat = 12
-                            let rightCol: CGFloat = 70
-                            let leftCol: CGFloat = max(120, contentWidth - imageBox - rightCol - gap*2)
-
-                            // REPLACED: three-column symmetric HStack (center fixed width)
-                            HStack(alignment: .top, spacing: 12) {
-
-                                // LEFT (stats)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("Buildings: \(store.castleBuildingsCount)")
-                                    Text("Income: +\(store.castleIncomePerDay)/day")
-                                    Text("Free tiles: \(store.castleFreeTilesCount)")
-                                }
-                                .font(.caption)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                                // CENTER (castle image placeholder) — всегда по центру
-                                VStack(spacing: 8) {
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .fill(.thinMaterial)
-                                        .overlay(
-                                            VStack(spacing: 6) {
-                                                Text("🏰")
-                                                    .font(.title2)
-                                                Text("Castle Image")
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 14)
-                                                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
-                                        )
-                                        .frame(width: 140, height: 110)
-                                }
-                                .frame(width: 140)
-
-                                // RIGHT (relics)
-                                VStack(alignment: .trailing, spacing: 6) {
-                                    Button {
-                                        isRelicsSheetPresented = true
-                                    } label: {
-                                        VStack(alignment: .trailing, spacing: 6) {
-                                            Text("Relics")
-                                                .font(.caption)
-                                                .fontWeight(.semibold)
-                                                .foregroundStyle(.primary)
-                                            HStack(spacing: 6) {
-                                                Text("🗿")
-                                                Text("🗝️")
-                                                Text("—")
-                                            }
-                                            .font(.caption)
-                                            .foregroundStyle(.primary)
-                                        }
-                                        .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                            }
-                            .frame(width: contentWidth, alignment: .center)
-
-                            // Mode buttons — store-driven with toggle idle behavior
-                            HStack(spacing: 12) {
-                                modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                        store.setCastleMode(CastleUIMode.build)
-                                    }
-                                }
-
-                                modePill("Upgrade", isActive: store.castleModeUI == CastleUIMode.upgrade) {
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                        store.setCastleMode(CastleUIMode.upgrade)
-                                    }
-                                }
-                            }
-                            .frame(width: contentWidth, alignment: .center)
+                            headerCard(contentWidth: contentWidth)
+                            topSummaryRow(contentWidth: contentWidth)
+                            modeButtonsRow(contentWidth: contentWidth)
 
                             #if DEBUG
-                            Button("Next Day (debug)") {
-                                store.castleAdvanceDay()
-                            }
-                            .buttonStyle(.bordered)
-                            .padding(.top, 6)
-                            .frame(width: contentWidth, alignment: .center)
+                            debugNextDayButton(contentWidth: contentWidth)
                             #endif
 
-                            // Grid container (derived from contentWidth)
-                            let gridWidth = contentWidth
-                            let gridHeight = gridWidth * gridAspect
+                            gridBlock(contentWidth: contentWidth)
 
-                            // Derived cell sizing
-                            let cols: CGFloat = 5
-                            let rows: CGFloat = 5
-                            let innerPadding: CGFloat = 14
-                            let cellSpacing: CGFloat = 10
-
-                            let innerW = gridWidth - innerPadding * 2
-                            let innerH = gridHeight - innerPadding * 2
-
-                            let cellWidth = (innerW - cellSpacing * (cols - 1)) / cols
-                            let cellHeight = (innerH - cellSpacing * (rows - 1)) / rows
-
-                            VStack(spacing: 0) {
-                                RoundedRectangle(cornerRadius: 22)
-                                    .fill(.thinMaterial)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 22)
-                                            .stroke(Color.primary.opacity(0.12), lineWidth: 1.5)
-                                    )
-                                    .frame(width: gridWidth, height: gridHeight)
-                                    .overlay(
-                                        LazyVGrid(
-                                            columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: cellSpacing), count: Int(cols)),
-                                            spacing: cellSpacing
-                                        ) {
-                                            ForEach(store.castleTiles) { tile in
-                                                let isMaxLevel: Bool = {
-                                                    if case .built(let type, let level) = tile.state {
-                                                        return level >= type.maxLevel
-                                                    }
-                                                    return false
-                                                }()
-
-                                                let isEmpty = (tile.building == nil)
-                                                let isHighlighted: Bool = {
-                                                    switch store.castleModeUI {
-                                                    case CastleUIMode.build: return isEmpty
-                                                    case CastleUIMode.upgrade:
-                                                        return !isEmpty && !isMaxLevel
-                                                    case CastleUIMode.idle: return false
-                                                    }
-                                                }()
-
-                                                Button {
-                                                    store.onTileTapped(tile)
-                                                } label: {
-                                                    CastleTileContentView(
-                                                        iconText: tile.building?.emoji ?? "⬜️",
-                                                        titleText: tile.building?.title ?? "Empty",
-                                                        statText: tile.building == nil
-                                                            ? "Tap to build"
-                                                            : "+\((tile.building?.incomePerDay(level: max(1, tile.level)) ?? 0))/day",
-                                                        levelText: {
-                                                            if tile.building == nil { return "—" }
-                                                            return isMaxLevel ? "MAX" : "Lv \(max(1, tile.level))"
-                                                        }(),
-                                                        width: cellWidth,
-                                                        height: cellHeight
-                                                    )
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 12)
-                                                            .stroke(isHighlighted ? Color.accentColor.opacity(0.9) : Color.clear, lineWidth: 3)
-                                                    )
-                                                    .opacity({
-                                                        switch store.castleModeUI {
-                                                        case CastleUIMode.build:
-                                                            return (tile.building != nil) ? 0.35 : 1.0
-                                                        case CastleUIMode.upgrade:
-                                                            if tile.building == nil { return 0.35 }
-                                                            return isMaxLevel ? 0.35 : 1.0
-                                                        case CastleUIMode.idle:
-                                                            return 1.0
-                                                        }
-                                                    }())
-                                                    .scaleEffect(isHighlighted ? 1.02 : 1.0)
-                                                }
-                                                .buttonStyle(.plain)
-                                                .allowsHitTesting({
-                                                    switch store.castleModeUI {
-                                                    case CastleUIMode.build:
-                                                        return isEmpty
-                                                    case CastleUIMode.upgrade:
-                                                        return (!isEmpty && !isMaxLevel)
-                                                    case CastleUIMode.idle:
-                                                        return true
-                                                    }
-                                                }())
-                                            }
-                                        }
-                                        .padding(innerPadding)
-                                    )
-                                    .frame(maxWidth: .infinity, alignment: .center)
-
-                                // Back to Hub
-                                Button("Back to Hub") {
-                                    store.goToHub()
-                                }
-                                .padding(.top, 12)
-                                .padding(.bottom, 8)
-                            }
-                            .frame(maxWidth: .infinity)
+                            backToHubButton(contentWidth: contentWidth)
                         }
                         .frame(width: contentWidth, alignment: .center)
                         .padding(.top, 12)
@@ -296,60 +84,325 @@ struct CastleView: View {
                 }
                 .scrollIndicators(.hidden)
             }
-            .onAppear {
-                store.castleRecomputeStats()
+        }
+        .onAppear {
+            store.castleRecomputeStats()
+        }
+        .sheet(isPresented: $isRelicsSheetPresented) {
+            RelicsListSheetView()
+                .environmentObject(store)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { store.isBuildSheetPresented },
+                set: { store.isBuildSheetPresented = $0 }
+            )
+        ) {
+            buildSheet
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { store.isUpgradeSheetPresented },
+                set: { store.isUpgradeSheetPresented = $0 }
+            )
+        ) {
+            upgradeSheet
+        }
+    }
+
+    // MARK: - Header
+
+    private func headerCard(contentWidth: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Best: \(store.meta.bestFloor)")
+                    .lineLimit(1).minimumScaleFactor(0.85)
+                Spacer()
+                Text("Day: \(store.meta.days)")
+                    .lineLimit(1).minimumScaleFactor(0.85)
+                Spacer()
+                Text("+\(store.castleIncomePerDay) / day")
+                    .lineLimit(1).minimumScaleFactor(0.85)
             }
-            .sheet(isPresented: $isRelicsSheetPresented) {
-                RelicsListSheetView()
-                    .environmentObject(store)
+            .font(.caption)
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+
+            Rectangle()
+                .fill(Color.primary.opacity(0.12))
+                .frame(height: 1)
+        }
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .frame(width: contentWidth, alignment: .center)
+    }
+
+    // MARK: - Top summary (stats + image + relics)
+
+    private func topSummaryRow(contentWidth: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            // LEFT (stats)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Buildings: \(store.castleBuildingsCount)")
+                Text("Income: +\(store.castleIncomePerDay)/day")
+                Text("Free tiles: \(store.castleFreeTilesCount)")
             }
-            .sheet(isPresented: $store.isBuildSheetPresented) {
-                CastleBuildSheetView(
-                    onPickFarm: {
-                        if let farm = store.buildCandidates.first(where: { $0.kind == .farm }) {
-                            store.confirmBuild(farm)
-                        } else {
-                            store.confirmBuild(
-                                BuildCandidate(kind: .farm, title: "Farm", emoji: "🌾", incomePerDay: 1, blurb: "+1 / day")
-                            )
+            .font(.caption)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // CENTER (castle image placeholder)
+            castleImageCard
+
+            // RIGHT (relics)
+            relicsButton
+        }
+        .frame(width: contentWidth, alignment: .center)
+    }
+
+    private var castleImageCard: some View {
+        VStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.thinMaterial)
+                .overlay(
+                    VStack(spacing: 6) {
+                        Text("🏰")
+                            .font(.title2)
+                        Text("Castle Image")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+                )
+                .frame(width: 140, height: 110)
+        }
+        .frame(width: 140)
+    }
+
+    private var relicsButton: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            Button {
+                isRelicsSheetPresented = true
+            } label: {
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text("Relics")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                    HStack(spacing: 6) {
+                        Text("🗿")
+                        Text("🗝️")
+                        Text("—")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    // MARK: - Mode buttons
+
+    private func modeButtonsRow(contentWidth: CGFloat) -> some View {
+        HStack(spacing: 12) {
+            modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                    store.setCastleMode(CastleUIMode.build)
+                }
+            }
+
+            modePill("Upgrade", isActive: store.castleModeUI == CastleUIMode.upgrade) {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                    store.setCastleMode(CastleUIMode.upgrade)
+                }
+            }
+        }
+        .frame(width: contentWidth, alignment: .center)
+    }
+
+    #if DEBUG
+    private func debugNextDayButton(contentWidth: CGFloat) -> some View {
+        Button("Next Day (debug)") {
+            store.castleAdvanceDay()
+        }
+        .buttonStyle(.bordered)
+        .padding(.top, 6)
+        .frame(width: contentWidth, alignment: .center)
+    }
+    #endif
+
+    // MARK: - Grid
+
+    private func gridBlock(contentWidth: CGFloat) -> some View {
+        let gridWidth = contentWidth
+        let gridHeight = gridWidth * gridAspect
+
+        // Derived cell sizing
+        let cols: CGFloat = 5
+        let rows: CGFloat = 5
+        let innerPadding: CGFloat = 14
+        let cellSpacing: CGFloat = 10
+
+        let innerW = gridWidth - innerPadding * 2
+        let innerH = gridHeight - innerPadding * 2
+
+        let cellWidth = (innerW - cellSpacing * (cols - 1)) / cols
+        let cellHeight = (innerH - cellSpacing * (rows - 1)) / rows
+
+        return VStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 22)
+                .fill(.thinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.primary.opacity(0.12), lineWidth: 1.5)
+                )
+                .frame(width: gridWidth, height: gridHeight)
+                .overlay(
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: cellSpacing), count: Int(cols)),
+                        spacing: cellSpacing
+                    ) {
+                        ForEach(store.castleTiles) { tile in
+                            let isMaxLevel: Bool = {
+                                if case .built(let type, let level) = tile.state {
+                                    return level >= type.maxLevel
+                                }
+                                return false
+                            }()
+
+                            let isEmpty = (tile.building == nil)
+
+                            let isHighlighted: Bool = {
+                                switch store.castleModeUI {
+                                case CastleUIMode.build: return isEmpty
+                                case CastleUIMode.upgrade: return !isEmpty && !isMaxLevel
+                                case CastleUIMode.idle: return false
+                                }
+                            }()
+
+                            let tileOpacity: Double = {
+                                switch store.castleModeUI {
+                                case CastleUIMode.build:
+                                    return (tile.building != nil) ? 0.35 : 1.0
+                                case CastleUIMode.upgrade:
+                                    if tile.building == nil { return 0.35 }
+                                    return isMaxLevel ? 0.35 : 1.0
+                                case CastleUIMode.idle:
+                                    return 1.0
+                                }
+                            }()
+
+                            let canHitTest: Bool = {
+                                switch store.castleModeUI {
+                                case CastleUIMode.build:
+                                    return isEmpty
+                                case CastleUIMode.upgrade:
+                                    return (!isEmpty && !isMaxLevel)
+                                case CastleUIMode.idle:
+                                    return true
+                                }
+                            }()
+
+                            Button {
+                                store.onTileTapped(tile)
+                            } label: {
+                                CastleTileContentView(
+                                    iconText: tile.building?.emoji ?? "⬜️",
+                                    titleText: tile.building?.title ?? "Empty",
+                                    statText: tile.building == nil
+                                        ? "Tap to build"
+                                        : "+\((tile.building?.incomePerDay(level: max(1, tile.level)) ?? 0))/day",
+                                    levelText: {
+                                        if tile.building == nil { return "—" }
+                                        return isMaxLevel ? "MAX" : "Lv \(max(1, tile.level))"
+                                    }(),
+                                    width: cellWidth,
+                                    height: cellHeight
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(isHighlighted ? Color.accentColor.opacity(0.9) : Color.clear, lineWidth: 3)
+                                )
+                                .opacity(tileOpacity)
+                                .scaleEffect(isHighlighted ? 1.02 : 1.0)
+                            }
+                            .buttonStyle(.plain)
+                            .allowsHitTesting(canHitTest)
                         }
-                    },
-                    onPickMine: {
-                        if let mine = store.buildCandidates.first(where: { $0.kind == .mine }) {
-                            store.confirmBuild(mine)
-                        } else {
-                            store.confirmBuild(
-                                BuildCandidate(kind: .mine, title: "Mine", emoji: "⛏️", incomePerDay: 2, blurb: "+2 / day")
-                            )
-                        }
+                    }
+                    .padding(innerPadding)
+                )
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Bottom
+
+    private func backToHubButton(contentWidth: CGFloat) -> some View {
+        Button("Back to Hub") {
+            store.goToHub()
+        }
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .frame(width: contentWidth, alignment: .center)
+    }
+
+    // MARK: - Sheets
+
+    private var buildSheet: some View {
+        CastleBuildSheetView(
+            onPickFarm: {
+                if let farm = store.buildCandidates.first(where: { $0.kind == .farm }) {
+                    store.confirmBuild(farm)
+                } else {
+                    store.confirmBuild(
+                        BuildCandidate(kind: .farm, title: "Farm", emoji: "🌾", incomePerDay: 1, blurb: "+1 / day")
+                    )
+                }
+            },
+            onPickMine: {
+                if let mine = store.buildCandidates.first(where: { $0.kind == .mine }) {
+                    store.confirmBuild(mine)
+                } else {
+                    store.confirmBuild(
+                        BuildCandidate(kind: .mine, title: "Mine", emoji: "⛏️", incomePerDay: 2, blurb: "+2 / day")
+                    )
+                }
+            },
+            onClose: {
+                store.cancelBuildSheet()
+            }
+        )
+        .presentationDetents([.medium])
+    }
+
+    private var upgradeSheet: some View {
+        Group {
+            if let idx = store.selectedCastleTileIndex,
+               let info = store.castleTileInfo(idx) {
+                CastleUpgradeSheetView(
+                    title: info.title,
+                    icon: info.icon,
+                    levelText: "Lv \(info.level)",
+                    incomeText: "+\(info.incomePerDay)/day",
+                    onUpgrade: {
+                        // If you add store.upgradeTile(tileIndex:) to GameStore, you can call it here.
+                        store.closeUpgradeSheet()
                     },
                     onClose: {
-                        store.cancelBuildSheet()
+                        store.closeUpgradeSheet()
                     }
                 )
                 .presentationDetents([.medium])
-            }
-            .sheet(isPresented: $store.isUpgradeSheetPresented) {
-                if let idx = store.selectedCastleTileIndex,
-                   let info = store.castleTileInfo(idx) {
-                    CastleUpgradeSheetView(
-                        title: info.title,
-                        icon: info.icon,
-                        levelText: "Lv \(info.level)",
-                        incomeText: "+\(info.incomePerDay)/day",
-                        onUpgrade: {
-                            store.upgradeTile(tileIndex: idx)
-                            store.closeUpgradeSheet()
-                        },
-                        onClose: {
-                            store.closeUpgradeSheet()
-                        }
-                    )
-                    .presentationDetents([.medium])
-                } else {
-                    Color.clear
-                        .onAppear { store.closeUpgradeSheet() }
-                }
+            } else {
+                Color.clear
+                    .onAppear { store.closeUpgradeSheet() }
             }
         }
     }
@@ -467,10 +520,8 @@ private struct CastleBuildSheetView: View {
                 .buttonStyle(.plain)
             }
 
-            Button("Close") {
-                onClose()
-            }
-            .padding(.top, 4)
+            Button("Close") { onClose() }
+                .padding(.top, 4)
         }
         .padding(20)
     }
@@ -505,14 +556,10 @@ private struct CastleUpgradeSheetView: View {
             }
             .padding(.horizontal)
 
-            Button("Upgrade (stub)") {
-                onUpgrade()
-            }
-            .buttonStyle(.borderedProminent)
+            Button("Upgrade (stub)") { onUpgrade() }
+                .buttonStyle(.borderedProminent)
 
-            Button("Close") {
-                onClose()
-            }
+            Button("Close") { onClose() }
         }
         .padding()
     }

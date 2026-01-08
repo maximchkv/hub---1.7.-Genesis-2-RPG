@@ -65,10 +65,11 @@ struct BattleView: View {
                                 hp: battle.playerHP,
                                 block: battle.playerBlock,
                                 maxHP: 20,
-                                intentText: nil
+                                intentText: nil,
+                                statuses: battle.playerStatuses
                             )
                             .frame(width: participantW)
-                            .frame(height: participantCardHeight) // fixed participant card height
+                            .frame(height: participantCardHeight)
                             .padding(.horizontal, participantInnerPad)
 
                             BattleParticipantCard(
@@ -76,13 +77,14 @@ struct BattleView: View {
                                 hp: battle.enemyHP,
                                 block: battle.enemyBlock,
                                 maxHP: 20,
-                                intentText: battle.enemyIntent.text
+                                intentText: battle.enemyIntent.text,
+                                statuses: battle.enemyStatuses
                             )
                             .frame(width: participantW)
-                            .frame(height: participantCardHeight) // fixed participant card height
+                            .frame(height: participantCardHeight)
                             .padding(.horizontal, participantInnerPad)
                         }
-                        .padding(.horizontal, participantSideInset) // side inset for the row
+                        .padding(.horizontal, participantSideInset)
                         .frame(width: contentWidth, alignment: .center)
 
                         Spacer().frame(height: participantsToLog)
@@ -121,15 +123,12 @@ struct BattleView: View {
 
     private func headerRow(floor: Int) -> some View {
         ZStack {
-            // Center title must stay centered on screen
             Text("Floor \(floor)")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
 
-            // Left/Right controls
             HStack(alignment: .center) {
-                // Top-left debug: win/lose (short)
                 HStack(spacing: 8) {
                     Button("win") { store.winBattle() }
                         .font(.caption2)
@@ -142,7 +141,6 @@ struct BattleView: View {
 
                 Spacer(minLength: 0)
 
-                // Top-right surrender placeholder
                 Button {
                     store.surrenderBattle()
                 } label: {
@@ -153,7 +151,6 @@ struct BattleView: View {
                         .background(.thinMaterial)
                         .clipShape(Circle())
                         .overlay(
-                            // FIX: replace UIStyle.Color.cardStroke with safe color
                             Circle().stroke(Color.primary.opacity(0.18), lineWidth: 1)
                         )
                         .accessibilityLabel("Surrender")
@@ -205,7 +202,6 @@ struct BattleView: View {
                 .background(.thinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: logCorner))
                 .overlay(
-                    // FIX: replace UIStyle.Color.cardStroke with safe color
                     RoundedRectangle(cornerRadius: logCorner)
                         .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                 )
@@ -219,14 +215,11 @@ struct BattleView: View {
 
     private func bottomStack(contentWidth: CGFloat, battle: BattleState) -> some View {
         VStack(spacing: 0) {
-
-            // Cards row (visually glued to bottom block area)
             actionCardsRow(battle: battle)
                 .frame(width: contentWidth, alignment: .center)
 
             Spacer().frame(height: cardsToAP)
 
-            // AP label (RU, black, bold)
             Text("Очки действий: \(battle.actionPoints)")
                 .font(.footnote)
                 .fontWeight(.bold)
@@ -235,9 +228,7 @@ struct BattleView: View {
 
             Spacer().frame(height: 10)
 
-            // End Turn centered under AP
             Button("End Turn") { store.endTurn() }
-                // FIX: remove dependency on battle.phase
                 .frame(maxWidth: .infinity, alignment: .center)
 
             Spacer().frame(height: 6)
@@ -245,11 +236,9 @@ struct BattleView: View {
     }
 
     private func actionCardsRow(battle: BattleState) -> some View {
-        // FIX: remove isEnemyPhase/phase usage
         return VStack(spacing: 8) {
             HStack(spacing: actionCardRowSpacing) {
                 ForEach(battle.hand, id: \.id) { card in
-                    // FIX: remove usedCardsThisTurn and phase checks; keep only AP
                     let hasAP = card.cost <= battle.actionPoints
                     let canPlay = hasAP
 
@@ -269,7 +258,7 @@ struct BattleView: View {
     }
 }
 
-// MARK: - Participant Card (square placeholder + tighter text)
+// MARK: - Participant Card (with status row)
 
 private struct BattleParticipantCard: View {
     let title: String
@@ -277,6 +266,7 @@ private struct BattleParticipantCard: View {
     let block: Int
     let maxHP: Int
     let intentText: String? // nil for player
+    let statuses: [StatusInstance]
 
     private let cardCorner: CGFloat = 16
     private let innerPad: CGFloat = 10
@@ -284,14 +274,14 @@ private struct BattleParticipantCard: View {
     private let portraitCorner: CGFloat = 14
 
     // Participant card visual tokens (UI-KIT v1.x)
-    private let participantBgOpacity: CGFloat = 0.55        // высокая прозрачность (виден фон)
-    private let participantStrokeOpacity: CGFloat = 0.12    // мягкий контур
-    private var participantBgTint: Color { Color(.systemGray5) } // сероватый, блеклый
+    private let participantBgOpacity: CGFloat = 0.55
+    private let participantStrokeOpacity: CGFloat = 0.12
+    private var participantBgTint: Color { Color(.systemGray5) }
 
     var body: some View {
         VStack(spacing: 6) {
 
-            // Name (tighter)
+            // Name
             Text(title)
                 .font(.headline)
                 .multilineTextAlignment(.center)
@@ -304,7 +294,7 @@ private struct BattleParticipantCard: View {
                 .frame(height: 6)
                 .padding(.top, 2)
 
-            // HP + Block (tighter)
+            // HP + Block
             VStack(spacing: 2) {
                 Text("HP: \(hp)/\(maxHP)")
                     .font(.caption2)
@@ -316,7 +306,11 @@ private struct BattleParticipantCard: View {
             }
             .padding(.top, 2)
 
-            // Intent (enemy) / reserved line (player) — tighter
+            // Status row (031B): bleed → vulnerable → weak → stun
+            statusRow
+                .padding(.top, 2)
+
+            // Intent line
             Group {
                 if let intentText {
                     Text("Intent: \(intentText)")
@@ -335,7 +329,6 @@ private struct BattleParticipantCard: View {
 
             // Portrait area (elastic, pinned: L/R/B = 8)
             ZStack {
-                // Keep the subtle frame/placeholder background
                 RoundedRectangle(cornerRadius: portraitCorner)
                     .strokeBorder(.gray.opacity(0.20), lineWidth: 1)
                     .background(
@@ -344,7 +337,7 @@ private struct BattleParticipantCard: View {
                     )
 
                 if intentText == nil {
-                    // Player portrait (untouched in this task)
+                    // Player portrait
                     Image("player")
                         .resizable()
                         .scaledToFill()
@@ -379,12 +372,50 @@ private struct BattleParticipantCard: View {
         )
     }
 
-    // FIX-BOOT-033: enemy portrait asset resolver with normalization
+    // 031B: status row view
+    private var statusRow: some View {
+        let filtered = statuses.filter { $0.stacks > 0 }
+        // Order: bleed → vulnerable → weak → stun
+        let ordered: [StatusInstance] = [
+            filtered.first(where: { $0.type == .bleed }),
+            filtered.first(where: { $0.type == .vulnerable }),
+            filtered.first(where: { $0.type == .weak }),
+            filtered.first(where: { $0.type == .stun })
+        ].compactMap { $0 }
+
+        return HStack(spacing: 6) {
+            ForEach(ordered, id: \.id) { s in
+                HStack(spacing: 4) {
+                    Image(systemName: iconName(for: s.type))
+                        .font(.caption2)
+                    Text("\(s.stacks)")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                }
+                .padding(.vertical, 3)
+                .padding(.horizontal, 6)
+                .background(Color.primary.opacity(0.08))
+                .clipShape(Capsule())
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func iconName(for type: StatusType) -> String {
+        switch type {
+        case .bleed: return "drop.fill"
+        case .vulnerable: return "exclamationmark.triangle.fill"
+        case .weak: return "arrow.down.circle.fill"
+        case .stun: return "bolt.fill"
+        }
+    }
+
+    // Enemy portraits (existing mapping)
     private func enemyPortraitAssetName(for name: String) -> String? {
         let key = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         switch key {
         case "феянча": return "feyancha"
-        case "графитовый голем": return "graphite_golem"
+        case "графитовый голем", "графитовый голем": return "graphite_golem"
         case "каратель": return "punisher"
         case "монахи зесуруми": return "zesurumi_monks"
         default: return nil

@@ -33,6 +33,7 @@
 		507E29ED2F09B82E00BD8FBB /* UIStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EC2F09B82E00BD8FBB /* UIStyle.swift */; };
 		507E29EF2F0A307F00BD8FBB /* Enemy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EE2F0A307F00BD8FBB /* Enemy.swift */; };
 		507E29F12F0A332100BD8FBB /* RuntimeEnemyCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */; };
+		50CB92512F0E73B400F1800F /* Status.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50CB92502F0E73B400F1800F /* Status.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +64,7 @@
 		507E29EC2F09B82E00BD8FBB /* UIStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIStyle.swift; sourceTree = "<group>"; };
 		507E29EE2F0A307F00BD8FBB /* Enemy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enemy.swift; sourceTree = "<group>"; };
 		507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeEnemyCatalog.swift; sourceTree = "<group>"; };
+		50CB92502F0E73B400F1800F /* Status.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Status.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -115,6 +117,7 @@
 				507E29EC2F09B82E00BD8FBB /* UIStyle.swift */,
 				507E29EE2F0A307F00BD8FBB /* Enemy.swift */,
 				507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */,
+				50CB92502F0E73B400F1800F /* Status.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -203,6 +206,7 @@
 				507E29E32F09654100BD8FBB /* CastleRelicsView.swift in Sources */,
 				507E299B2F07F17D00BD8FBB /* Route.swift in Sources */,
 				507E29AB2F07F51A00BD8FBB /* ChestView.swift in Sources */,
+				50CB92512F0E73B400F1800F /* Status.swift in Sources */,
 				507E29E72F09756700BD8FBB /* BuildPickerOverlay.swift in Sources */,
 				507E29EF2F0A307F00BD8FBB /* Enemy.swift in Sources */,
 				507E29B32F07F6C600BD8FBB /* ActionCard.swift in Sources */,

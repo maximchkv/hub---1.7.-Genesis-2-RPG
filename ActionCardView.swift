@@ -25,7 +25,7 @@ struct ActionCardView: View {
                 .minimumScaleFactor(0.9)
                 .frame(maxWidth: .infinity)
 
-            // 3) Description (placeholder text for now)
+            // 3) Description (placeholder or effect text)
             Text(descriptionText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -33,6 +33,17 @@ struct ActionCardView: View {
                 .lineLimit(3)
                 .minimumScaleFactor(0.9)
                 .frame(maxWidth: .infinity)
+
+            // 3.1) 031B: Effect row for status cards (icon + value)
+            if let effect = statusEffectRow {
+                HStack(spacing: 6) {
+                    Image(systemName: effect.icon)
+                        .font(.caption)
+                    Text(effect.valueText)
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+            }
 
             Spacer(minLength: 0)
 
@@ -64,6 +75,9 @@ struct ActionCardView: View {
         case .defend: return "Guard"
         case .doubleStrike: return "Double Strike"
         case .counterStance: return "Counter Stance"
+        case .bleedPlus2: return "Кровоток"
+        case .weakPlus1: return "Ослабить"
+        case .stun1: return "Оглушить"
         }
     }
 
@@ -73,6 +87,9 @@ struct ActionCardView: View {
         case .defend: return "🛡️"
         case .doubleStrike: return "⚔️"
         case .counterStance: return "🔁"
+        case .bleedPlus2: return "🩸"
+        case .weakPlus1: return "⬇️"
+        case .stun1: return "⚡️"
         }
     }
 
@@ -82,6 +99,23 @@ struct ActionCardView: View {
         case .defend: return "Gain block."
         case .doubleStrike: return "Deal damage twice."
         case .counterStance: return "Gain block and deal damage."
+        case .bleedPlus2: return "Накладывает Кровотечение (+2)"
+        case .weakPlus1: return "Накладывает Слабость (+1)"
+        case .stun1: return "Накладывает Оглушение (1)"
+        }
+    }
+
+    // 031B: effect row content for status cards
+    private var statusEffectRow: (icon: String, valueText: String)? {
+        switch card.kind {
+        case .bleedPlus2:
+            return ("drop.fill", "+2")
+        case .weakPlus1:
+            return ("arrow.down.circle.fill", "+1")
+        case .stun1:
+            return ("bolt.fill", "1")
+        default:
+            return nil
         }
     }
 }

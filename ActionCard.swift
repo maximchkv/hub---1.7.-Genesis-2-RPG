@@ -5,6 +5,11 @@ enum ActionCardKind: String, Codable {
     case defend           // Защита (важно: кейс называется defend, не guard)
     case doubleStrike     // Двойной удар
     case counterStance    // Контратака
+
+    // 031B: Status cards
+    case bleedPlus2       // Кровоток
+    case weakPlus1        // Ослабить
+    case stun1            // Оглушить
 }
 
 struct ActionCard: Identifiable, Codable {
@@ -17,6 +22,9 @@ struct ActionCard: Identifiable, Codable {
         case .defend: return 1
         case .doubleStrike: return 2
         case .counterStance: return 2
+        case .bleedPlus2: return 1
+        case .weakPlus1: return 1
+        case .stun1: return 2
         }
     }
 

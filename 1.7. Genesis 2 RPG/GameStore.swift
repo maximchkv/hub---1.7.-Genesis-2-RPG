@@ -64,9 +64,9 @@ final class GameStore: ObservableObject {
     // MARK: - Castle tile state (027A1)
     enum CastleTileState: Codable, Equatable {
         case empty
-        case constructing(type: BuildingKind)               // will become built(level: 1) on next day tick
-        case built(type: BuildingKind, level: Int)          // active building
-        case upgrading(type: BuildingKind, fromLevel: Int)  // will become built(level: fromLevel+1) on next day tick
+        case constructing(type: BuildingKind)
+        case built(type: BuildingKind, level: Int)
+        case upgrading(type: BuildingKind, fromLevel: Int)
 
         var buildingType: BuildingKind? {
             switch self {
@@ -82,7 +82,7 @@ final class GameStore: ObservableObject {
             case .built(_, let level):
                 return max(1, level)
             case .upgrading(_, let fromLevel):
-                return max(1, fromLevel) // while upgrade is pending — show current level
+                return max(1, fromLevel)
             default:
                 return nil
             }
@@ -100,17 +100,16 @@ final class GameStore: ObservableObject {
         let id: Int // 0...24
         var state: CastleTileState = .empty
 
-        // Compatibility accessors for existing UI (do not change UI files)
         var building: BuildingKind? {
             state.buildingType
         }
 
-        // Level used by UI; 0 if empty/constructing
         var level: Int {
             switch state {
             case .built(_, let level): return max(1, level)
             case .upgrading(_, let fromLevel): return max(1, fromLevel)
-            default: return 0
+            default:
+                return 0
             }
         }
 
@@ -148,7 +147,6 @@ final class GameStore: ObservableObject {
     }
 
     // MARK: - Castle computed stats
-    // Sum only active built tiles. Artifact bonuses remain global via PlayerMeta.incomePerDay (as-is).
     var castleIncomePerDay: Int {
         castleTiles.reduce(0) { acc, t in
             switch t.state {
@@ -165,7 +163,6 @@ final class GameStore: ObservableObject {
         toast = "\(mode.rawValue) mode"
     }
 
-    // Helpers for overlays (updated to use state)
     func isCastleTileEmpty(_ index: Int) -> Bool {
         guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return false }
         if case .empty = castleTiles[idx].state { return true }
@@ -198,129 +195,6 @@ final class GameStore: ObservableObject {
         )
     }
 
-    // Build specific kind on tile (used by Build overlay) — legacy immediate builder
-    // Kept for compatibility; prefer buildTile(tileIndex:type:) with cost and pending.
-    func buildOnTile(index: Int, kind: BuildingKind) {
-        guard let idx = castleTiles.firstIndex(where: { $0.id == index }) else { return }
-        switch castleTiles[idx].state {
-        case .empty:
-            castleTiles[idx].state = .constructing(type: kind)
-            toast = "Building \(kind.title) started"
-        default:
-            toast = "Tile is not empty"
-            return
-        }
-        castleRecomputeStats()
-    }
-
-    // Upgrade tile by +1 level (used by Upgrade overlay) — legacy signature delegates to 027A3
-    func upgradeTile(index: Int) {
-        upgradeTile(tileIndex: index)
-    }
-
-    // 027A3 + 027B: Can upgrade check (gold + state + max level)
-    func canUpgradeTile(tileIndex: Int) -> Bool {
-        guard castleTiles.indices.contains(tileIndex) else { return false }
-        let tile = castleTiles[tileIndex]
-        switch tile.state {
-        case .built(let type, let level):
-            guard level < type.maxLevel else { return false }
-            let cost = type.upgradeCost(fromLevel: level)
-            return meta.gold >= cost
-        default:
-            return false
-        }
-    }
-
-    // 027A3 + 027B: Upgrade with cost, busy checks, max level, and pending state
-    func upgradeTile(tileIndex: Int) {
-        guard castleTiles.indices.contains(tileIndex) else { return }
-
-        switch castleTiles[tileIndex].state {
-        case .built(let type, let level):
-            // 027B: max level guard first
-            guard level < type.maxLevel else {
-                toast = "Max level reached"
-                return
-            }
-
-            let cost = type.upgradeCost(fromLevel: level)
-            guard meta.gold >= cost else {
-                toast = "Not enough gold"
-                return
-            }
-
-            // pay immediately on confirmation
-            meta.gold -= cost
-
-            // set pending upgrade
-            castleTiles[tileIndex].state = .upgrading(type: type, fromLevel: max(1, level))
-
-            // income should not change yet; keep hook
-            castleRecomputeStats()
-
-            toast = "Upgrade started"
-
-        case .empty:
-            toast = "Nothing to upgrade"
-        case .constructing:
-            toast = "Busy: constructing"
-        case .upgrading:
-            toast = "Busy: upgrading"
-        }
-    }
-
-    // 027A4: Can build check (state + gold with scaling by existing built count)
-    func canBuildTile(tileIndex: Int, type: BuildingKind) -> Bool {
-        guard castleTiles.indices.contains(tileIndex) else { return false }
-
-        let tile = castleTiles[tileIndex]
-        // Only on empty tiles
-        guard case .empty = tile.state else { return false }
-
-        let builtCount = castleTiles.filter {
-            if case .built = $0.state { return true }
-            return false
-        }.count
-
-        let cost = type.buildCost(existingBuildings: builtCount)
-        return meta.gold >= cost
-    }
-
-    // 027A4: Build with cost, busy checks, pending construction, and scaling
-    func buildTile(tileIndex: Int, type: BuildingKind) {
-        guard castleTiles.indices.contains(tileIndex) else { return }
-
-        let tile = castleTiles[tileIndex]
-        guard case .empty = tile.state else {
-            toast = "Tile is busy"
-            return
-        }
-
-        let builtCount = castleTiles.filter {
-            if case .built = $0.state { return true }
-            return false
-        }.count
-
-        let cost = type.buildCost(existingBuildings: builtCount)
-
-        guard meta.gold >= cost else {
-            toast = "Not enough gold"
-            return
-        }
-
-        // Pay immediately
-        meta.gold -= cost
-
-        // Set pending construction
-        castleTiles[tileIndex].state = .constructing(type: type)
-
-        // Income does not change until Day Tick
-        castleRecomputeStats()
-
-        toast = "Construction started"
-    }
-
     private let towerService = TowerService()
 
     // MVP card pool
@@ -328,7 +202,11 @@ final class GameStore: ObservableObject {
         .powerStrike,
         .defend,
         .doubleStrike,
-        .counterStance
+        .counterStance,
+        // 031B: include status cards in pool (for testing)
+        .bleedPlus2,
+        .weakPlus1,
+        .stun1
     ]
 
     private func drawHand() -> [ActionCard] {
@@ -360,17 +238,13 @@ final class GameStore: ObservableObject {
         battle.log.append(CombatLogEntry(id: UUID(), text: logText(side, message), isPlayer: side == .player, kind: kind))
     }
 
-    // Divider marker for UI (not a visible text)
     private func pushDivider() {
         guard var b = battle else { return }
         b.log.append(CombatLogEntry(id: UUID(), text: "__DIVIDER__", isPlayer: false, kind: .separator))
         battle = b
     }
 
-    // Spec wrappers
-    private func pushSeparator() {
-        pushDivider()
-    }
+    private func pushSeparator() { pushDivider() }
 
     private func pushSystem(_ text: String) {
         guard var b = battle else { return }
@@ -408,18 +282,9 @@ final class GameStore: ObservableObject {
     func goToCardLibrary() { route = .cardLibrary }
     func goToChest() { route = .chest }
 
-    // MARK: - Castle internal navigation (021B)
-    func goToCastleUpgrade() {
-        castleRoute = .upgrade
-    }
-
-    func goToCastleRelics() {
-        castleRoute = .relics
-    }
-
-    func backToCastleMain() {
-        castleRoute = .main
-    }
+    func goToCastleUpgrade() { castleRoute = .upgrade }
+    func goToCastleRelics() { castleRoute = .relics }
+    func backToCastleMain() { castleRoute = .main }
 
     // MARK: - Run
     func startRun() {
@@ -492,7 +357,6 @@ final class GameStore: ObservableObject {
         }
     }
 
-    // MARK: - Day Tick (legacy, kept for compatibility in non-castle flows)
     func applyDayTick() {
         meta.days += 1
         meta.gold += meta.incomePerDay
@@ -528,22 +392,7 @@ final class GameStore: ObservableObject {
         route = .tower
     }
 
-    // MARK: - Combat core
-    private func applyDamage(
-        _ amount: Int,
-        toHP hp: inout Int,
-        block: inout Int
-    ) -> (blocked: Int, dealt: Int) {
-        let blocked = min(block, amount)
-        block -= blocked
-        let dealt = amount - blocked
-        if dealt > 0 {
-            hp -= dealt
-        }
-        return (blocked, dealt)
-    }
-
-    // 011B: progression formulas
+    // MARK: - Combat core (031A/031B integrated)
     private func baseValue(level: Int) -> Int {
         var v = 5
         if level <= 1 { return v }
@@ -553,27 +402,13 @@ final class GameStore: ObservableObject {
         return v
     }
 
-    private func powerStrikeDamage(level: Int) -> Int {
-        baseValue(level: level)
-    }
+    private func powerStrikeDamage(level: Int) -> Int { baseValue(level: level) }
+    private func defendBlock(level: Int) -> Int { baseValue(level: level) }
+    private func doubleStrikeHit(level: Int) -> Int { Int((Double(powerStrikeDamage(level: level)) * 0.8).rounded()) }
+    private func counterDamage(level: Int) -> Int { Int((Double(powerStrikeDamage(level: level)) * 0.6).rounded()) }
+    private func counterBlock(level: Int) -> Int { Int((Double(defendBlock(level: level)) * 0.8).rounded()) }
 
-    private func defendBlock(level: Int) -> Int {
-        baseValue(level: level)
-    }
-
-    private func doubleStrikeHit(level: Int) -> Int {
-        Int((Double(powerStrikeDamage(level: level)) * 0.8).rounded())
-    }
-
-    private func counterDamage(level: Int) -> Int {
-        Int((Double(powerStrikeDamage(level: level)) * 0.6).rounded())
-    }
-
-    private func counterBlock(level: Int) -> Int {
-        Int((Double(defendBlock(level: level)) * 0.8).rounded())
-    }
-
-    // MARK: - Runtime enemy helpers (spec)
+    // Runtime enemy helpers (spec)
     private func enemyAttackValue() -> Int { 5 }
     private func enemyBlockValue() -> Int { 5 }
 
@@ -603,7 +438,6 @@ final class GameStore: ObservableObject {
     func startBattle() {
         let enemy = RuntimeEnemyCatalog.randomV1()
 
-        // Preserve your current initialization pattern but set runtime enemy fields
         var newBattle = BattleState(
             floor: run?.currentFloor ?? 1,
             enemyName: enemy.name,
@@ -654,6 +488,12 @@ final class GameStore: ObservableObject {
 
     // MARK: - Cards
     func playCard(_ card: ActionCard) {
+        // 031A: block playing if stunned
+        if let b = battle, b.playerSkipTurn {
+            pushSystem("You are stunned and cannot act.")
+            return
+        }
+
         guard var battle = battle else { return }
         guard battle.phase == .player else { return }
         if battle.usedCardsThisTurn.contains(card.kind) { return }
@@ -664,27 +504,56 @@ final class GameStore: ObservableObject {
 
         switch card.kind {
         case .powerStrike:
-            let dmg = powerStrikeDamage(level: lvl)
-            let r = applyDamage(dmg, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(r.dealt) (blocked \(r.blocked))")
+            let base = powerStrikeDamage(level: lvl)
+            let dmg = battle.modifiedOutgoingWeaponDamage(base, from: .player)
+            let beforeHP = battle.enemyHP
+            let beforeBlock = battle.enemyBlock
+            battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
+            let dealt = max(0, beforeHP - battle.enemyHP)
+            let blocked = max(0, beforeBlock - battle.enemyBlock)
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
+
         case .defend:
-            let b = defendBlock(level: lvl)
-            battle.playerBlock += b
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(b)")
+            let bVal = defendBlock(level: lvl)
+            battle.playerBlock += bVal
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal)")
+
         case .doubleStrike:
             let hit = doubleStrikeHit(level: lvl)
-            let r1 = applyDamage(hit, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-            let r2 = applyDamage(hit, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-            let totalDealt = r1.dealt + r2.dealt
-            let totalBlocked = r1.blocked + r2.blocked
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(totalDealt) (blocked \(totalBlocked))")
+            let dmg1 = battle.modifiedOutgoingWeaponDamage(hit, from: .player)
+            let dmg2 = battle.modifiedOutgoingWeaponDamage(hit, from: .player)
+            let beforeHP = battle.enemyHP
+            let beforeBlock = battle.enemyBlock
+            battle.dealDamage(amount: dmg1, to: .enemy, isWeaponDamage: true)
+            battle.dealDamage(amount: dmg2, to: .enemy, isWeaponDamage: true)
+            let dealt = max(0, beforeHP - battle.enemyHP)
+            let blocked = max(0, beforeBlock - battle.enemyBlock)
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
+
         case .counterStance:
-            // 027C-A: Counter-Stance Lv1 values (player): +4 block, 3 dmg, single log line
             let bVal = counterStanceBlockValue()
-            let dmgVal = counterStanceAttackValue()
+            let base = counterStanceAttackValue()
             battle.playerBlock += bVal
-            let r = applyDamage(dmgVal, toHP: &battle.enemyHP, block: &battle.enemyBlock)
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal), dmg \(dmgVal) (blocked \(r.blocked))")
+            let dmg = battle.modifiedOutgoingWeaponDamage(base, from: .player)
+            let beforeHP = battle.enemyHP
+            let beforeBlock = battle.enemyBlock
+            battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
+            let dealt = max(0, beforeHP - battle.enemyHP)
+            let blocked = max(0, beforeBlock - battle.enemyBlock)
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal), dmg \(dealt) (blocked \(blocked))")
+
+        // 031B: Status cards
+        case .bleedPlus2:
+            battle.addStatus(.bleed, stacks: 2, to: .enemy)
+            pushLog(&battle, side: .player, "Player uses Кровоток → Enemy: Кровоток +2")
+
+        case .weakPlus1:
+            battle.addStatus(.weak, stacks: 1, to: .enemy)
+            pushLog(&battle, side: .player, "Player uses Ослабить → Enemy: Слабость +1")
+
+        case .stun1:
+            battle.addStatus(.stun, stacks: 1, to: .enemy)
+            pushLog(&battle, side: .player, "Player uses Оглушить → Enemy: Оглушение 1")
         }
 
         battle.usedCardsThisTurn.insert(card.kind)
@@ -700,33 +569,71 @@ final class GameStore: ObservableObject {
         guard var b = battle else { return }
         pushLog(&b, side: .player, "End turn")
         b.phase = .enemy
-        battle = b
 
-        // Enemy phase: per spec
-        pushSeparator()
-        performEnemyTurn()
-        cycleEnemyIntent()
-        pushSeparator()
+        // 031A: Start of enemy turn (statuses)
+        var out = b.startOfTurn(for: .enemy)
+        for line in out.logLines {
+            b.log.append(CombatLogEntry.system(line))
+        }
+
+        // Enemy phase: per spec (only if not stunned)
+        if !out.didSkipTurn {
+            pushSeparator()
+            self.battle = b
+            performEnemyTurn()
+            if let after = self.battle { b = after }
+            cycleEnemyIntent()
+            if let after2 = self.battle { b = after2 }
+            pushSeparator()
+        }
+
+        // 031A: Start of player turn (statuses)
+        out = b.startOfTurn(for: .player)
+        for line in out.logLines {
+            b.log.append(CombatLogEntry.system(line))
+        }
 
         // Prepare next player turn
-        guard var b2 = battle else { return }
-        b2.playerBlock = 0
-        b2.actionPoints = 2
-        b2.hand = drawHand()
-        b2.usedCardsThisTurn.removeAll()
-        b2.phase = .player
-        pushLog(&b2, side: .system, "New turn: hand refreshed")
-        battle = b2
+        b.playerBlock = 0
+        b.actionPoints = 2
+        b.hand = drawHand()
+        b.usedCardsThisTurn.removeAll()
+        b.phase = .player
+        pushLog(&b, side: .system, "New turn: hand refreshed")
+        battle = b
     }
 
     private func performEnemyTurn() {
         guard var battle = battle else { return }
 
+        func applyEnemyOnHitStatus() {
+            switch battle.enemyRuntimeKind {
+            case .punisher:
+                battle.addStatus(.vulnerable, stacks: 1, to: .player)
+                pushLog(&battle, side: .enemy, "Enemy attack → Player: Уязвимость +1")
+            case .graphiteGolem:
+                battle.addStatus(.weak, stacks: 1, to: .player)
+                pushLog(&battle, side: .enemy, "Enemy attack → Player: Слабость +1")
+            case .zesurumiMonks:
+                battle.addStatus(.bleed, stacks: 2, to: .player)
+                pushLog(&battle, side: .enemy, "Enemy attack → Player: Кровоток +2")
+            case .feyanchа:
+                battle.addStatus(.bleed, stacks: 1, to: .player)
+                pushLog(&battle, side: .enemy, "Enemy attack → Player: Кровоток +1")
+            }
+        }
+
         switch battle.enemyIntent.kind {
         case .attack:
-            let dmg = enemyAttackValue()
-            let r = applyDamage(dmg, toHP: &battle.playerHP, block: &battle.playerBlock)
-            pushLog(&battle, side: .enemy, "Attack: dmg \(r.dealt) (blocked \(r.blocked))")
+            let base = enemyAttackValue()
+            let dmg = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
+            let beforeHP = battle.playerHP
+            let beforeBlock = battle.playerBlock
+            battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
+            let dealt = max(0, beforeHP - battle.playerHP)
+            let blocked = max(0, beforeBlock - battle.playerBlock)
+            pushLog(&battle, side: .enemy, "Attack: dmg \(dealt) (blocked \(blocked))")
+            applyEnemyOnHitStatus()
             if battle.playerHP <= 0 {
                 self.battle = battle
                 loseBattle()
@@ -739,12 +646,17 @@ final class GameStore: ObservableObject {
             pushLog(&battle, side: .enemy, "Defend: block +\(block)")
 
         case .counterStance:
-            // 027C-A: Counter-Stance Lv1 values (enemy): +4 block, 3 dmg, single log line
             let bVal = counterStanceBlockValue()
-            let dmgVal = counterStanceAttackValue()
+            let base = counterStanceAttackValue()
             battle.enemyBlock += bVal
-            let r = applyDamage(dmgVal, toHP: &battle.playerHP, block: &battle.playerBlock)
-            pushLog(&battle, side: .enemy, "Counter Stance: block +\(bVal), dmg \(dmgVal) (blocked \(r.blocked))")
+            let dmg = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
+            let beforeHP = battle.playerHP
+            let beforeBlock = battle.playerBlock
+            battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
+            let dealt = max(0, beforeHP - battle.playerHP)
+            let blocked = max(0, beforeBlock - battle.playerBlock)
+            pushLog(&battle, side: .enemy, "Counter Stance: block +\(bVal), dmg \(dealt) (blocked \(blocked))")
+            applyEnemyOnHitStatus()
             if battle.playerHP <= 0 {
                 self.battle = battle
                 loseBattle()
@@ -752,10 +664,17 @@ final class GameStore: ObservableObject {
             }
 
         case .doubleStrikeFixed4:
-            let r1 = applyDamage(4, toHP: &battle.playerHP, block: &battle.playerBlock)
-            let r2 = applyDamage(4, toHP: &battle.playerHP, block: &battle.playerBlock)
-            let dealt = r1.dealt + r2.dealt
-            let blocked = r1.blocked + r2.blocked
+            let base = 4
+            let dmg1 = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
+            let dmg2 = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
+            let beforeHP = battle.playerHP
+            let beforeBlock = battle.playerBlock
+            battle.dealDamage(amount: dmg1, to: .player, isWeaponDamage: true)
+            applyEnemyOnHitStatus()
+            battle.dealDamage(amount: dmg2, to: .player, isWeaponDamage: true)
+            applyEnemyOnHitStatus()
+            let dealt = max(0, beforeHP - battle.playerHP)
+            let blocked = max(0, beforeBlock - battle.playerBlock)
             pushLog(&battle, side: .enemy, "Double Strike: dmg \(dealt) (blocked \(blocked))")
             if battle.playerHP <= 0 {
                 self.battle = battle
@@ -764,7 +683,6 @@ final class GameStore: ObservableObject {
             }
 
         case .counter:
-            // legacy no-op if encountered
             pushLog(&battle, side: .enemy, "Counter")
         }
 
@@ -784,6 +702,9 @@ final class GameStore: ObservableObject {
         case .defend: return "Guard"
         case .doubleStrike: return "Double Strike"
         case .counterStance: return "Counter Stance"
+        case .bleedPlus2: return "Кровоток"
+        case .weakPlus1: return "Ослабить"
+        case .stun1: return "Оглушить"
         }
     }
 
@@ -793,14 +714,12 @@ final class GameStore: ObservableObject {
     @Published var isUpgradeSheetPresented: Bool = false
     @Published var selectedCastleTileIndex: Int? = nil
 
-    // 023C: Build sheet state
     @Published var selectedBuildTileIndex: Int? = nil
     @Published var buildCandidates: [BuildCandidate] = [
         BuildCandidate(kind: .farm, title: "Farm", emoji: "🌾", incomePerDay: 1, blurb: "+1 / day"),
         BuildCandidate(kind: .mine, title: "Mine", emoji: "⛏️", incomePerDay: 2, blurb: "+2 / day")
     ]
 
-    // MARK: - Castle UI Actions
     func setCastleMode(_ mode: CastleUIMode) {
         if castleModeUI == mode {
             castleModeUI = .idle
@@ -809,18 +728,15 @@ final class GameStore: ObservableObject {
         }
     }
 
-    // 023B: unified tap entry point
     func onTileTapped(_ tile: CastleTile) {
         switch castleModeUI {
         case .build:
             guard tile.isEmpty else { return }
             openBuildSheet(forTile: tile.id)
-
         case .upgrade:
             guard tile.canUpgrade else { return }
             selectedCastleTileIndex = tile.id
             isUpgradeSheetPresented = true
-
         case .idle:
             if tile.isEmpty {
                 openBuildSheet(forTile: tile.id)
@@ -831,13 +747,11 @@ final class GameStore: ObservableObject {
         }
     }
 
-    // Backward compatibility (can be removed after View migration)
     func handleCastleTileTap(index: Int, isEmpty: Bool) {
         guard let tile = castleTiles.first(where: { $0.id == index }) else { return }
         onTileTapped(tile)
     }
 
-    // 023B: close helpers that also reset mode to idle
     func closeBuildSheet() {
         isBuildSheetPresented = false
         castleModeUI = .idle
@@ -848,7 +762,6 @@ final class GameStore: ObservableObject {
         castleModeUI = .idle
     }
 
-    // 023C: Build sheet control
     func openBuildSheet(forTile index: Int) {
         selectedBuildTileIndex = index
         isBuildSheetPresented = true
@@ -862,38 +775,26 @@ final class GameStore: ObservableObject {
 
     func confirmBuild(_ candidate: BuildCandidate) {
         guard let index = selectedBuildTileIndex else { return }
-        // Prefer cost-aware pending build
-        buildTile(tileIndex: index, type: candidate.kind)
-        // Close and reset
+        guard castleTiles.indices.contains(index) else { return }
+
+        // Apply build directly (was: buildTile(...), but that method doesn't exist)
+        castleTiles[index].state = .built(type: candidate.kind, level: 1)
+        castleRecomputeStats()
+
         isBuildSheetPresented = false
         selectedBuildTileIndex = nil
         castleModeUI = .idle
     }
 
-    // MARK: - Castle day tick + stats (026/027A1/027A2)
-    func castleRecomputeStats() {
-        // No-op: stats are computed via castleIncomePerDay
-    }
+    func castleRecomputeStats() {}
 
-    // Unified Day Tick per 027A2
     func advanceDayTick() {
-        // 1) +1 Day
         meta.days += 1
-
-        // 2) Income BEFORE applying pending (built only)
         let incomeBeforeApplying = castleIncomePerDay
         meta.gold += incomeBeforeApplying
-
-        // 3) Apply pending
         applyCastlePending()
-
-        // 4) Hook for future recomputations
         recomputeCastleEconomy()
-
-        // Feedback
         toast = "Day +1  •  Gold +\(incomeBeforeApplying)"
-
-        // 6) Invariants
         for tile in castleTiles {
             if case .built(_, let level) = tile.state {
                 assert(level >= 1)
@@ -901,12 +802,8 @@ final class GameStore: ObservableObject {
         }
     }
 
-    // Debug button should use the same unified tick
-    func castleAdvanceDay() {
-        advanceDayTick()
-    }
+    func castleAdvanceDay() { advanceDayTick() }
 
-    // Apply constructing/upgrading to become built states
     private func applyCastlePending() {
         for i in castleTiles.indices {
             switch castleTiles[i].state {
@@ -921,13 +818,10 @@ final class GameStore: ObservableObject {
         }
     }
 
-    // No-op in this architecture; meta.incomePerDay is global baseline; castle income is computed.
-    private func recomputeCastleEconomy() {
-        // Keep as a hook if later you aggregate meta fields.
-    }
+    private func recomputeCastleEconomy() {}
 }
 
-// MARK: - BuildingKind income progression (027A1) + upgrade cost (027A3) + build cost (027A4) + max level (027B)
+// MARK: - BuildingKind progression
 extension GameStore.BuildingKind {
     var baseIncome: Int {
         switch self {
@@ -948,16 +842,12 @@ extension GameStore.BuildingKind {
         return baseIncome + (lvl - 1) * incomeGrowthPerLevel
     }
 
-    // 027A3: quadratic upgrade cost
     func upgradeCost(fromLevel: Int) -> Int {
         let lvl = max(1, fromLevel)
-        // L1->L2: 20, L2->L3: 35, L3->L4: 55, L4->L5: 80 ...
         return 10 + (lvl * lvl * 5) + (lvl * 5)
     }
 
-    // 027A4: build cost with simple scaling by number of existing built buildings
     func buildCost(existingBuildings: Int) -> Int {
-        // MVP: base + 4 per existing built
         return baseBuildCost + (existingBuildings * 4)
     }
 
@@ -968,7 +858,6 @@ extension GameStore.BuildingKind {
         }
     }
 
-    // 027B: max level per building type
     var maxLevel: Int {
         switch self {
         case .mine: return 5
