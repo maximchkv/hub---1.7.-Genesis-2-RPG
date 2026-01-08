@@ -21,7 +21,7 @@ struct BattleView: View {
     private let participantGap: CGFloat = 12 // was 6; now larger gap between cards
     private let participantSideInset: CGFloat = 10 // squeeze row inside contentWidth for side/center air
     private let participantInnerPad: CGFloat = 0
-    private let participantCardHeight: CGFloat = 284 // taller participant cards (try 240–260 if needed)
+    private let participantCardHeight: CGFloat = 348 // +64px
 
     // Log sizing
     private let logMinHeight: CGFloat = 110
@@ -306,7 +306,7 @@ private struct BattleParticipantCard: View {
             }
             .padding(.top, 2)
 
-            // Status row (031B): bleed → vulnerable → weak → stun
+            // Status row (031B): bleed → vulnerable → weak → stun (under HP)
             statusRow
                 .padding(.top, 2)
 
@@ -327,7 +327,7 @@ private struct BattleParticipantCard: View {
 
             Spacer(minLength: 0)
 
-            // Portrait area (elastic, pinned: L/R/B = 8)
+            // Portrait area (fixed height)
             ZStack {
                 RoundedRectangle(cornerRadius: portraitCorner)
                     .strokeBorder(.gray.opacity(0.20), lineWidth: 1)
@@ -357,9 +357,9 @@ private struct BattleParticipantCard: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            .frame(height: 132) // FIXED portrait height
             .padding(.horizontal, portraitInset)
             .padding(.bottom, portraitInset)
-            .aspectRatio(1, contentMode: .fit)
         }
         .padding(innerPad)
         .background(

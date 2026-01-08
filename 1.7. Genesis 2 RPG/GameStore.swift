@@ -568,6 +568,8 @@ final class GameStore: ObservableObject {
     func endTurn() {
         guard var b = battle else { return }
         pushLog(&b, side: .player, "End turn")
+        // Add a visual divider immediately after End turn (FIX-BOOT-032)
+        b.log.append(CombatLogEntry(id: UUID(), text: "__DIVIDER__", isPlayer: false, kind: .separator))
         b.phase = .enemy
 
         // 031A: Start of enemy turn (statuses)
