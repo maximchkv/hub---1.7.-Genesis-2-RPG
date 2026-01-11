@@ -6,12 +6,63 @@ struct StartView: View {
 
     private let subtitle = "A parchment roguelike of cards, climbs, and a living castle."
 
-    private let bullets: [String] = [
-        "Climb a tower of floors and encounters.",
-        "Fight turn-based battles using cards.",
-        "Build up your castle between runs.",
-        "Unlock and collect new cards over time."
-    ]
+    @State private var selectedChip: Chip = .climb
+
+    private enum Chip: String, CaseIterable, Identifiable {
+        case climb
+        case cards
+        case castle
+        case collect
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .climb: return "Climb"
+            case .cards: return "Cards"
+            case .castle: return "Castle"
+            case .collect: return "Collect"
+            }
+        }
+
+        var onboardingTitle: String {
+            switch self {
+            case .climb: return "A tower run, one floor at a time"
+            case .cards: return "Play cards, shape your turn"
+            case .castle: return "Between runs, grow your base"
+            case .collect: return "Unlock new tools over time"
+            }
+        }
+
+        var onboardingLines: [String] {
+            switch self {
+            case .climb:
+                return [
+                    "Choose routes and face encounters.",
+                    "Survive to reach the next floor.",
+                    "Find rewards and adapt your build."
+                ]
+            case .cards:
+                return [
+                    "Turn-based combat with a small hand.",
+                    "Spend your turn wisely.",
+                    "Build a deck that fits your style."
+                ]
+            case .castle:
+                return [
+                    "Upgrade your castle between runs.",
+                    "Unlock helpers and new options.",
+                    "Return stronger on the next climb."
+                ]
+            case .collect:
+                return [
+                    "Earn and discover new cards.",
+                    "Collect relics and artifacts.",
+                    "Keep progression across runs."
+                ]
+            }
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -84,18 +135,20 @@ struct StartView: View {
                     .frame(maxWidth: .infinity)
             }
 
-            // Onboarding card
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(bullets, id: \.self) { line in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text("•")
-                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+            // Chips row
+            chipRow()
 
-                        Text(line)
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .font(.body)
+            // Onboarding card (swaps based on chip)
+            VStack(alignment: .leading, spacing: 12) {
+                ZStack(alignment: .topLeading) {
+                    onboardingContent(for: selectedChip)
+                        .id(selectedChip)
+                        .transition(
+                            .asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .bottom)),
+                                removal: .opacity.combined(with: .move(edge: .top))
+                            )
+                        )
                 }
             }
             .padding(16)
@@ -108,6 +161,7 @@ struct StartView: View {
                 RoundedRectangle(cornerRadius: UIStyle.cardRadius)
                     .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
             )
+            .animation(.easeInOut(duration: 0.22), value: selectedChip)
 
             // CTA button
             Button {
@@ -125,6 +179,81 @@ struct StartView: View {
             }
         }
         .frame(width: contentWidth)
+    }
+
+    // MARK: - Chips + onboarding
+
+    @ViewBuilder
+    private func chipRow() -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                ForEach(Chip.allCases) { chip in
+                    chipView(chip)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(Chip.allCases) { chip in
+                        chipView(chip)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+        }
+    }
+
+    private func chipView(_ chip: Chip) -> some View {
+        let isSelected = (chip == selectedChip)
+
+        return Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.92)) {
+                selectedChip = chip
+            }
+        } label: {
+            Text(chip.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isSelected ? .white : UIStyle.Colors.inkPrimary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? UIStyle.Colors.accent : UIStyle.Colors.mutedFill)
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? UIStyle.Colors.accent.opacity(0.35) : UIStyle.Colors.cardStroke, lineWidth: 1)
+                )
+                .scaleEffect(isSelected ? 1.02 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(chip.title))
+        .accessibilityValue(Text(isSelected ? "Selected" : "Not selected"))
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func onboardingContent(for chip: Chip) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(chip.onboardingTitle)
+                .font(.headline)
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(chip.onboardingLines, id: \.self) { line in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("•")
+                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+
+                        Text(line)
+                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.callout)
+                }
+            }
+        }
     }
 
     private func nonScrollLayout(contentWidth: CGFloat, horizontalPadding: CGFloat) -> some View {
