@@ -66,7 +66,7 @@ struct StartView: View {
 
             // Title + subtitle
             VStack(spacing: 8) {
-                Text("Genesis RPG")
+                Text("Tower of Ink")
                     .font(.system(size: 34, weight: .semibold, design: .serif))
                     .foregroundStyle(UIStyle.Colors.inkPrimary)
                     .multilineTextAlignment(.center)
