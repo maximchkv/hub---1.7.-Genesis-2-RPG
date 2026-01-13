@@ -5,7 +5,7 @@ struct BattleView: View {
     @EnvironmentObject private var store: GameStore
 
     // Debug layout outlines (3px) to visualize real block bounds
-    private let showDebugOutlines: Bool = true
+    private let showDebugOutlines: Bool = false
 
     // MARK: - Layout constants (Contract v2.0)
 
@@ -22,7 +22,8 @@ struct BattleView: View {
     private var logToCards: CGFloat { interBlock }
     private let cardsToAP: CGFloat = 12 // cards -> AP label
     private let apToButton: CGFloat = 12
-    private let headerHeight: CGFloat = 52
+    // Reduced by ~1/3 (was 52) to free vertical space for participants.
+    private let headerHeight: CGFloat = 35
 
     // Participants sizing
     // Keep participants row flush with the content column edges (per UX request).
@@ -35,6 +36,7 @@ struct BattleView: View {
 
     // Action cards sizing
     private let actionCardWidth: CGFloat = 120
+    // Default card height (rolled back from +33%).
     private let actionCardHeight: CGFloat = 170
     private let actionCardRowSpacing: CGFloat = 12
 
@@ -49,6 +51,7 @@ struct BattleView: View {
             GeometryReader { geo in
                 let available = max(0, geo.size.width - outerPad * 2)
                 let contentWidth = min(available, contentCap)
+                // Intentionally not using safe-area bottom inset here: bottom controls are pinned to the bottom edge.
 
                 // Participants width calculation with side inset
                 let participantRowWidth = max(0, contentWidth - participantSideInset * 2)
@@ -60,8 +63,8 @@ struct BattleView: View {
                         // HEADER (debug left, floor centered, surrender right)
                         headerRow(floor: battle.floor, isPlayerTurn: isPlayerTurn)
                             .frame(width: contentWidth, alignment: .center)
+                            .frame(height: headerHeight, alignment: .center)
                             .padding(.top, topHeaderPad)
-                            .frame(height: headerHeight, alignment: .bottom)
                             .debugStroke(showDebugOutlines, .red)
 
                         Spacer().frame(height: headerToParticipants)
@@ -81,6 +84,10 @@ struct BattleView: View {
                             debug: showDebugOutlines
                         )
                         .frame(width: participantRowWidth)
+                        // Let participants expand to consume leftover vertical space,
+                        // pushing log/cards/button down without increasing log height.
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .layoutPriority(1)
                         .padding(.horizontal, participantSideInset)
                         .frame(width: contentWidth, alignment: .center)
                         .debugStroke(showDebugOutlines, .green)
@@ -99,7 +106,14 @@ struct BattleView: View {
                         Spacer().frame(height: logToCards)
                             .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
-                        Spacer(minLength: 0)
+                        // Bottom controls (in-flow) so they naturally move up/down as the top content changes.
+                        bottomStack(contentWidth: contentWidth, battle: battle)
+                            .frame(width: contentWidth, alignment: .center)
+                            // Pin the bottom controls to the bottom edge (per UX request).
+                            // NOTE: this will put the button closer to the home indicator.
+                            .padding(.bottom, 0)
+                            .frame(maxWidth: .infinity)
+                            .debugStroke(showDebugOutlines, .blue)
 
                     } else {
                         VStack(spacing: 12) {
@@ -112,15 +126,6 @@ struct BattleView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, outerPad)
-                .safeAreaInset(edge: .bottom) {
-                    if let battle = store.battle {
-                        bottomStack(contentWidth: contentWidth, battle: battle)
-                            .frame(width: contentWidth, alignment: .center)
-                            .padding(.bottom, 10)
-                            .frame(maxWidth: .infinity)
-                            .debugStroke(showDebugOutlines, .blue)
-                    }
-                }
                 .debugStroke(showDebugOutlines, .purple)
             }
         }
@@ -129,56 +134,64 @@ struct BattleView: View {
     // MARK: - Header
 
     private func headerRow(floor: Int, isPlayerTurn: Bool) -> some View {
-        VStack(spacing: 4) {
-            Text("Этаж \(floor)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-
-            Text(isPlayerTurn ? "Ваш ход" : "Ход врага")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(isPlayerTurn ? UIStyle.Colors.accent : UIStyle.Colors.inkSecondary)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 10)
-                .background(
-                    Capsule()
-                        .fill(isPlayerTurn ? UIStyle.Colors.accent.opacity(0.22) : Color.primary.opacity(0.08))
-                )
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
-                )
-                .frame(maxWidth: .infinity, alignment: .center)
-        }
-        // Overlays DO NOT affect the view’s measured height → keeps the gap truly 12pt from the pill to participants.
-        .overlay(alignment: .leading) {
-            HStack(spacing: 8) {
-                Button("win") { store.winBattle() }
+        ZStack {
+            // Center content (inside the red header rectangle)
+            VStack(spacing: 2) {
+                Text("Этаж \(floor)")
                     .font(.caption2)
-                    .buttonStyle(.bordered)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
-                Button("lose") { store.loseBattle() }
-                    .font(.caption2)
-                    .buttonStyle(.bordered)
-            }
-        }
-        .overlay(alignment: .trailing) {
-            Button {
-                store.surrenderBattle()
-            } label: {
-                Image(systemName: "flag.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .padding(8)
-                    .background(.thinMaterial)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle().stroke(Color.primary.opacity(0.18), lineWidth: 1)
+                Text(isPlayerTurn ? "Ваш ход" : "Ход врага")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(isPlayerTurn ? UIStyle.Colors.accent : UIStyle.Colors.inkSecondary)
+                    // Slightly shorter vertically (per UX request)
+                    .padding(.vertical, 2)
+                    .padding(.horizontal, 10)
+                    .background(
+                        Capsule()
+                            .fill(isPlayerTurn ? UIStyle.Colors.accent.opacity(0.22) : Color.primary.opacity(0.08))
                     )
-                    .accessibilityLabel("Surrender")
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                    )
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            // Side controls, vertically centered within the header
+            HStack {
+                HStack(spacing: 8) {
+                    Button("win") { store.winBattle() }
+                        .font(.caption2)
+                        .buttonStyle(.bordered)
+
+                    Button("lose") { store.loseBattle() }
+                        .font(.caption2)
+                        .buttonStyle(.bordered)
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    store.surrenderBattle()
+                } label: {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .padding(8)
+                        .background(.thinMaterial)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle().stroke(Color.primary.opacity(0.18), lineWidth: 1)
+                        )
+                        .accessibilityLabel("Surrender")
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
     // MARK: - Log
@@ -243,10 +256,7 @@ struct BattleView: View {
             Spacer().frame(height: cardsToAP)
                 .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
-            Text("Очки действий: \(battle.actionPoints)")
-                .font(.footnote)
-                .fontWeight(.bold)
-                .foregroundStyle(.primary)
+            apPanel(ap: battle.actionPoints)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .debugStroke(showDebugOutlines, .yellow)
 
@@ -261,6 +271,34 @@ struct BattleView: View {
 
             Spacer().frame(height: 2)
         }
+    }
+
+    private func apPanel(ap: Int) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14)
+        let chipShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+
+        return HStack(spacing: 10) {
+            Text("Очки действий:")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
+
+            Spacer(minLength: 0)
+
+            Text("\(ap) ОД")
+                .font(.caption) // slightly smaller, not bold
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 10)
+                .background(UIStyle.Colors.mutedFill, in: chipShape)
+                .overlay(
+                    chipShape.stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                )
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12) // left inset for label, right inset for chip
+        .frame(width: actionCardWidth * 2) // x2 width (per UX request)
+        .background(.thinMaterial, in: shape)
+        .overlay(shape.stroke(UIStyle.Colors.cardStroke, lineWidth: 1))
     }
 
     private func actionCardsRow(battle: BattleState) -> some View {
@@ -341,7 +379,8 @@ private struct ParticipantsPanel: View {
                 intentText: nil,
                 portrait: .player
             )
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            // Stretch the whole card to fill available height when the panel expands.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .debugStroke(debug, .green)
 
             participantCard(
@@ -352,10 +391,10 @@ private struct ParticipantsPanel: View {
                 intentText: enemyIntent.displayRU,
                 portrait: .enemy(name: enemyName)
             )
-            .frame(maxWidth: .infinity, alignment: .topTrailing)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             .debugStroke(debug, .purple)
         }
-        .frame(maxWidth: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private enum PortraitKind {
