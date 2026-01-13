@@ -18,6 +18,12 @@ struct RootView: View {
                 BattleView()
             case .defeat:
                 DefeatView()
+            case .rest:
+                RestView()
+            case .event:
+                EventView()
+            case .victory:
+                VictoryView()
             case .castle:
                 CastleView()
             case .cardLibrary:

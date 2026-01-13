@@ -25,6 +25,13 @@ final class GameStore: ObservableObject {
     @Published var toast: String? = nil
     @Published var chest: ChestState? = nil
     @Published var battle: BattleState? = nil
+    @Published var event: EventState? = nil
+
+    // Reward (currently not routed, but referenced by RewardView.swift)
+    @Published var reward: RewardState? = nil
+
+    // Tracks the room currently being resolved (used for post-room progression)
+    @Published var activeRoomKind: RoomKind? = nil
 
     // Castle routing (021B)
     enum CastleRoute: Equatable {
@@ -266,12 +273,10 @@ final class GameStore: ObservableObject {
         route = .tower
 
         if run == nil {
-            startRun()
+            startRun(routeToHub: false)
         }
 
-        if run?.roomOptions.isEmpty ?? true {
-            refreshRoomOptions()
-        }
+        refreshRoomOptions()
     }
 
     func goToCastle() {
@@ -287,11 +292,13 @@ final class GameStore: ObservableObject {
     func backToCastleMain() { castleRoute = .main }
 
     // MARK: - Run
-    func startRun() {
-        var newRun = RunState(currentFloor: 1)
-        newRun.roomOptions = towerService.generateRoomOptions(nonCombatStreak: newRun.nonCombatStreak)
+    func startRun(routeToHub: Bool = true) {
+        var newRun = RunState()
+        newRun.roomOptions = towerService.generateRoomOptions(run: newRun)
         run = newRun
-        route = .hub
+        if routeToHub {
+            route = .hub
+        }
     }
 
     func endRun() {
@@ -303,49 +310,68 @@ final class GameStore: ObservableObject {
         run = nil
         battle = nil
         chest = nil
+        event = nil
+        activeRoomKind = nil
         route = .hub
     }
 
     // MARK: - Tower
     func refreshRoomOptions() {
         guard var r = run else { return }
-        r.roomOptions = towerService.generateRoomOptions(
-            nonCombatStreak: r.nonCombatStreak
-        )
+        r.roomOptions = towerService.generateRoomOptions(run: r)
         run = r
     }
 
     func selectRoom(_ option: RoomOption) {
-        guard var run else { return }
+        guard let run else { return }
         if option.kind == .chest && option.isLocked {
             return
         }
 
-        switch option.kind {
-        case .combat:
-            run.nonCombatStreak = 0
-        case .chest:
-            run.nonCombatStreak += 1
-        }
-
-        run.currentFloor += 1
-
-        // Unified day tick after floor progression
-        advanceDayTick()
-
-        meta.bestFloor = max(meta.bestFloor, run.currentFloor)
-
-        run.roomOptions = towerService.generateRoomOptions(nonCombatStreak: run.nonCombatStreak)
-
-        self.run = run
+        activeRoomKind = option.kind
 
         switch option.kind {
         case .combat:
-            startBattle()
+            startBattle(kind: .combat)
         case .chest:
             chest = ChestState()
             route = .chest
+        case .elite:
+            startBattle(kind: .elite)
+        case .boss:
+            startBattle(kind: .boss)
+        case .rest:
+            route = .rest
+        case .event:
+            event = EventState(
+                title: "A Stranger",
+                text: "A hooded figure offers you a choice.",
+                options: [
+                    .init(title: "Accept the gift", toast: "You feel a strange warmth."),
+                    .init(title: "Walk away", toast: "You stay cautious and move on.")
+                ]
+            )
+            route = .event
         }
+    }
+
+    func chooseEventOption(_ option: EventState.Option) {
+        toast = option.toast
+        event = nil
+        completeNonCombatRoomAndContinue(kind: .event)
+    }
+
+    func completeNonCombatRoomAndContinue(kind: RoomKind) {
+        completeRoomAndMoveForward(kind: kind, didWinCombat: nil)
+    }
+
+    func finishRunAndReturnToHub() {
+        run = nil
+        battle = nil
+        chest = nil
+        event = nil
+        activeRoomKind = nil
+        route = .hub
     }
 
     // DEBUG
@@ -353,7 +379,7 @@ final class GameStore: ObservableObject {
         meta.days += 1
         meta.gold += 3
         if let run {
-            meta.bestFloor = max(meta.bestFloor, run.currentFloor)
+            meta.bestFloor = max(meta.bestFloor, run.globalFloor)
         }
     }
 
@@ -389,7 +415,7 @@ final class GameStore: ObservableObject {
         meta.artifacts.append(art)
         toast = "\(art.icon) \(art.name) added (+\(art.incomeBonus)/day)"
         self.chest = nil
-        route = .tower
+        completeNonCombatRoomAndContinue(kind: .chest)
     }
 
     // MARK: - Combat core (031A/031B integrated)
@@ -435,15 +461,23 @@ final class GameStore: ObservableObject {
     }
 
     // MARK: - Battle
-    func startBattle() {
+    func startBattle(kind: RoomKind) {
+        // kind is expected to be .combat / .elite / .boss
+        activeRoomKind = kind
         let enemy = RuntimeEnemyCatalog.randomV1()
 
+        let floorLabel = run?.globalFloor ?? 1
+
+        // Structural-only tuning: mark tougher fights
+        let enemyHP: Int = (kind == .boss) ? 40 : (kind == .elite ? 28 : 20)
+        let playerHP: Int = 20 // (per-run persistence comes later)
+
         var newBattle = BattleState(
-            floor: run?.currentFloor ?? 1,
-            enemyName: enemy.name,
-            playerHP: 20,
+            floor: floorLabel,
+            enemyName: (kind == .boss) ? "Boss: \(enemy.name)" : (kind == .elite ? "Elite: \(enemy.name)" : enemy.name),
+            playerHP: playerHP,
             playerBlock: 0,
-            enemyHP: 20,
+            enemyHP: enemyHP,
             enemyBlock: 0,
             actionPoints: 2,
             hand: drawHand(),
@@ -471,9 +505,11 @@ final class GameStore: ObservableObject {
     }
 
     func winBattle() {
+        // Progression happens on victory (not on room selection)
+        let kind = activeRoomKind ?? .combat
         battle = nil
-        toast = "Victory"
-        route = .tower
+        toast = (kind == .boss) ? "Boss defeated" : "Victory"
+        completeRoomAndMoveForward(kind: kind, didWinCombat: true)
     }
 
     func loseBattle() {
@@ -483,7 +519,55 @@ final class GameStore: ObservableObject {
 
     func surrenderBattle() {
         battle = nil
+        activeRoomKind = nil
         route = .hub
+    }
+
+    // MARK: - Post-room progression (structure v1)
+    private func completeRoomAndMoveForward(kind: RoomKind, didWinCombat: Bool?) {
+        guard var r = run else {
+            route = .hub
+            return
+        }
+
+        // Update non-combat streak (elite/boss are combats)
+        switch kind {
+        case .combat, .elite, .boss:
+            r.nonCombatStreak = 0
+        case .chest, .rest, .event:
+            r.nonCombatStreak += 1
+        }
+
+        // Unified day tick after clearing a floor
+        advanceDayTick()
+
+        // Advance run structure
+        r.advanceAfterClearingCurrentFloor()
+
+        // Best floor uses global floor
+        meta.bestFloor = max(meta.bestFloor, r.globalFloor)
+
+        // Clear active room marker
+        activeRoomKind = nil
+
+        // End condition
+        if r.isCompleted {
+            run = r
+            route = .victory
+            return
+        }
+
+        // Generate next options and return to tower
+        r.roomOptions = towerService.generateRoomOptions(run: r)
+        run = r
+        route = .tower
+    }
+
+    // MARK: - Reward stubs (keeps RewardView compiling)
+    func claimReward(_ kind: ActionCardKind) {
+        toast = "Upgraded \(kind.rawValue) (+1)"
+        reward = nil
+        route = .tower
     }
 
     // MARK: - Cards

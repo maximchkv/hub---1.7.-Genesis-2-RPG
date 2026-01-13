@@ -62,6 +62,9 @@ struct RewardView: View {
         case .defend: return "Defend"
         case .doubleStrike: return "Double Strike"
         case .counterStance: return "Counter Stance"
+        case .bleedPlus2: return "Кровоток"
+        case .weakPlus1: return "Ослабить"
+        case .stun1: return "Оглушить"
         }
     }
 
@@ -71,6 +74,10 @@ struct RewardView: View {
         case .defend: return "🛡️"
         case .doubleStrike: return "⚔️"
         case .counterStance: return "🔁"
+        case .bleedPlus2: return "🩸"
+        case .weakPlus1: return "⬇️"
+        case .stun1: return "⚡️"
         }
     }
 }
+

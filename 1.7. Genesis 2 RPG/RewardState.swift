@@ -9,3 +9,4 @@ struct RewardState: Identifiable, Codable, Hashable {
         self.options = options
     }
 }
+

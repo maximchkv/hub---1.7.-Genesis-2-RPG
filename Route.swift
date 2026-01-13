@@ -5,6 +5,9 @@ enum Route: Hashable {
     case chest
     case battle
     case defeat
+    case rest
+    case event
+    case victory
     case castle
     case cardLibrary
 }

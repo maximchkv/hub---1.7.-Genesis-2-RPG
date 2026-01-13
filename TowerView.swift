@@ -147,15 +147,19 @@ struct TowerView: View {
     // MARK: - Meta
 
     private var metaRow: some View {
-        let floor = store.run?.currentFloor ?? 0
-        let streak = store.run?.nonCombatStreak ?? 0
+        let act = store.run?.actIndex ?? 0
+        let floorInAct = store.run?.floorInAct ?? 0
+        let bossIn = store.run?.floorsRemainingToBoss ?? 0
 
         return HStack(spacing: 12) {
-            metaChip(title: "Floor", value: "\(floor)")
+            metaChip(title: "Act", value: "\(act)/\(RunState.actCount)")
                 .frame(maxWidth: .infinity)
 
-            metaChip(title: "Run streak", value: "\(streak)")
-                .frame(maxWidth: .infinity)
+            metaChip(
+                title: "Floor",
+                value: "\(floorInAct)/\(RunState.floorsPerAct + 1)"
+            )
+            .frame(maxWidth: .infinity)
         }
         .padding(12)
         .background(.thinMaterial)
@@ -164,6 +168,7 @@ struct TowerView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.primary.opacity(0.10), lineWidth: 1)
         )
+        .accessibilityLabel("Act \(act), floor \(floorInAct). Boss in \(bossIn).")
     }
 
     private func metaChip(title: String, value: String) -> some View {
@@ -219,7 +224,7 @@ struct TowerView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
 
-                Text(option.kind == .combat ? "Combat • Random enemy" : "Chest • Relic")
+                Text(option.kindDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

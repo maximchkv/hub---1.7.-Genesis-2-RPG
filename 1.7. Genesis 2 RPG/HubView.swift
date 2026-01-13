@@ -94,7 +94,7 @@ struct HubView: View {
             HStack(alignment: .top, spacing: 10) {
                 metricCell(title: "Gold", value: "\(store.meta.gold)")
                 metricCell(title: "Best floor", value: "\(store.meta.bestFloor)")
-                metricCell(title: "Current floor", value: "\(store.run?.currentFloor ?? 0)")
+                metricCell(title: "Run", value: runProgressValue())
                 metricCell(title: "Days", value: "\(store.meta.days)")
                 metricCell(title: "Run streak", value: "\(store.run?.nonCombatStreak ?? 0)")
             }
@@ -127,6 +127,12 @@ struct HubView: View {
                 .frame(height: metricValueHeight, alignment: .top)
         }
         .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    private func runProgressValue() -> String {
+        guard let r = store.run else { return "—" }
+        // Compact: A1 F3 / 33
+        return "A\(r.actIndex) F\(r.floorInAct)/\(r.globalFloorsTotal)"
     }
 
     // MARK: - Toast Slot (fixed height, no layout shifts)
