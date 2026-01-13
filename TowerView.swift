@@ -132,6 +132,8 @@ struct TowerView: View {
         let hp = store.run?.playerHP ?? 0
         let maxHP = store.run?.playerMaxHP ?? 0
         let streak = store.run?.nonCombatStreak ?? 0
+        let global = store.run?.globalFloor ?? 0
+        let globalTotal = store.run?.globalFloorsTotal ?? 0
 
         return VStack(spacing: 10) {
             HStack(spacing: 12) {
@@ -150,16 +152,19 @@ struct TowerView: View {
                     .frame(maxWidth: .infinity)
                 metaChip(title: "Streak", value: "\(streak)")
                     .frame(maxWidth: .infinity)
+                metaChip(title: "Global", value: "\(global)/\(globalTotal)")
+                    .frame(maxWidth: .infinity)
             }
         }
-        .padding(12)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
         .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.primary.opacity(0.10), lineWidth: 1)
         )
-        .accessibilityLabel("Act \(act), floor \(floorInAct). Boss in \(bossIn). HP \(hp) of \(maxHP). Streak \(streak).")
+        .accessibilityLabel("Act \(act), floor \(floorInAct). Boss in \(bossIn). HP \(hp) of \(maxHP). Streak \(streak). Global \(global) of \(globalTotal).")
     }
 
     private func metaChip(title: String, value: String) -> some View {
@@ -234,6 +239,22 @@ struct TowerView: View {
 
             Spacer(minLength: 0)
 
+            // Badge (Elite/Boss/Rest/Event)
+            if let badge = badgeText(for: option.kind) {
+                Text(badge)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(badgeForeground(for: option.kind))
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(badgeBackground(for: option.kind))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule().stroke(Color.primary.opacity(0.10), lineWidth: 1)
+                    )
+                    .accessibilityLabel("\(badge) room")
+            }
+
             // Trailing affordance
             if option.isLocked {
                 Image(systemName: "lock.fill")
@@ -254,5 +275,36 @@ struct TowerView: View {
             RoundedRectangle(cornerRadius: cardCorner)
                 .stroke(Color.primary.opacity(0.10), lineWidth: 1)
         )
+    }
+
+    private func badgeText(for kind: RoomKind) -> String? {
+        switch kind {
+        case .elite: return "ELITE"
+        case .boss: return "BOSS"
+        case .rest: return "REST"
+        case .event: return "EVENT"
+        default:
+            return nil
+        }
+    }
+
+    private func badgeBackground(for kind: RoomKind) -> Color {
+        switch kind {
+        case .boss:
+            return Color.primary.opacity(0.14)
+        case .elite:
+            return Color.primary.opacity(0.10)
+        default:
+            return Color.primary.opacity(0.08)
+        }
+    }
+
+    private func badgeForeground(for kind: RoomKind) -> Color {
+        switch kind {
+        case .boss:
+            return Color.primary
+        default:
+            return Color.primary.opacity(0.90)
+        }
     }
 }

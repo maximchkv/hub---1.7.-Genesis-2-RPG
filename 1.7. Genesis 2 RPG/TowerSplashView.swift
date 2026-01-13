@@ -4,35 +4,35 @@ struct TowerSplashView: View {
     @EnvironmentObject private var store: GameStore
     @State private var didContinue: Bool = false
 
+    // Layout tuning
+    private let horizontalPad: CGFloat = 18
+    private let topPad: CGFloat = 12
+    private let artTopGap: CGFloat = 14
+    private let artBottomGap: CGFloat = 14
+    private let bottomPad: CGFloat = 18
+
     var body: some View {
         ZStack {
-            Image("tower")
-                .resizable()
-                .scaledToFill()
+            UIStyle.background()
                 .ignoresSafeArea()
-
-            // Subtle overlay for legibility
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.55),
-                    .black.opacity(0.10),
-                    .black.opacity(0.55)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 header
-                    .padding(.top, 12)
-                    .padding(.horizontal, 18)
+                    .padding(.top, topPad)
+                    .padding(.horizontal, horizontalPad)
 
-                Spacer(minLength: 0)
+                // Tower art: keep original composition (no crop)
+                Image("tower")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(.top, artTopGap)
+                    .padding(.bottom, artBottomGap)
+                    .padding(.horizontal, horizontalPad)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
 
                 footer
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 18)
+                    .padding(.horizontal, horizontalPad)
+                    .padding(.bottom, bottomPad)
             }
         }
         .contentShape(Rectangle())
@@ -44,7 +44,7 @@ struct TowerSplashView: View {
             ZStack {
                 Text("Tower")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
 
                 HStack {
                     Button {
@@ -52,12 +52,12 @@ struct TowerSplashView: View {
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .padding(8)
-                            .background(.ultraThinMaterial)
+                            .background(.thinMaterial)
                             .clipShape(Circle())
                             .overlay(
-                                Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                Circle().stroke(Color.primary.opacity(0.10), lineWidth: 1)
                             )
                             .accessibilityLabel("Back to Hub")
                     }
@@ -97,11 +97,11 @@ struct TowerSplashView: View {
             }
         }
         .padding(12)
-        .background(.ultraThinMaterial)
+        .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
         )
     }
 
@@ -109,13 +109,13 @@ struct TowerSplashView: View {
         VStack(spacing: 2) {
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.80))
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
 
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
@@ -124,13 +124,13 @@ struct TowerSplashView: View {
     private var footer: some View {
         Text("Tap to enter")
             .font(.caption)
-            .foregroundStyle(.white.opacity(0.85))
+            .foregroundStyle(.secondary)
             .padding(.vertical, 10)
             .padding(.horizontal, 14)
-            .background(.ultraThinMaterial)
+            .background(.thinMaterial)
             .clipShape(Capsule())
             .overlay(
-                Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                Capsule().stroke(Color.primary.opacity(0.10), lineWidth: 1)
             )
     }
 
