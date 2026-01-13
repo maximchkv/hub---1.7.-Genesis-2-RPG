@@ -22,13 +22,38 @@ struct EnemyIntent: Codable, Hashable {
         }
     }
 
+    /// RU label for UI.
+    var titleRU: String {
+        switch kind {
+        case .attack: return "Атака"
+        case .defend: return "Защита"
+        case .counter: return "Контратака"
+        case .counterStance: return "Стойка"
+        case .doubleStrikeFixed4: return "Двойной удар"
+        }
+    }
+
+    /// Compact RU description for the current intent, used in UI.
+    var displayRU: String {
+        switch kind {
+        case .attack:
+            return "\(icon) \(value)"
+        case .defend:
+            return "\(icon) +\(value)"
+        case .doubleStrikeFixed4:
+            return "\(icon) 4×2"
+        case .counter, .counterStance:
+            return "\(icon) \(titleRU)"
+        }
+    }
+
     var text: String {
         switch kind {
-        case .attack: return "Attack"
-        case .defend: return "Defend"
-        case .counter: return "Counter"
-        case .counterStance: return "Counter Stance"
-        case .doubleStrikeFixed4: return "Double Strike"
+        case .attack: return "Атака"
+        case .defend: return "Защита"
+        case .counter: return "Контратака"
+        case .counterStance: return "Стойка"
+        case .doubleStrikeFixed4: return "Двойной удар"
         }
     }
 }

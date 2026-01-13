@@ -3,78 +3,85 @@ import SwiftUI
 struct ActionCardView: View {
     let card: ActionCard
     let disabled: Bool
+    let level: Int
 
     var body: some View {
         VStack(spacing: 8) {
+            // Top: centered icon, level badge in top-right
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(UIStyle.Colors.mutedFill)
+                    Text(icon)
+                        .font(.title2)
+                }
+                .frame(width: 44, height: 44)
+                .frame(maxWidth: .infinity, alignment: .center)
 
-            // 1) Icon container (smaller than before, for emoji now, images later)
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(.systemGray6))
-                Text(icon)
-                    .font(.title2)
+                if level > 1 {
+                    Text("Lv\(level)")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(UIStyle.Colors.mutedFill)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                        )
+                }
             }
-            .frame(height: 44)
 
-            // 2) Skill name
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
+            // Name
+            Text(titleRU)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.9)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .center)
 
-            // 3) Description (placeholder or effect text)
-            Text(descriptionText)
+            // Effect (compact, 1–2 lines)
+            Text(effectRU)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(UIStyle.Colors.inkSecondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
                 .minimumScaleFactor(0.9)
-                .frame(maxWidth: .infinity)
-
-            // 3.1) 031B: Effect row for status cards (icon + value)
-            if let effect = statusEffectRow {
-                HStack(spacing: 6) {
-                    Image(systemName: effect.icon)
-                        .font(.caption)
-                    Text(effect.valueText)
-                        .font(.caption)
-                }
-                .foregroundStyle(.secondary)
-            }
+                .frame(maxWidth: .infinity, alignment: .center)
 
             Spacer(minLength: 0)
 
-            // 4) AP cost
-            Text("\(card.cost) AP")
-                .font(.caption)
+            // Cost
+            Text("\(card.cost) ОД")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(.systemGray5))
+                        .fill(UIStyle.Colors.mutedFill)
                 )
         }
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.secondarySystemBackground))
+                .fill(UIStyle.Colors.cardFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color(.separator), lineWidth: 1)
+                .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
         )
-        .opacity(disabled ? 0.6 : 1.0)
+        .opacity(disabled ? 0.60 : 1.0)
     }
 
-    private var title: String {
+    private var titleRU: String {
         switch card.kind {
-        case .powerStrike: return "Power Strike"
-        case .defend: return "Guard"
-        case .doubleStrike: return "Double Strike"
-        case .counterStance: return "Counter Stance"
+        case .powerStrike: return "Мощный удар"
+        case .defend: return "Защита"
+        case .doubleStrike: return "Двойной удар"
+        case .counterStance: return "Контратака"
         case .bleedPlus2: return "Кровоток"
         case .weakPlus1: return "Ослабить"
         case .stun1: return "Оглушить"
@@ -93,29 +100,15 @@ struct ActionCardView: View {
         }
     }
 
-    private var descriptionText: String {
+    private var effectRU: String {
         switch card.kind {
-        case .powerStrike: return "Deal damage."
-        case .defend: return "Gain block."
-        case .doubleStrike: return "Deal damage twice."
-        case .counterStance: return "Gain block and deal damage."
-        case .bleedPlus2: return "Накладывает Кровотечение (+2)"
-        case .weakPlus1: return "Накладывает Слабость (+1)"
-        case .stun1: return "Накладывает Оглушение (1)"
-        }
-    }
-
-    // 031B: effect row content for status cards
-    private var statusEffectRow: (icon: String, valueText: String)? {
-        switch card.kind {
-        case .bleedPlus2:
-            return ("drop.fill", "+2")
-        case .weakPlus1:
-            return ("arrow.down.circle.fill", "+1")
-        case .stun1:
-            return ("bolt.fill", "1")
-        default:
-            return nil
+        case .powerStrike: return "Наносит урон."
+        case .defend: return "Даёт блок."
+        case .doubleStrike: return "Наносит урон дважды."
+        case .counterStance: return "Даёт блок и наносит урон."
+        case .bleedPlus2: return "Накладывает Кровоток +2."
+        case .weakPlus1: return "Накладывает Слабость +1."
+        case .stun1: return "Накладывает Оглушение 1."
         }
     }
 }
