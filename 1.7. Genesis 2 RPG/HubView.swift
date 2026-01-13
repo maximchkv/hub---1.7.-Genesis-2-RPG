@@ -176,7 +176,7 @@ struct HubView: View {
             HStack(spacing: 12) {
                 // Tower card
                 Button {
-                    store.goToTower()
+                    store.goToTowerEntry()
                 } label: {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .center, spacing: 10) {

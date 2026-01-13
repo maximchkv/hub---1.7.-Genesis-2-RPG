@@ -10,6 +10,8 @@ struct RootView: View {
                 StartView()
             case .hub:
                 HubView()
+            case .towerSplash:
+                TowerSplashView()
             case .tower:
                 TowerView()
             case .chest:

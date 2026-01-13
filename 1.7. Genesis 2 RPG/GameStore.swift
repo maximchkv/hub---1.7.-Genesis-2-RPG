@@ -269,6 +269,17 @@ final class GameStore: ObservableObject {
     func goToStart() { route = .start }
     func goToHub() { route = .hub }
 
+    /// Entry point into the Tower from Hub: shows the splash once.
+    func goToTowerEntry() {
+        route = .towerSplash
+
+        if run == nil {
+            startRun(routeToHub: false)
+        }
+
+        refreshRoomOptions()
+    }
+
     func goToTower() {
         route = .tower
 

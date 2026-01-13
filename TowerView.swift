@@ -8,16 +8,9 @@ struct TowerView: View {
     private let outerPad: CGFloat = 0
 
     private let topPad: CGFloat = 10
-    private let headerToToast: CGFloat = 10
     private let toastToMeta: CGFloat = 12
     private let metaToRooms: CGFloat = 14
     private let roomsSpacing: CGFloat = 12
-    private let bottomPad: CGFloat = 14
-
-    // Hero image (Tower)
-    private let towerHeroCorner: CGFloat = 16
-    private let headerToHero: CGFloat = 10
-    private let heroToToast: CGFloat = 10
 
     // Card styling
     private let cardCorner: CGFloat = 16
@@ -43,14 +36,6 @@ struct TowerView: View {
                         .frame(width: contentWidth, alignment: .center)
                         .padding(.top, topPad)
 
-                    Spacer().frame(height: headerToHero)
-
-                    // Hero image block (square 1:1)
-                    towerHero(contentWidth: contentWidth)
-                        .frame(width: contentWidth, alignment: .center)
-
-                    Spacer().frame(height: heroToToast)
-
                     // Toast
                     toastView
                         .frame(width: contentWidth, alignment: .center)
@@ -63,23 +48,9 @@ struct TowerView: View {
 
                     Spacer().frame(height: metaToRooms)
 
-                    // Center area (roomsList centered vertically)
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 0)
-
-                        roomsList
-                            .frame(width: contentWidth, alignment: .center)
-
-                        Spacer(minLength: 0)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    // Bottom button pinned to screen bottom
-                    Button("Back to Hub") {
-                        store.goToHub()
-                    }
-                    .padding(.bottom, bottomPad)
-                    .frame(width: contentWidth, alignment: .center)
+                    roomsList
+                        .frame(width: contentWidth, alignment: .center)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
@@ -96,24 +67,32 @@ struct TowerView: View {
     // MARK: - Header
 
     private var headerRow: some View {
-        Text("Tower")
-            .font(.headline)
-            .foregroundStyle(.primary)
-            .frame(maxWidth: .infinity, alignment: .center)
-    }
+        HStack(spacing: 12) {
+            Button {
+                store.goToHub()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .padding(8)
+                    .background(.thinMaterial)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle().stroke(Color.primary.opacity(0.10), lineWidth: 1)
+                    )
+                    .accessibilityLabel("Back to Hub")
+            }
+            .buttonStyle(.plain)
 
-    private func towerHero(contentWidth: CGFloat) -> some View {
-        Image("tower")
-            .resizable()
-            .scaledToFill()
-            .frame(width: contentWidth, height: contentWidth) // квадрат
-            .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: towerHeroCorner))
-            .overlay(
-                RoundedRectangle(cornerRadius: towerHeroCorner)
-                    .stroke(Color.primary.opacity(0.10), lineWidth: 1)
-            )
-            .accessibilityLabel("Tower illustration")
+            Text("Tower")
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            // symmetric spacer so title stays centered
+            Color.clear
+                .frame(width: 34, height: 34)
+        }
     }
 
     // MARK: - Toast
@@ -150,16 +129,28 @@ struct TowerView: View {
         let act = store.run?.actIndex ?? 0
         let floorInAct = store.run?.floorInAct ?? 0
         let bossIn = store.run?.floorsRemainingToBoss ?? 0
+        let hp = store.run?.playerHP ?? 0
+        let maxHP = store.run?.playerMaxHP ?? 0
+        let streak = store.run?.nonCombatStreak ?? 0
 
-        return HStack(spacing: 12) {
-            metaChip(title: "Act", value: "\(act)/\(RunState.actCount)")
-                .frame(maxWidth: .infinity)
+        return VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                metaChip(title: "Act", value: "\(act)/\(RunState.actCount)")
+                    .frame(maxWidth: .infinity)
 
-            metaChip(
-                title: "Floor",
-                value: "\(floorInAct)/\(RunState.floorsPerAct + 1)"
-            )
-            .frame(maxWidth: .infinity)
+                metaChip(title: "Floor", value: "\(floorInAct)/\(RunState.floorsPerAct + 1)")
+                    .frame(maxWidth: .infinity)
+
+                metaChip(title: "Boss in", value: "\(bossIn)")
+                    .frame(maxWidth: .infinity)
+            }
+
+            HStack(spacing: 12) {
+                metaChip(title: "HP", value: "\(hp)/\(maxHP)")
+                    .frame(maxWidth: .infinity)
+                metaChip(title: "Streak", value: "\(streak)")
+                    .frame(maxWidth: .infinity)
+            }
         }
         .padding(12)
         .background(.thinMaterial)
@@ -168,7 +159,7 @@ struct TowerView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.primary.opacity(0.10), lineWidth: 1)
         )
-        .accessibilityLabel("Act \(act), floor \(floorInAct). Boss in \(bossIn).")
+        .accessibilityLabel("Act \(act), floor \(floorInAct). Boss in \(bossIn). HP \(hp) of \(maxHP). Streak \(streak).")
     }
 
     private func metaChip(title: String, value: String) -> some View {
@@ -190,18 +181,22 @@ struct TowerView: View {
     // MARK: - Rooms
 
     private var roomsList: some View {
-        VStack(spacing: roomsSpacing) {
-            ForEach(store.run?.roomOptions ?? []) { option in
-                Button {
-                    store.selectRoom(option)
-                } label: {
-                    roomCard(option)
+        ScrollView(.vertical) {
+            VStack(spacing: roomsSpacing) {
+                ForEach(store.run?.roomOptions ?? []) { option in
+                    Button {
+                        store.selectRoom(option)
+                    } label: {
+                        roomCard(option)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(option.isLocked)
+                    .opacity(option.isLocked ? 0.55 : 1.0)
                 }
-                .buttonStyle(.plain)
-                .disabled(option.isLocked)
-                .opacity(option.isLocked ? 0.55 : 1.0)
             }
+            .padding(.vertical, 2)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func roomCard(_ option: RoomOption) -> some View {
