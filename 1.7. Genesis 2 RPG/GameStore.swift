@@ -365,6 +365,19 @@ final class GameStore: ObservableObject {
         completeRoomAndMoveForward(kind: kind, didWinCombat: nil)
     }
 
+    func restHealAndContinue() {
+        let healAmount = 6
+        guard var r = run else {
+            route = .tower
+            return
+        }
+        let before = r.playerHP
+        r.playerHP = min(r.playerMaxHP, r.playerHP + healAmount)
+        run = r
+        toast = "Rest: +\(r.playerHP - before) HP"
+        completeNonCombatRoomAndContinue(kind: .rest)
+    }
+
     func finishRunAndReturnToHub() {
         run = nil
         battle = nil
@@ -470,7 +483,7 @@ final class GameStore: ObservableObject {
 
         // Structural-only tuning: mark tougher fights
         let enemyHP: Int = (kind == .boss) ? 40 : (kind == .elite ? 28 : 20)
-        let playerHP: Int = 20 // (per-run persistence comes later)
+        let playerHP: Int = run?.playerHP ?? 20
 
         var newBattle = BattleState(
             floor: floorLabel,
@@ -484,7 +497,7 @@ final class GameStore: ObservableObject {
             enemyIntent: EnemyIntent(kind: .attack, value: 5),
             log: [],
             enemyAttackedThisTurn: false,
-            cardLevels: [.powerStrike: 1, .defend: 1, .doubleStrike: 1, .counterStance: 1]
+            cardLevels: run?.cardLevels ?? [:]
         )
         newBattle.phase = .player
 
@@ -507,9 +520,18 @@ final class GameStore: ObservableObject {
     func winBattle() {
         // Progression happens on victory (not on room selection)
         let kind = activeRoomKind ?? .combat
+        // Persist HP into the run before leaving combat
+        if var r = run, let b = battle {
+            r.playerHP = max(0, min(r.playerMaxHP, b.playerHP))
+            run = r
+        }
+
         battle = nil
         toast = (kind == .boss) ? "Boss defeated" : "Victory"
-        completeRoomAndMoveForward(kind: kind, didWinCombat: true)
+
+        // Reward gate (v1): choose 1 card upgrade after every win
+        reward = generateReward()
+        route = .reward
     }
 
     func loseBattle() {
@@ -563,11 +585,37 @@ final class GameStore: ObservableObject {
         route = .tower
     }
 
-    // MARK: - Reward stubs (keeps RewardView compiling)
+    // MARK: - Reward (v1)
+    private func generateReward() -> RewardState {
+        // Pick 3 unique upgrade options from a stable pool.
+        // (Full deckbuilding/rarities come later.)
+        let pool: [ActionCardKind] = [
+            .powerStrike, .defend, .doubleStrike, .counterStance,
+            .bleedPlus2, .weakPlus1, .stun1
+        ]
+        let options = Array(Set(pool.shuffled().prefix(3)))
+        // Ensure exactly 3 when Set collapses (rare)
+        let fixed = (options.count == 3) ? options : Array(pool.shuffled().prefix(3))
+        return RewardState(options: fixed)
+    }
+
     func claimReward(_ kind: ActionCardKind) {
-        toast = "Upgraded \(kind.rawValue) (+1)"
+        guard var r = run else {
+            reward = nil
+            route = .tower
+            return
+        }
+
+        let old = r.cardLevels[kind] ?? 1
+        r.cardLevels[kind] = old + 1
+        run = r
+
+        toast = "Upgraded \(kind.rawValue) → Lv\(old + 1)"
         reward = nil
-        route = .tower
+
+        // Now advance the floor and return to tower/victory
+        let roomKind = activeRoomKind ?? .combat
+        completeRoomAndMoveForward(kind: roomKind, didWinCombat: true)
     }
 
     // MARK: - Cards

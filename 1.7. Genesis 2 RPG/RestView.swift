@@ -15,8 +15,8 @@ struct RestView: View {
             Text("🔥")
                 .font(.system(size: 64))
 
-            Button("Continue") {
-                store.completeNonCombatRoomAndContinue(kind: .rest)
+            Button("Heal +6 & Continue") {
+                store.restHealAndContinue()
             }
         }
         .padding()

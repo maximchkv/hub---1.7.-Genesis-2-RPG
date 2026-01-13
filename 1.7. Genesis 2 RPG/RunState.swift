@@ -3,6 +3,14 @@ struct RunState {
     static let actCount: Int = 3
     static let floorsPerAct: Int = 10 // normal floors before boss
 
+    // MARK: - Run persistence (v1)
+    var playerMaxHP: Int
+    var playerHP: Int
+
+    /// Card upgrade levels persisted for the whole run.
+    /// Default is 1 for any card kind not present in the dictionary.
+    var cardLevels: [ActionCardKind: Int]
+
     /// 1...actCount
     var actIndex: Int
 
@@ -52,6 +60,9 @@ struct RunState {
 
     /// Start of a run: Act 1, Floor 1.
     init() {
+        self.playerMaxHP = 20
+        self.playerHP = 20
+        self.cardLevels = [:]
         self.actIndex = 1
         self.floorInAct = 1
         self.nonCombatStreak = 0

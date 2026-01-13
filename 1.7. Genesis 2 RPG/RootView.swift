@@ -22,6 +22,8 @@ struct RootView: View {
                 RestView()
             case .event:
                 EventView()
+            case .reward:
+                RewardView()
             case .victory:
                 VictoryView()
             case .castle:

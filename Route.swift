@@ -7,6 +7,7 @@ enum Route: Hashable {
     case defeat
     case rest
     case event
+    case reward
     case victory
     case castle
     case cardLibrary
