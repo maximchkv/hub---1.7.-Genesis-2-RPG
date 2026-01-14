@@ -1,6 +1,8 @@
 import Foundation
 
-enum ActionCardKind: String, Codable {
+enum ActionCardKind: String, Codable, Hashable, CaseIterable, Identifiable {
+    var id: String { self.rawValue }
+    // Базовые карты (разблокированы с начала)
     case powerStrike      // Мощный удар
     case defend           // Защита (важно: кейс называется defend, не guard)
     case doubleStrike     // Двойной удар
@@ -10,6 +12,31 @@ enum ActionCardKind: String, Codable {
     case bleedPlus2       // Кровоток
     case weakPlus1        // Ослабить
     case stun1            // Оглушить
+    
+    // Placeholder карты (будущий контент)
+    case placeholder1
+    case placeholder2
+    case placeholder3
+    case placeholder4
+    case placeholder5
+    
+    var isBaseCard: Bool {
+        switch self {
+        case .powerStrike, .defend, .doubleStrike, .counterStance, .bleedPlus2, .weakPlus1, .stun1:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var isPlaceholder: Bool {
+        switch self {
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 struct ActionCard: Identifiable, Codable {
@@ -25,6 +52,8 @@ struct ActionCard: Identifiable, Codable {
         case .bleedPlus2: return 1
         case .weakPlus1: return 1
         case .stun1: return 2
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return 0
         }
     }
 

@@ -85,6 +85,8 @@ struct ActionCardView: View {
         case .bleedPlus2: return "Кровоток"
         case .weakPlus1: return "Ослабить"
         case .stun1: return "Оглушить"
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return "???"
         }
     }
 
@@ -97,6 +99,8 @@ struct ActionCardView: View {
         case .bleedPlus2: return "🩸"
         case .weakPlus1: return "⬇️"
         case .stun1: return "⚡️"
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return "❓"
         }
     }
 
@@ -109,6 +113,8 @@ struct ActionCardView: View {
         case .bleedPlus2: return "Накладывает Кровоток +2."
         case .weakPlus1: return "Накладывает Слабость +1."
         case .stun1: return "Накладывает Оглушение 1."
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return "Будущая карта"
         }
     }
 }

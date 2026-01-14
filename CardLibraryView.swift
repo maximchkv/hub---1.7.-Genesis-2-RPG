@@ -2,16 +2,202 @@ import SwiftUI
 
 struct CardLibraryView: View {
     @EnvironmentObject private var store: GameStore
-
+    @Environment(\.horizontalSizeClass) private var hSizeClass
+    @State private var selectedCard: ActionCardKind? = nil
+    @State private var hasAppeared: Bool = false
+    
+    // Layout constants
+    private let horizontalPadding: CGFloat = 24
+    private let verticalPadding: CGFloat = 24
+    
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Card Library (stub)")
-                .font(.title)
-
-            Button("Back to Hub") {
-                store.goToHub()
+        NavigationStack {
+            ZStack {
+                UIStyle.background()
+                    .ignoresSafeArea()
+                
+                GeometryReader { geo in
+                    let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
+                    let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
+                    let contentWidth = min(availableWidth, cap)
+                    
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            // Info block with progress
+                            infoBlock
+                                .frame(width: contentWidth)
+                            
+                            // Empty state or card grid
+                            if store.meta.collection.unlockedCount == 0 {
+                                emptyState
+                                    .frame(width: contentWidth)
+                            } else {
+                                cardGrid
+                                    .frame(width: contentWidth)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.top, 8)
+                        .padding(.bottom, verticalPadding)
+                        .opacity(hasAppeared ? 1.0 : 0.0)
+                        .offset(y: hasAppeared ? 0 : 20)
+                    }
+                    .scrollIndicators(.hidden)
+                    .onAppear {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            hasAppeared = true
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Коллекция")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        store.goToHub()
+                    } label: {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    }
+                    .accessibilityLabel("Назад в Hub")
+                }
+            }
+            .toolbarBackground(.thinMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .sheet(item: $selectedCard) { card in
+                CardDetailView(card: card, isUnlocked: store.meta.collection.isUnlocked(card))
+                    .environmentObject(store)
             }
         }
-        .padding()
+    }
+    
+    // MARK: - Info Block
+    
+    private var infoBlock: some View {
+        VStack(spacing: 12) {
+            // Header
+            HStack {
+                Text("Коллекция карт")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                Spacer()
+            }
+            
+            // Progress
+            HStack {
+                Text("\(store.meta.collection.unlockedCount) / \(store.meta.collection.totalCount)")
+                    .font(.headline)
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                
+                Spacer()
+                
+                Text("разблокировано")
+                    .font(.caption)
+                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Разблокировано \(store.meta.collection.unlockedCount) из \(store.meta.collection.totalCount) карт")
+            
+            // Progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    // Background
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(UIStyle.Colors.mutedFill)
+                    
+                    // Progress
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(UIStyle.Colors.accent)
+                        .frame(width: progressWidth(totalWidth: geo.size.width))
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: store.meta.collection.unlockedCount)
+                }
+            }
+            .frame(height: 8)
+            .accessibilityHidden(true)
+        }
+        .uiCard()
+    }
+    
+    private func progressWidth(totalWidth: CGFloat) -> CGFloat {
+        let total = store.meta.collection.totalCount
+        guard total > 0 else { return 0 }
+        let unlocked = store.meta.collection.unlockedCount
+        return totalWidth * CGFloat(unlocked) / CGFloat(total)
+    }
+    
+    // MARK: - Empty State
+    
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "square.stack.3d.up.slash")
+                .font(.system(size: 64))
+                .foregroundStyle(UIStyle.Colors.inkSecondary.opacity(0.5))
+            
+            Text("Коллекция пуста")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
+            
+            Text("Играйте в Tower, улучшайте карты после боев, чтобы разблокировать их в коллекции.")
+                .font(.body)
+                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(32)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: UIStyle.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: UIStyle.cardRadius)
+                .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Коллекция пуста. Играйте в Tower, улучшайте карты после боев, чтобы разблокировать их в коллекции.")
+    }
+    
+    // MARK: - Card Grid
+    
+    private var cardGrid: some View {
+        let columns = gridColumns(for: hSizeClass)
+        
+        return LazyVGrid(columns: columns, spacing: 16) {
+            ForEach(store.meta.collection.allCards, id: \.self) { card in
+                CollectionCardCell(
+                    card: card,
+                    isUnlocked: store.meta.collection.isUnlocked(card)
+                ) {
+                    selectedCard = card
+                }
+            }
+        }
+    }
+    
+    // MARK: - Layout Helpers
+    
+    private func widthCap(for sizeClass: UserInterfaceSizeClass?, windowWidth: CGFloat) -> CGFloat {
+        switch sizeClass {
+        case .compact:
+            return 360 // iPhone
+        case .regular:
+            return windowWidth < 900 ? 600 : 720 // iPad
+        default:
+            return 360
+        }
+    }
+    
+    private func gridColumns(for sizeClass: UserInterfaceSizeClass?) -> [GridItem] {
+        switch sizeClass {
+        case .compact:
+            // 2 columns on iPhone
+            return Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)
+        case .regular:
+            // 3-4 columns on iPad
+            return Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
+        default:
+            return Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)
+        }
     }
 }

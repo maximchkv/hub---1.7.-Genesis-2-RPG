@@ -301,14 +301,39 @@ final class GameStore: ObservableObject {
     func goToCastleUpgrade() { castleRoute = .upgrade }
     func goToCastleRelics() { castleRoute = .relics }
     func backToCastleMain() { castleRoute = .main }
+    
+    // MARK: - Collection
+    func unlockCard(_ kind: ActionCardKind) {
+        let wasUnlocked = meta.collection.isUnlocked(kind)
+        meta.unlockCard(kind)
+        if !wasUnlocked {
+            toast = "Карта разблокирована: \(cardTitle(kind))"
+        }
+    }
+    
+    func incrementCardUsage(_ kind: ActionCardKind) {
+        meta.incrementCardUsage(kind)
+    }
 
     // MARK: - Run
     func startRun(routeToHub: Bool = true) {
         var newRun = RunState()
         newRun.roomOptions = towerService.generateRoomOptions(run: newRun)
         run = newRun
+        
+        // Auto-unlock base cards on first run
+        if meta.collection.unlockedCards.isEmpty {
+            unlockBaseCards()
+        }
+        
         if routeToHub {
             route = .hub
+        }
+    }
+    
+    private func unlockBaseCards() {
+        for cardKind in ActionCardKind.allCases where cardKind.isBaseCard {
+            meta.unlockCard(cardKind)
         }
     }
 
@@ -620,6 +645,9 @@ final class GameStore: ObservableObject {
         let old = r.cardLevels[kind] ?? 1
         r.cardLevels[kind] = old + 1
         run = r
+        
+        // Unlock card in collection if first time
+        unlockCard(kind)
 
         toast = "Upgraded \(kind.rawValue) → Lv\(old + 1)"
         reward = nil
@@ -697,10 +725,17 @@ final class GameStore: ObservableObject {
         case .stun1:
             battle.addStatus(.stun, stacks: 1, to: .enemy)
             pushLog(&battle, side: .player, "Player uses Оглушить → Enemy: Оглушение 1")
+            
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            // Placeholders should never be playable
+            break
         }
 
         battle.usedCardsThisTurn.insert(card.kind)
         self.battle = battle
+        
+        // Track card usage in collection
+        incrementCardUsage(card.kind)
 
         if battle.enemyHP <= 0 {
             winBattle()
@@ -850,6 +885,8 @@ final class GameStore: ObservableObject {
         case .bleedPlus2: return "Кровоток"
         case .weakPlus1: return "Ослабить"
         case .stun1: return "Оглушить"
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return "???"
         }
     }
 
