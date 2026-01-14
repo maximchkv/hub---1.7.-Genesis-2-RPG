@@ -544,10 +544,6 @@ private struct HPBar: View {
     let value: Int
     let maxValue: Int
 
-    private var darkGreen: Color {
-        Color(red: 0.12, green: 0.45, blue: 0.20)
-    }
-
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
@@ -559,7 +555,7 @@ private struct HPBar: View {
                     .fill(Color(.systemGray5))
 
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(darkGreen)
+                    .fill(UIStyle.Colors.hpGreen)
                     .frame(width: fillW)
             }
         }

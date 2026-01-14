@@ -13,15 +13,20 @@ struct RoomOption: Identifiable, Codable, Hashable {
     let id: UUID
     let kind: RoomKind
     var isLocked: Bool
+    
+    // Preview fields
+    let difficulty: Int // 0 = none, 1 = easy, 2 = medium, 3 = hard
+    let descriptionText: String
+    let previewEnemy: RuntimeEnemyKind?
 
     var title: String {
         switch kind {
-        case .combat: return "Battle"
-        case .chest: return "Chest"
-        case .elite: return "Elite"
-        case .rest: return "Rest"
-        case .event: return "Event"
-        case .boss: return "Boss"
+        case .combat: return "Битва"
+        case .chest: return "Сундук"
+        case .elite: return "Элита"
+        case .rest: return "Отдых"
+        case .event: return "Событие"
+        case .boss: return "Босс"
         }
     }
 
@@ -38,25 +43,34 @@ struct RoomOption: Identifiable, Codable, Hashable {
 
     var kindDescription: String {
         switch kind {
-        case .combat: return "Combat • Random enemy"
-        case .elite: return "Elite • Hard fight"
-        case .boss: return "Boss • Act climax"
-        case .chest: return "Chest • Relic"
-        case .rest: return "Rest • Pause"
-        case .event: return "Event • Choice"
+        case .combat: return "Враг на пути"
+        case .elite: return "Элитный враг"
+        case .boss: return "Финал акта"
+        case .chest: return "Награда"
+        case .rest: return "Восстановление"
+        case .event: return "Выбор"
         }
     }
 
     var subtitle: String {
         if kind == .chest && isLocked {
-            return "Locked: can't take 3 non-combat rooms in a row"
+            return "Заблокировано: нельзя пропускать 3 боя подряд"
         }
         return ""
     }
 
-    init(kind: RoomKind, isLocked: Bool = false) {
+    init(
+        kind: RoomKind,
+        isLocked: Bool = false,
+        difficulty: Int = 0,
+        descriptionText: String = "",
+        previewEnemy: RuntimeEnemyKind? = nil
+    ) {
         self.id = UUID()
         self.kind = kind
         self.isLocked = isLocked
+        self.difficulty = difficulty
+        self.descriptionText = descriptionText
+        self.previewEnemy = previewEnemy
     }
 }

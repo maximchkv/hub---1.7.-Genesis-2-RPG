@@ -26,6 +26,9 @@ enum UIStyle {
 
         static let accent      = SwiftUI.Color(red: 0.55, green: 0.45, blue: 0.30)
         static let mutedFill   = SwiftUI.Color.black.opacity(0.06)
+
+        // Consistent HP green (used across UI)
+        static let hpGreen     = SwiftUI.Color(red: 0.12, green: 0.45, blue: 0.20)
     }
 
     // MARK: - Radius

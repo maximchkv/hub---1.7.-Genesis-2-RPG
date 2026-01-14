@@ -10,12 +10,6 @@ struct TowerView: View {
     private let topPad: CGFloat = 10
     private let toastToMeta: CGFloat = 12
     private let metaToRooms: CGFloat = 14
-    private let roomsSpacing: CGFloat = 12
-
-    // Card styling
-    private let cardCorner: CGFloat = 16
-    private let cardHPad: CGFloat = 14
-    private let cardVPad: CGFloat = 16
 
     // Toast
     private let toastHideDelay: Double = 1.2
@@ -42,15 +36,15 @@ struct TowerView: View {
 
                     Spacer().frame(height: toastToMeta)
 
-                    // Meta (Floor / Run streak)
-                    metaRow
+                    // Top info — two columns (HP left, run progress right)
+                    topInfoRow
                         .frame(width: contentWidth, alignment: .center)
 
                     Spacer().frame(height: metaToRooms)
 
-                    roomsList
+                    roomsSection(contentWidth: contentWidth)
                         .frame(width: contentWidth, alignment: .center)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
@@ -84,7 +78,7 @@ struct TowerView: View {
             }
             .buttonStyle(.plain)
 
-            Text("Tower")
+            Text("Башня")
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -125,46 +119,60 @@ struct TowerView: View {
 
     // MARK: - Meta
 
-    private var metaRow: some View {
-        let act = store.run?.actIndex ?? 0
-        let floorInAct = store.run?.floorInAct ?? 0
-        let bossIn = store.run?.floorsRemainingToBoss ?? 0
+    private var topInfoRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            playerInfoRow
+                .frame(maxWidth: .infinity)
+            progressRow
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var playerInfoRow: some View {
         let hp = store.run?.playerHP ?? 0
         let maxHP = store.run?.playerMaxHP ?? 0
-        let streak = store.run?.nonCombatStreak ?? 0
+        let denom = max(1, maxHP)
+        let hpFrac = Double(max(0, min(hp, denom))) / Double(denom)
+
+        return metaCard(vertical: 10, horizontal: 12) {
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Здоровье")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Text("\(hp)/\(maxHP)")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                }
+
+                TowerHPBar(fraction: hpFrac)
+                    .frame(height: 7)
+            }
+        }
+        .accessibilityLabel("Здоровье \(hp) из \(maxHP).")
+    }
+
+    private var progressRow: some View {
+        let floorInAct = store.run?.floorInAct ?? 0
+        let bossIn = store.run?.floorsRemainingToBoss ?? 0
         let global = store.run?.globalFloor ?? 0
         let globalTotal = store.run?.globalFloorsTotal ?? 0
 
-        return VStack(spacing: 10) {
+        return metaCard(vertical: 10, horizontal: 12) {
             HStack(spacing: 12) {
-                metaChip(title: "Act", value: "\(act)/\(RunState.actCount)")
+                metaChip(title: "Этаж", value: "\(floorInAct)/\(RunState.floorsPerAct + 1)")
                     .frame(maxWidth: .infinity)
 
-                metaChip(title: "Floor", value: "\(floorInAct)/\(RunState.floorsPerAct + 1)")
+                metaChip(title: "Босс", value: "\(bossIn)")
                     .frame(maxWidth: .infinity)
 
-                metaChip(title: "Boss in", value: "\(bossIn)")
-                    .frame(maxWidth: .infinity)
-            }
-
-            HStack(spacing: 12) {
-                metaChip(title: "HP", value: "\(hp)/\(maxHP)")
-                    .frame(maxWidth: .infinity)
-                metaChip(title: "Streak", value: "\(streak)")
-                    .frame(maxWidth: .infinity)
-                metaChip(title: "Global", value: "\(global)/\(globalTotal)")
+                metaChip(title: "Всего", value: "\(global)/\(globalTotal)")
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 12)
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
-        )
-        .accessibilityLabel("Act \(act), floor \(floorInAct). Boss in \(bossIn). HP \(hp) of \(maxHP). Streak \(streak). Global \(global) of \(globalTotal).")
+        .accessibilityLabel("Этаж \(floorInAct). До босса \(bossIn). Всего \(global) из \(globalTotal).")
     }
 
     private func metaChip(title: String, value: String) -> some View {
@@ -183,128 +191,302 @@ struct TowerView: View {
         .frame(minWidth: 0)
     }
 
-    // MARK: - Rooms
-
-    private var roomsList: some View {
-        ScrollView(.vertical) {
-            VStack(spacing: roomsSpacing) {
-                ForEach(store.run?.roomOptions ?? []) { option in
-                    Button {
-                        store.selectRoom(option)
-                    } label: {
-                        roomCard(option)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(option.isLocked)
-                    .opacity(option.isLocked ? 0.55 : 1.0)
-                }
-            }
-            .padding(.vertical, 2)
-        }
-        .scrollIndicators(.hidden)
+    private func metaCard<Content: View>(
+        vertical: CGFloat = 12,
+        horizontal: CGFloat = 12,
+        @ViewBuilder _ content: () -> Content
+    ) -> some View {
+        content()
+            .padding(.vertical, vertical)
+            .padding(.horizontal, horizontal)
+            .background(.thinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+            )
     }
 
-    private func roomCard(_ option: RoomOption) -> some View {
-        HStack(spacing: 12) {
-            // Icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.primary.opacity(0.06))
+    // MARK: - Rooms
 
-                Text(option.icon)
-                    .font(.title2)
+    private func roomsSection(contentWidth: CGFloat) -> some View {
+        let options = store.run?.roomOptions ?? []
+        // Larger container for bigger cards
+        let containerHeight: CGFloat = {
+            if options.isEmpty { return 280 }
+            if options.count <= 3 { return 480 }
+            return 600
+        }()
+
+        return VStack(spacing: 0) {
+            Spacer(minLength: 8)
+            roomsStage(options)
+                .frame(width: contentWidth, alignment: .center)
+                .frame(height: containerHeight)
+            Spacer(minLength: 8)
+        }
+    }
+
+    private func roomsStage(_ options: [RoomOption]) -> some View {
+        // Intentionally NO background/border: this is a pure layout stage.
+        VStack(spacing: 0) {
+            Group {
+                if options.isEmpty {
+                    Text("Комнаты недоступны")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else if options.count <= 3 {
+                    // Even vertical distribution with tighter spacing
+                    VStack(spacing: 12) {
+                        ForEach(options) { option in
+                            Button {
+                                store.selectRoom(option)
+                            } label: {
+                                roomOptionCard(option)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(option.isLocked)
+                            .opacity(option.isLocked ? 0.55 : 1.0)
+                        }
+                    }
+                } else {
+                    ScrollView(.vertical) {
+                        VStack(spacing: 12) {
+                            ForEach(options) { option in
+                                Button {
+                                    store.selectRoom(option)
+                                } label: {
+                                    roomOptionCard(option)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(option.isLocked)
+                                .opacity(option.isLocked ? 0.55 : 1.0)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .scrollIndicators(.hidden)
+                }
             }
-            .frame(width: 44, height: 44)
+            .padding(.horizontal, 12)
+        }
+    }
 
-            // Texts
-            VStack(alignment: .leading, spacing: 6) {
-                Text(option.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-
+    private func roomOptionCard(_ option: RoomOption) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            // Portrait (left) — larger
+            roomPortrait(option)
+                .frame(width: 72, height: 72)
+            
+            // Center content
+            VStack(alignment: .leading, spacing: 8) {
+                // Top row: title + difficulty
+                HStack(alignment: .center) {
+                    Text(option.title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    
+                    Spacer(minLength: 4)
+                    
+                    // Difficulty / safety indicator
+                    if option.difficulty > 0 {
+                        difficultyIndicator(option.difficulty)
+                    } else {
+                        safeIndicator(option.kind)
+                    }
+                }
+                
+                // Room type
                 Text(option.kindDescription)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-
+                
+                // Description
+                if !option.descriptionText.isEmpty {
+                    Text(option.descriptionText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                // Locked subtitle
                 if !option.subtitle.isEmpty {
                     Text(option.subtitle)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                        .foregroundStyle(.red.opacity(0.8))
                         .lineLimit(2)
                 }
             }
-
-            Spacer(minLength: 0)
-
-            // Badge (Elite/Boss/Rest/Event)
-            if let badge = badgeText(for: option.kind) {
-                Text(badge)
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(badgeForeground(for: option.kind))
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(badgeBackground(for: option.kind))
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule().stroke(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
-                    .accessibilityLabel("\(badge) room")
-            }
-
-            // Trailing affordance
+            
+            // Trailing chevron
             if option.isLocked {
                 Image(systemName: "lock.fill")
-                    .font(.caption)
+                    .font(.system(size: 16))
                     .foregroundStyle(.secondary)
             } else {
                 Image(systemName: "chevron.right")
-                    .font(.caption)
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, cardHPad)
-        .padding(.vertical, cardVPad)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .frame(minHeight: 120)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: cardCorner))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay(
-            RoundedRectangle(cornerRadius: cardCorner)
-                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
         )
     }
-
-    private func badgeText(for kind: RoomKind) -> String? {
+    
+    // MARK: - Room Portrait
+    
+    private func roomPortrait(_ option: RoomOption) -> some View {
+        let cornerRadius: CGFloat = 14
+        
+        return ZStack {
+            // Background with subtle gradient for depth
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.primary.opacity(0.08), Color.primary.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            // If we have an enemy preview, show their portrait
+            if let enemy = option.previewEnemy, let assetName = enemyAssetName(enemy) {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            } else {
+                // Fallback to icon for non-combat rooms
+                Text(option.icon)
+                    .font(.system(size: 32))
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(Color.primary.opacity(0.18), lineWidth: 1.5)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+    }
+    
+    private func enemyAssetName(_ kind: RuntimeEnemyKind) -> String? {
         switch kind {
-        case .elite: return "ELITE"
-        case .boss: return "BOSS"
-        case .rest: return "REST"
-        case .event: return "EVENT"
-        default:
-            return nil
+        case .punisher: return "punisher"
+        case .graphiteGolem: return "graphite_golem"
+        case .zesurumiMonks: return "zesurumi_monks"
+        case .feyanchа: return "feyancha"
         }
     }
-
-    private func badgeBackground(for kind: RoomKind) -> Color {
-        switch kind {
-        case .boss:
-            return Color.primary.opacity(0.14)
-        case .elite:
-            return Color.primary.opacity(0.10)
-        default:
-            return Color.primary.opacity(0.08)
+    
+    // MARK: - Safety Indicator (for non-combat rooms)
+    
+    private func safeIndicator(_ kind: RoomKind) -> some View {
+        let (icon, label, color): (String, String, Color) = {
+            switch kind {
+            case .event: return ("sparkles", "Выбор", .blue)
+            case .rest: return ("heart.fill", "Отдых", .green)
+            case .chest: return ("gift.fill", "Награда", .yellow)
+            default: return ("checkmark.shield", "Безопасно", .green)
+            }
+        }()
+        
+        return HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(color)
+            
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.15))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(color.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Difficulty Indicator
+    
+    private func difficultyIndicator(_ level: Int) -> some View {
+        HStack(spacing: 4) {
+            // Skulls for danger level
+            ForEach(0..<level, id: \.self) { _ in
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(difficultyColor(level))
+            }
+            
+            // Text label
+            Text(difficultyLabel(level))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(difficultyColor(level))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(difficultyColor(level).opacity(0.15))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(difficultyColor(level).opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    private func difficultyLabel(_ level: Int) -> String {
+        switch level {
+        case 1: return "Бой"
+        case 2: return "Опасно"
+        case 3: return "Босс"
+        default: return ""
         }
     }
-
-    private func badgeForeground(for kind: RoomKind) -> Color {
-        switch kind {
-        case .boss:
-            return Color.primary
-        default:
-            return Color.primary.opacity(0.90)
+    
+    private func difficultyColor(_ level: Int) -> Color {
+        switch level {
+        case 1: return .orange
+        case 2: return .red
+        case 3: return .purple
+        default: return .gray
         }
+    }
+}
+
+// MARK: - Local helpers
+
+private struct TowerHPBar: View {
+    let fraction: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let f = max(0, min(1, fraction))
+            let fillW = CGFloat(f) * w
+
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(.systemGray5))
+
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(UIStyle.Colors.hpGreen)
+                    .frame(width: fillW)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .accessibilityHidden(true)
     }
 }
