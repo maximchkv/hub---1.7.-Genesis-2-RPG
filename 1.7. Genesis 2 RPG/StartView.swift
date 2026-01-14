@@ -8,6 +8,12 @@ struct StartView: View {
 
     @State private var selectedChip: Chip = .climb
 
+    // Lantern reveal (interactive background layer)
+    @State private var lanternPoint: CGPoint = .zero
+    @State private var didTouchLantern: Bool = false
+    @State private var showLanternHint: Bool = true
+    @State private var didScheduleHintHide: Bool = false
+
     private enum Chip: String, CaseIterable, Identifiable {
         case climb
         case cards
@@ -70,6 +76,9 @@ struct StartView: View {
                 .ignoresSafeArea()
 
             GeometryReader { geo in
+                let lanternRadius = max(160, min(geo.size.width, geo.size.height) * 0.24)
+                let lanternFeather = lanternRadius * 0.38
+
                 // Поля по 24pt слева/справа
                 let horizontalPadding: CGFloat = 24
                 let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
@@ -80,12 +89,74 @@ struct StartView: View {
                 // Итоговая ширина контента
                 let contentWidth = min(availableWidth, cap)
 
-                ViewThatFits(in: .vertical) {
-                    // 1) Без скролла — если всё влезает
-                    nonScrollLayout(contentWidth: contentWidth, horizontalPadding: horizontalPadding)
+                ZStack {
+                    LanternRevealLayer(
+                        lightPoint: (lanternPoint == .zero)
+                            ? CGPoint(x: geo.size.width * 0.5, y: geo.size.height * 0.34)
+                            : lanternPoint,
+                        radius: lanternRadius,
+                        feather: lanternFeather
+                    )
+                    .ignoresSafeArea()
 
-                    // 2) Авто-переход в скролл — если не влезло по высоте
-                    scrollLayout(contentWidth: contentWidth, horizontalPadding: horizontalPadding)
+                    ViewThatFits(in: .vertical) {
+                        // 1) Без скролла — если всё влезает
+                        nonScrollLayout(contentWidth: contentWidth, horizontalPadding: horizontalPadding)
+
+                        // 2) Авто-переход в скролл — если не влезло по высоте
+                        scrollLayout(contentWidth: contentWidth, horizontalPadding: horizontalPadding)
+                    }
+
+                    if showLanternHint {
+                        VStack {
+                            Spacer(minLength: 0)
+
+                            Text("Move your finger to reveal the tower")
+                                .font(.caption)
+                                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 14)
+                                .background(.thinMaterial)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                                )
+                                .padding(.bottom, 18)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .allowsHitTesting(false)
+                    }
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
+                .contentShape(Rectangle())
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                        .onChanged { v in
+                            lanternPoint = v.location
+                            if !didTouchLantern {
+                                didTouchLantern = true
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    showLanternHint = false
+                                }
+                            }
+                        }
+                )
+                .onAppear {
+                    if lanternPoint == .zero {
+                        lanternPoint = CGPoint(x: geo.size.width * 0.5, y: geo.size.height * 0.34)
+                    }
+                    if !didScheduleHintHide {
+                        didScheduleHintHide = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.7) {
+                            if !didTouchLantern {
+                                withAnimation(.easeOut(duration: 0.35)) {
+                                    showLanternHint = false
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
