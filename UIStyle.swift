@@ -76,6 +76,24 @@ enum UIStyle {
                 )
         }
     }
+
+    // MARK: - Card button style
+    // Использование:
+    // Button { ... } label: { ... }.buttonStyle(UIStyle.CardButtonStyle())
+    //
+    // Предполагается, что label уже оформлен как карточка (например через `.uiCard()`).
+    struct CardButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
+                .opacity(configuration.isPressed ? 0.96 : 1.0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: UIStyle.cardRadius)
+                        .stroke(UIStyle.Colors.accent.opacity(configuration.isPressed ? 0.28 : 0.0), lineWidth: 1)
+                )
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        }
+    }
 }
 
 // MARK: - View helpers
@@ -83,4 +101,8 @@ extension View {
     func uiCard() -> some View {
         self.modifier(UIStyle.CardModifier())
     }
+    
+    // ⚠️ УДАЛЕНЫ хелперы uiSafeAreaScreenPadding и uiMaxReadableWidth.
+    // Они не работали надёжно и привели к 7 итерациям багфикса RewardView.
+    // Используй простой .padding() на контенте — см. UI_DESIGN_RULES.md
 }
