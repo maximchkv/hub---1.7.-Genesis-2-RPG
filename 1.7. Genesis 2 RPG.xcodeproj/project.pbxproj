@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3C395DAE421A4B8FBEC05644 /* CardStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E8A4D2FB064EFF823F2738 /* CardStats.swift */; };
 		507E29992F07F0DA00BD8FBB /* PlayerMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29982F07F0DA00BD8FBB /* PlayerMeta.swift */; };
 		507E299B2F07F17D00BD8FBB /* Route.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E299A2F07F17D00BD8FBB /* Route.swift */; };
 		507E299D2F07F18000BD8FBB /* TowerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E299C2F07F18000BD8FBB /* TowerView.swift */; };
@@ -34,13 +35,14 @@
 		507E29EF2F0A307F00BD8FBB /* Enemy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29EE2F0A307F00BD8FBB /* Enemy.swift */; };
 		507E29F12F0A332100BD8FBB /* RuntimeEnemyCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */; };
 		50CB92512F0E73B400F1800F /* Status.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50CB92502F0E73B400F1800F /* Status.swift */; };
-		3C395DAE421A4B8FBEC05644 /* CardStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E8A4D2FB064EFF823F2738 /* CardStats.swift */; };
 		7BAB9B9352D042578506B292 /* CollectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C22FFB0828A4353AC567EE2 /* CollectionState.swift */; };
-		CD025EA785864DA6B78E6329 /* CollectionCardCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F5B7E741B674866978872CA /* CollectionCardCell.swift */; };
 		C0A95ED7F806475DBF1917DF /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0519FD2A364C4F1294D5968E /* CardDetailView.swift */; };
-		/* End PBXBuildFile section */
+		CD025EA785864DA6B78E6329 /* CollectionCardCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F5B7E741B674866978872CA /* CollectionCardCell.swift */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0519FD2A364C4F1294D5968E /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailView.swift; sourceTree = "<group>"; };
+		0F5B7E741B674866978872CA /* CollectionCardCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionCardCell.swift; sourceTree = "<group>"; };
 		507E29802F07EE5100BD8FBB /* 1.7. Genesis 2 RPG.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "1.7. Genesis 2 RPG.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		507E29982F07F0DA00BD8FBB /* PlayerMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerMeta.swift; sourceTree = "<group>"; };
 		507E299A2F07F17D00BD8FBB /* Route.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Route.swift; sourceTree = "<group>"; };
@@ -69,11 +71,9 @@
 		507E29EE2F0A307F00BD8FBB /* Enemy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enemy.swift; sourceTree = "<group>"; };
 		507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeEnemyCatalog.swift; sourceTree = "<group>"; };
 		50CB92502F0E73B400F1800F /* Status.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Status.swift; sourceTree = "<group>"; };
-		B1E8A4D2FB064EFF823F2738 /* CardStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardStats.swift; sourceTree = "<group>"; };
 		7C22FFB0828A4353AC567EE2 /* CollectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionState.swift; sourceTree = "<group>"; };
-		0F5B7E741B674866978872CA /* CollectionCardCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionCardCell.swift; sourceTree = "<group>"; };
-		0519FD2A364C4F1294D5968E /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailView.swift; sourceTree = "<group>"; };
-		/* End PBXFileReference section */
+		B1E8A4D2FB064EFF823F2738 /* CardStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardStats.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		507E29822F07EE5100BD8FBB /* 1.7. Genesis 2 RPG */ = {
@@ -126,7 +126,7 @@
 				507E29EE2F0A307F00BD8FBB /* Enemy.swift */,
 				507E29F02F0A332100BD8FBB /* RuntimeEnemyCatalog.swift */,
 				50CB92502F0E73B400F1800F /* Status.swift */,
-							B1E8A4D2FB064EFF823F2738 /* CardStats.swift */,
+				B1E8A4D2FB064EFF823F2738 /* CardStats.swift */,
 				7C22FFB0828A4353AC567EE2 /* CollectionState.swift */,
 				0F5B7E741B674866978872CA /* CollectionCardCell.swift */,
 				0519FD2A364C4F1294D5968E /* CardDetailView.swift */,
@@ -219,7 +219,6 @@
 				7BAB9B9352D042578506B292 /* CollectionState.swift in Sources */,
 				CD025EA785864DA6B78E6329 /* CollectionCardCell.swift in Sources */,
 				C0A95ED7F806475DBF1917DF /* CardDetailView.swift in Sources */,
-				
 				507E29E32F09654100BD8FBB /* CastleRelicsView.swift in Sources */,
 				507E299B2F07F17D00BD8FBB /* Route.swift in Sources */,
 				507E29AB2F07F51A00BD8FBB /* ChestView.swift in Sources */,

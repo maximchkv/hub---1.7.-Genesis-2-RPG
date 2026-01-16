@@ -128,7 +128,7 @@ struct TowerService {
         return Array(shuffled.prefix(2))
     }
     
-    private func generateAllNextFloorOptions(run: RunState) -> [RoomOption] {
+    func generateAllNextFloorOptions(run: RunState) -> [RoomOption] {
         // Boss floor: single mandatory option
         if run.isBossFloor {
             return [makeBossRoom(actIndex: run.actIndex)]

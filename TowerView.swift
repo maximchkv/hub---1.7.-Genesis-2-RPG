@@ -3,13 +3,19 @@ import SwiftUI
 struct TowerView: View {
     @EnvironmentObject private var store: GameStore
 
-    // MARK: - Layout constants (UI-KIT v1.0)
+    // MARK: - Layout constants (UI-KIT v2.0 - Redesign)
     private let contentCap: CGFloat = 380
     private let outerPad: CGFloat = 0
 
-    private let topPad: CGFloat = 10
-    private let toastToMeta: CGFloat = 12
-    private let metaToRooms: CGFloat = 14
+    private let topPad: CGFloat = 8
+    private let toastToMeta: CGFloat = 10
+    private let metaToStrategic: CGFloat = 12
+    private let strategicToTactical: CGFloat = 12
+    private let safeAreaBottomPadding: CGFloat = 160
+    
+    // Проценты высоты секций
+    private let strategicSectionHeightPercent: CGFloat = 0.28
+    private let tacticalSectionHeightPercent: CGFloat = 0.65
 
     // Toast
     private let toastHideDelay: Double = 1.2
@@ -23,32 +29,38 @@ struct TowerView: View {
                 let available = max(0, geo.size.width - outerPad * 2)
                 let contentWidth = min(available, contentCap)
 
-                VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header (приглушённый)
+                        headerRow
+                            .frame(width: contentWidth, alignment: .center)
+                            .padding(.top, topPad)
 
-                    // Header (только заголовок)
-                    headerRow
-                        .frame(width: contentWidth, alignment: .center)
-                        .padding(.top, topPad)
+                        // Toast
+                        toastView
+                            .frame(width: contentWidth, alignment: .center)
 
-                    // Toast
-                    toastView
-                        .frame(width: contentWidth, alignment: .center)
+                        Spacer().frame(height: toastToMeta)
 
-                    Spacer().frame(height: toastToMeta)
+                        // HP и прогресс (сбалансированно выделено)
+                        topInfoRow
+                            .frame(width: contentWidth, alignment: .center)
 
-                    // Top info — two columns (HP left, run progress right)
-                    topInfoRow
-                        .frame(width: contentWidth, alignment: .center)
+                        Spacer().frame(height: metaToStrategic)
 
-                    Spacer().frame(height: metaToRooms)
+                        // СТРАТЕГИЧЕСКАЯ СЕКЦИЯ (пустой блок для будущей реализации)
+                        strategicSectionPlaceholder(contentWidth: contentWidth)
 
-                    roomsSection(contentWidth: contentWidth)
-                        .frame(width: contentWidth, alignment: .center)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        Spacer().frame(height: strategicToTactical)
+
+                        // ТАКТИЧЕСКАЯ СЕКЦИЯ (большие карточки комнат)
+                        tacticalSection(contentWidth: contentWidth)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .safeAreaPadding(.horizontal)
+                    .safeAreaPadding(.bottom, safeAreaBottomPadding)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
-                .padding(.horizontal, outerPad)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .onAppear {
@@ -66,26 +78,23 @@ struct TowerView: View {
                 store.goToHub()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .padding(8)
-                    .background(.thinMaterial)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(6)
+                    .background(Color.primary.opacity(0.05))
                     .clipShape(Circle())
-                    .overlay(
-                        Circle().stroke(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
                     .accessibilityLabel("Back to Hub")
             }
             .buttonStyle(.plain)
 
             Text("Башня")
-                .font(.headline)
-                .foregroundStyle(.primary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
 
             // symmetric spacer so title stays centered
             Color.clear
-                .frame(width: 34, height: 34)
+                .frame(width: 28, height: 28)
         }
     }
 
@@ -122,9 +131,9 @@ struct TowerView: View {
     private var topInfoRow: some View {
         HStack(alignment: .top, spacing: 12) {
             playerInfoRow
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
             progressRow
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -133,23 +142,31 @@ struct TowerView: View {
         let maxHP = store.run?.playerMaxHP ?? 0
         let denom = max(1, maxHP)
         let hpFrac = Double(max(0, min(hp, denom))) / Double(denom)
+        
+        // Цветовая индикация HP
+        let hpColor: Color = {
+            if hpFrac > 0.6 { return .green }
+            if hpFrac > 0.3 { return .yellow }
+            return .red
+        }()
 
-        return metaCard(vertical: 10, horizontal: 12) {
-            VStack(spacing: 8) {
+        return metaCard(vertical: 8, horizontal: 12) {
+            VStack(spacing: 10) {
                 HStack {
                     Text("Здоровье")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)
                     Text("\(hp)/\(maxHP)")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(hpColor)
                 }
 
-                TowerHPBar(fraction: hpFrac)
-                    .frame(height: 7)
+                TowerHPBar(fraction: hpFrac, color: hpColor)
+                    .frame(height: 10)
             }
+            .frame(minHeight: 48)
         }
         .accessibilityLabel("Здоровье \(hp) из \(maxHP).")
     }
@@ -160,7 +177,7 @@ struct TowerView: View {
         let global = store.run?.globalFloor ?? 0
         let globalTotal = store.run?.globalFloorsTotal ?? 0
 
-        return metaCard(vertical: 10, horizontal: 12) {
+        return metaCard(vertical: 8, horizontal: 12) {
             HStack(spacing: 12) {
                 metaChip(title: "Этаж", value: "\(floorInAct)/\(RunState.floorsPerAct + 1)")
                     .frame(maxWidth: .infinity)
@@ -171,6 +188,7 @@ struct TowerView: View {
                 metaChip(title: "Всего", value: "\(global)/\(globalTotal)")
                     .frame(maxWidth: .infinity)
             }
+            .frame(minHeight: 48)
         }
         .accessibilityLabel("Этаж \(floorInAct). До босса \(bossIn). Всего \(global) из \(globalTotal).")
     }
@@ -207,328 +225,62 @@ struct TowerView: View {
             )
     }
 
-    // MARK: - Rooms
-
-    private func roomsSection(contentWidth: CGFloat) -> some View {
-        let options = store.run?.roomOptions ?? []
-        // Larger container for bigger cards
-        let containerHeight: CGFloat = {
-            if options.isEmpty { return 280 }
-            if options.count <= 3 { return 480 }
-            return 600
-        }()
-
-        return VStack(spacing: 0) {
-            Spacer(minLength: 8)
-            roomsStage(options)
-                .frame(width: contentWidth, alignment: .center)
-                .frame(height: containerHeight)
-            Spacer(minLength: 8)
+    // MARK: - Strategic Section (Placeholder)
+    
+    private func strategicSectionPlaceholder(contentWidth: CGFloat) -> some View {
+        VStack {
+            // Пустой блок для будущей реализации стратегической секции
         }
-    }
-
-    private func roomsStage(_ options: [RoomOption]) -> some View {
-        // Intentionally NO background/border: this is a pure layout stage.
-        VStack(spacing: 0) {
-            Group {
-                if options.isEmpty {
-                    Text("Комнаты недоступны")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                } else if options.count <= 3 {
-                    // Even vertical distribution with tighter spacing
-                    VStack(spacing: 12) {
-                        ForEach(options) { option in
-                            Button {
-                                store.selectRoom(option)
-                            } label: {
-                                roomOptionCard(option)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(option.isLocked)
-                            .opacity(option.isLocked ? 0.55 : 1.0)
-                        }
-                    }
-                } else {
-                    ScrollView(.vertical) {
-                        VStack(spacing: 12) {
-                            ForEach(options) { option in
-                                Button {
-                                    store.selectRoom(option)
-                                } label: {
-                                    roomOptionCard(option)
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(option.isLocked)
-                                .opacity(option.isLocked ? 0.55 : 1.0)
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    .scrollIndicators(.hidden)
-                }
-            }
-            .padding(.horizontal, 12)
-        }
-    }
-
-    private func roomOptionCard(_ option: RoomOption) -> some View {
-        HStack(alignment: .center, spacing: 16) {
-            // Portrait (left) — larger
-            roomPortrait(option)
-                .frame(width: 72, height: 72)
-            
-            // Center content
-            VStack(alignment: .leading, spacing: 8) {
-                // Top row: title + difficulty
-                HStack(alignment: .center) {
-                    Text(option.title)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    
-                    Spacer(minLength: 4)
-                    
-                    // Difficulty / safety indicator
-                    if option.difficulty > 0 {
-                        difficultyIndicator(option.difficulty)
-                    } else {
-                        safeIndicator(option.kind)
-                    }
-                }
-                
-                // Room type
-                Text(option.kindDescription)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                
-                // Description
-                if !option.descriptionText.isEmpty {
-                    Text(option.descriptionText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                
-                // Locked subtitle
-                if !option.subtitle.isEmpty {
-                    Text(option.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.red.opacity(0.8))
-                        .lineLimit(2)
-                }
-                
-                // Next floor preview
-                if let preview = option.nextFloorPreview, !preview.isEmpty {
-                    nextFloorPreviewView(preview)
-                        .padding(.top, 4)
-                }
-            }
-            
-            // Trailing chevron
-            if option.isLocked {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.secondary)
-            } else {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .frame(minHeight: 120)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .frame(width: contentWidth)
+        .frame(height: 248)
         .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
         )
     }
-    
-    // MARK: - Room Portrait
-    
-    private func roomPortrait(_ option: RoomOption) -> some View {
-        let cornerRadius: CGFloat = 14
+
+    // MARK: - Tactical Section (Большие карточки)
+
+    private func tacticalSection(contentWidth: CGFloat) -> some View {
+        let options = store.run?.roomOptions ?? []
+        let standardSpacing: CGFloat = 12 // Same as metaToStrategic and strategicToTactical
         
-        return ZStack {
-            // Background with subtle gradient for depth
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.primary.opacity(0.08), Color.primary.opacity(0.04)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            
-            // If we have an enemy preview, show their portrait
-            if let enemy = option.previewEnemy, let assetName = enemyAssetName(enemy) {
-                Image(assetName)
-                    .resizable()
-                    .scaledToFill()
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        return VStack(spacing: standardSpacing) {
+            if options.isEmpty {
+                Text("Комнаты недоступны")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .padding(.vertical, 40)
             } else {
-                // Fallback to icon for non-combat rooms
-                Text(option.icon)
-                    .font(.system(size: 32))
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(Color.primary.opacity(0.18), lineWidth: 1.5)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
-    }
-    
-    private func enemyAssetName(_ kind: RuntimeEnemyKind) -> String? {
-        switch kind {
-        case .punisher: return "punisher"
-        case .graphiteGolem: return "graphite_golem"
-        case .zesurumiMonks: return "zesurumi_monks"
-        case .feyanchа: return "feyancha"
-        }
-    }
-    
-    // MARK: - Safety Indicator (for non-combat rooms)
-    
-    private func safeIndicator(_ kind: RoomKind) -> some View {
-        let (icon, label, color): (String, String, Color) = {
-            switch kind {
-            case .event: return ("sparkles", "Выбор", .blue)
-            case .rest: return ("heart.fill", "Отдых", .green)
-            case .chest: return ("gift.fill", "Награда", .yellow)
-            default: return ("checkmark.shield", "Безопасно", .green)
-            }
-        }()
-        
-        return HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(color)
-            
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(color)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(color.opacity(0.15))
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(color.opacity(0.3), lineWidth: 1)
-        )
-    }
-    
-    // MARK: - Difficulty Indicator
-    
-    private func difficultyIndicator(_ level: Int) -> some View {
-        HStack(spacing: 4) {
-            // Skulls for danger level
-            ForEach(0..<level, id: \.self) { _ in
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(difficultyColor(level))
-            }
-            
-            // Text label
-            Text(difficultyLabel(level))
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(difficultyColor(level))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(difficultyColor(level).opacity(0.15))
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(difficultyColor(level).opacity(0.3), lineWidth: 1)
-        )
-    }
-    
-    private func difficultyLabel(_ level: Int) -> String {
-        switch level {
-        case 1: return "Бой"
-        case 2: return "Опасно"
-        case 3: return "Босс"
-        default: return ""
-        }
-    }
-    
-    private func difficultyColor(_ level: Int) -> Color {
-        switch level {
-        case 1: return .orange
-        case 2: return .red
-        case 3: return .purple
-        default: return .gray
-        }
-    }
-    
-    // MARK: - Next Floor Preview
-    
-    private func nextFloorPreviewView(_ preview: [RoomOption]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Следующий этаж:")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            
-            HStack(spacing: 8) {
-                // Show 2 known rooms
-                ForEach(preview.prefix(2)) { room in
-                    nextFloorRoomChip(room)
+                ForEach(options) { option in
+                    TacticalRoomCardView(room: option) {
+                        store.selectRoom(option)
+                    }
+                    .frame(width: contentWidth)
+                    .frame(maxHeight: .infinity)
                 }
-                
-                // Secret room indicator
-                HStack(spacing: 4) {
-                    Image(systemName: "questionmark")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    Text("?")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.15))
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
             }
         }
+        .frame(width: contentWidth)
+        .frame(maxHeight: .infinity)
     }
-    
-    private func nextFloorRoomChip(_ room: RoomOption) -> some View {
-        HStack(spacing: 4) {
-            Text(room.icon)
-                .font(.caption)
-            Text(room.title)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.secondary.opacity(0.15))
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-        )
-    }
+
 }
 
 // MARK: - Local helpers
 
 private struct TowerHPBar: View {
     let fraction: Double
+    let color: Color
+    
+    init(fraction: Double, color: Color = UIStyle.Colors.hpGreen) {
+        self.fraction = fraction
+        self.color = color
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -537,15 +289,15 @@ private struct TowerHPBar: View {
             let fillW = CGFloat(f) * w
 
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: 5)
                     .fill(Color(.systemGray5))
 
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(UIStyle.Colors.hpGreen)
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(color)
                     .frame(width: fillW)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
         .accessibilityHidden(true)
     }
 }
