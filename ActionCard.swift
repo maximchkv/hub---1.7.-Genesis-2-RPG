@@ -13,6 +13,10 @@ enum ActionCardKind: String, Codable, Hashable, CaseIterable, Identifiable {
     case weakPlus1        // Ослабить
     case stun1            // Оглушить
     
+    // Синергийные карты
+    case bleedStrike      // Кровавый удар
+    case weakDefend       // Ослабляющий щит
+    
     // Placeholder карты (будущий контент)
     case placeholder1
     case placeholder2
@@ -22,7 +26,7 @@ enum ActionCardKind: String, Codable, Hashable, CaseIterable, Identifiable {
     
     var isBaseCard: Bool {
         switch self {
-        case .powerStrike, .defend, .doubleStrike, .counterStance, .bleedPlus2, .weakPlus1, .stun1:
+        case .powerStrike, .defend, .doubleStrike, .counterStance, .bleedPlus2, .weakPlus1, .stun1, .bleedStrike, .weakDefend:
             return true
         default:
             return false
@@ -52,6 +56,8 @@ struct ActionCard: Identifiable, Codable {
         case .bleedPlus2: return 1
         case .weakPlus1: return 1
         case .stun1: return 2
+        case .bleedStrike: return 2
+        case .weakDefend: return 2
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return 0
         }

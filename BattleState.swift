@@ -204,7 +204,7 @@ struct BattleState {
         var result = amount
         // Incoming Vulnerable on target
         if getStacks(.vulnerable, for: target) > 0 {
-            result = Int((Double(result) * 1.25).rounded())
+            result = Int((Double(result) * 1.5).rounded())
         }
         return max(0, result)
     }

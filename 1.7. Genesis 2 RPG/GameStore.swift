@@ -213,12 +213,15 @@ final class GameStore: ObservableObject {
         // 031B: include status cards in pool (for testing)
         .bleedPlus2,
         .weakPlus1,
-        .stun1
+        .stun1,
+        // Синергийные карты
+        .bleedStrike,
+        .weakDefend
     ]
 
     private func drawHand() -> [ActionCard] {
         let shuffled = allCards.shuffled()
-        return Array(shuffled.prefix(3)).map { ActionCard(kind: $0) }
+        return Array(shuffled.prefix(5)).map { ActionCard(kind: $0) }
     }
 
     init(meta: PlayerMeta) {
@@ -528,7 +531,7 @@ final class GameStore: ObservableObject {
             playerBlock: 0,
             enemyHP: enemyHP,
             enemyBlock: 0,
-            actionPoints: 2,
+            actionPoints: 3,
             hand: drawHand(),
             enemyIntent: EnemyIntent(kind: .attack, value: 5),
             log: [],
@@ -627,7 +630,8 @@ final class GameStore: ObservableObject {
         // (Full deckbuilding/rarities come later.)
         let pool: [ActionCardKind] = [
             .powerStrike, .defend, .doubleStrike, .counterStance,
-            .bleedPlus2, .weakPlus1, .stun1
+            .bleedPlus2, .weakPlus1, .stun1,
+            .bleedStrike, .weakDefend
         ]
         let options = Array(Set(pool.shuffled().prefix(3)))
         // Ensure exactly 3 when Set collapses (rare)
@@ -725,6 +729,29 @@ final class GameStore: ObservableObject {
         case .stun1:
             battle.addStatus(.stun, stacks: 1, to: .enemy)
             pushLog(&battle, side: .player, "Player uses Оглушить → Enemy: Оглушение 1")
+        
+        // Синергийные карты
+        case .bleedStrike:
+            let enemyBleedStacks = battle.enemyStatuses.first(where: { $0.type == .bleed })?.stacks ?? 0
+            if enemyBleedStacks > 0 {
+                // Если у врага есть кровотечение: урон = стаки × 3
+                let dmg = enemyBleedStacks * 3
+                let beforeHP = battle.enemyHP
+                let beforeBlock = battle.enemyBlock
+                battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
+                let dealt = max(0, beforeHP - battle.enemyHP)
+                let blocked = max(0, beforeBlock - battle.enemyBlock)
+                pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked), от кровотечения ×\(enemyBleedStacks))")
+            } else {
+                // Если у врага нет кровотечения: наложить Bleed +2
+                battle.addStatus(.bleed, stacks: 2, to: .enemy)
+                pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Кровоток +2")
+            }
+        
+        case .weakDefend:
+            battle.addStatus(.weak, stacks: 1, to: .enemy)
+            battle.playerBlock += 4
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Слабость +1 врагу, блок +4")
             
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             // Placeholders should never be playable
@@ -775,7 +802,7 @@ final class GameStore: ObservableObject {
 
         // Prepare next player turn
         b.playerBlock = 0
-        b.actionPoints = 2
+        b.actionPoints = 3
         b.hand = drawHand()
         b.usedCardsThisTurn.removeAll()
         b.phase = .player
@@ -885,6 +912,8 @@ final class GameStore: ObservableObject {
         case .bleedPlus2: return "Кровоток"
         case .weakPlus1: return "Ослабить"
         case .stun1: return "Оглушить"
+        case .bleedStrike: return "Кровавый удар"
+        case .weakDefend: return "Ослабляющий щит"
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "???"
         }

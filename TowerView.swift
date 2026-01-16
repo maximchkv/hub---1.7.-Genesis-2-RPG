@@ -320,6 +320,12 @@ struct TowerView: View {
                         .foregroundStyle(.red.opacity(0.8))
                         .lineLimit(2)
                 }
+                
+                // Next floor preview
+                if let preview = option.nextFloorPreview, !preview.isEmpty {
+                    nextFloorPreviewView(preview)
+                        .padding(.top, 4)
+                }
             }
             
             // Trailing chevron
@@ -463,6 +469,59 @@ struct TowerView: View {
         case 3: return .purple
         default: return .gray
         }
+    }
+    
+    // MARK: - Next Floor Preview
+    
+    private func nextFloorPreviewView(_ preview: [RoomOption]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Следующий этаж:")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            
+            HStack(spacing: 8) {
+                // Show 2 known rooms
+                ForEach(preview.prefix(2)) { room in
+                    nextFloorRoomChip(room)
+                }
+                
+                // Secret room indicator
+                HStack(spacing: 4) {
+                    Image(systemName: "questionmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text("?")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.15))
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+            }
+        }
+    }
+    
+    private func nextFloorRoomChip(_ room: RoomOption) -> some View {
+        HStack(spacing: 4) {
+            Text(room.icon)
+                .font(.caption)
+            Text(room.title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.15))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 

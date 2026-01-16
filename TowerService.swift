@@ -42,9 +42,14 @@ struct TowerService {
     // MARK: - Generation
     
     func generateRoomOptions(run: RunState) -> [RoomOption] {
+        // Generate next floor preview first
+        let nextFloorPreview = generateNextFloorPreview(run: run)
+        
         // Boss floor: single mandatory option
         if run.isBossFloor {
-            return [makeBossRoom(actIndex: run.actIndex)]
+            var bossRoom = makeBossRoom(actIndex: run.actIndex)
+            bossRoom.nextFloorPreview = nextFloorPreview
+            return [bossRoom]
         }
 
         // Pre-boss floor: guarantee Rest among the 3 options
@@ -54,6 +59,10 @@ struct TowerService {
                 makeCombatRoom(),
                 makeRestRoom()
             ]
+            // Attach preview to each option
+            for i in 0..<options.count {
+                options[i].nextFloorPreview = nextFloorPreview
+            }
             options.shuffle()
             return options
         }
@@ -82,8 +91,82 @@ struct TowerService {
         }()
 
         var options: [RoomOption] = [optionA, optionB, special]
+        // Attach preview to each option
+        for i in 0..<options.count {
+            options[i].nextFloorPreview = nextFloorPreview
+        }
         options.shuffle()
         return options
+    }
+    
+    // MARK: - Next Floor Preview Generation
+    
+    private func generateNextFloorPreview(run: RunState) -> [RoomOption]? {
+        // If this is the last floor of the last act, no next floor
+        if run.isBossFloor && run.actIndex >= RunState.actCount {
+            return nil
+        }
+        
+        // Create a temporary run state for the next floor
+        var nextRun = run
+        nextRun.advanceAfterClearingCurrentFloor()
+        
+        // If next floor is completed, no preview
+        if nextRun.isCompleted {
+            return nil
+        }
+        
+        // Generate all 3 options for next floor
+        let allNextOptions = generateAllNextFloorOptions(run: nextRun)
+        
+        // Return 2 random options (third is secret)
+        guard allNextOptions.count >= 2 else {
+            return allNextOptions
+        }
+        
+        let shuffled = allNextOptions.shuffled()
+        return Array(shuffled.prefix(2))
+    }
+    
+    private func generateAllNextFloorOptions(run: RunState) -> [RoomOption] {
+        // Boss floor: single mandatory option
+        if run.isBossFloor {
+            return [makeBossRoom(actIndex: run.actIndex)]
+        }
+
+        // Pre-boss floor: guarantee Rest among the 3 options
+        if run.floorInAct == RunState.floorsPerAct {
+            return [
+                makeCombatRoom(),
+                makeCombatRoom(),
+                makeRestRoom()
+            ]
+        }
+
+        // Base: two combats + one "special"
+        var optionA = makeCombatRoom()
+        var optionB = makeCombatRoom()
+
+        // Sprinkle elites in mid/late act by upgrading one combat slot.
+        if run.floorInAct >= 5, run.floorInAct % 2 == 1 {
+            optionB = makeEliteRoom()
+        }
+
+        // Special slot: event early, event/chest later (chest can be locked)
+        let chestLocked = (run.nonCombatStreak >= 2)
+        let special: RoomOption = {
+            if run.floorInAct <= 2 {
+                return makeEventRoom()
+            }
+            let pool: [RoomKind] = [.event, .chest, .chest]
+            let picked = pool.randomElement() ?? .event
+            if picked == .chest {
+                return makeChestRoom(isLocked: chestLocked)
+            }
+            return makeEventRoom()
+        }()
+
+        return [optionA, optionB, special]
     }
     
     // MARK: - Room Factories

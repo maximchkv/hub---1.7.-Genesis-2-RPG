@@ -18,6 +18,9 @@ struct RoomOption: Identifiable, Codable, Hashable {
     let difficulty: Int // 0 = none, 1 = easy, 2 = medium, 3 = hard
     let descriptionText: String
     let previewEnemy: RuntimeEnemyKind?
+    
+    // Preview of next floor (2 out of 3 rooms, third is secret)
+    var nextFloorPreview: [RoomOption]?
 
     var title: String {
         switch kind {
@@ -64,7 +67,8 @@ struct RoomOption: Identifiable, Codable, Hashable {
         isLocked: Bool = false,
         difficulty: Int = 0,
         descriptionText: String = "",
-        previewEnemy: RuntimeEnemyKind? = nil
+        previewEnemy: RuntimeEnemyKind? = nil,
+        nextFloorPreview: [RoomOption]? = nil
     ) {
         self.id = UUID()
         self.kind = kind
@@ -72,5 +76,6 @@ struct RoomOption: Identifiable, Codable, Hashable {
         self.difficulty = difficulty
         self.descriptionText = descriptionText
         self.previewEnemy = previewEnemy
+        self.nextFloorPreview = nextFloorPreview
     }
 }

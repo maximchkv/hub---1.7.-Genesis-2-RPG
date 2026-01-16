@@ -164,6 +164,10 @@ struct CardDetailView: View {
             return "Слабость +1"
         case .stun1:
             return "Оглушение 1"
+        case .bleedStrike:
+            return "Если Кровоток: урон = стаки × 3. Иначе: Кровоток +2"
+        case .weakDefend:
+            return "Слабость +1 врагу, Блок +4"
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "???"
         }
@@ -247,6 +251,8 @@ struct CardDetailView: View {
         case .bleedPlus2: return "Кровоток"
         case .weakPlus1: return "Ослабить"
         case .stun1: return "Оглушить"
+        case .bleedStrike: return "Кровавый удар"
+        case .weakDefend: return "Ослабляющий щит"
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "???"
         }
@@ -261,6 +267,8 @@ struct CardDetailView: View {
         case .bleedPlus2: return "🩸"
         case .weakPlus1: return "⬇️"
         case .stun1: return "⚡️"
+        case .bleedStrike: return "🩸⚔️"
+        case .weakDefend: return "🛡️⬇️"
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "❓"
         }
@@ -275,6 +283,8 @@ struct CardDetailView: View {
         case .bleedPlus2: return "Накладывает Кровоток +2 на противника. Кровоток наносит урон в начале каждого хода."
         case .weakPlus1: return "Накладывает Слабость +1 на противника. Слабость уменьшает наносимый урон."
         case .stun1: return "Накладывает Оглушение 1 на противника. Оглушенный пропускает следующий ход."
+        case .bleedStrike: return "Если у противника есть Кровоток: наносит урон равный стакам Кровотока × 3. Если Кровотока нет: накладывает Кровоток +2. Синергийная карта для тактики кровотечения."
+        case .weakDefend: return "Накладывает Слабость +1 на противника и даёт Блок +4. Комбинирует контроль и защиту."
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "Эта карта появится в будущих обновлениях. Продолжение следует..."
         }
@@ -289,6 +299,8 @@ struct CardDetailView: View {
         case .bleedPlus2: return 1
         case .weakPlus1: return 1
         case .stun1: return 2
+        case .bleedStrike: return 2
+        case .weakDefend: return 2
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return 0
         }

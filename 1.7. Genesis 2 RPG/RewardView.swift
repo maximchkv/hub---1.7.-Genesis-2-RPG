@@ -83,6 +83,8 @@ struct RewardView: View {
         case .bleedPlus2: return "Кровоток"
         case .weakPlus1: return "Ослабить"
         case .stun1: return "Оглушить"
+        case .bleedStrike: return "Кровавый удар"
+        case .weakDefend: return "Ослабляющий щит"
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "???"
         }
@@ -97,6 +99,8 @@ struct RewardView: View {
         case .bleedPlus2: return "🩸"
         case .weakPlus1: return "⬇️"
         case .stun1: return "⚡️"
+        case .bleedStrike: return "🩸⚔️"
+        case .weakDefend: return "🛡️⬇️"
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "❓"
         }
