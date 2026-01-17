@@ -10,7 +10,7 @@ struct TacticalRoomCardView: View {
                 // Арт-плейсхолдер (левая колонка) - растягивается на всю высоту блока
                 artPlaceholderSection
                     .frame(width: 100)
-                    .frame(maxHeight: .infinity)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .clipShape(UnevenRoundedRectangle(cornerRadii: .init(
                         topLeading: 20,
                         bottomLeading: 20,
@@ -19,11 +19,11 @@ struct TacticalRoomCardView: View {
                     )))
                 
                 // Контент карточки (правая колонка)
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
                     // Заголовок и индикатор сложности
                     HStack(alignment: .center) {
                         Text(room.title)
-                            .font(.headline.weight(.bold))
+                            .font(.subheadline.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                         
@@ -46,9 +46,9 @@ struct TacticalRoomCardView: View {
                     // Текстовое описание (компактно)
                     if !room.descriptionText.isEmpty {
                         Text(room.descriptionText)
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundStyle(.primary)
-                            .lineLimit(2)
+                            .lineLimit(1)
                     }
                     
                     // Превью следующего этажа (компактно)
@@ -66,8 +66,8 @@ struct TacticalRoomCardView: View {
                     
                     Spacer(minLength: 0)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 20))
@@ -107,7 +107,7 @@ struct TacticalRoomCardView: View {
                     .opacity(0.7)
             } else {
                 Text(room.icon)
-                    .font(.system(size: 40))
+                    .font(.system(size: 24))
             }
             
             // Overlay для глубины

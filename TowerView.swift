@@ -1,7 +1,17 @@
 import SwiftUI
+import Foundation
+
+// MARK: - PreferenceKey для позиции тактической секции
+private struct TacticalTopYKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
 
 struct TowerView: View {
     @EnvironmentObject private var store: GameStore
+    @State private var tacticalTopY: CGFloat = 0
 
     // MARK: - Layout constants (UI-KIT v2.0 - Redesign)
     private let contentCap: CGFloat = 380
@@ -28,35 +38,187 @@ struct TowerView: View {
             GeometryReader { geo in
                 let available = max(0, geo.size.width - outerPad * 2)
                 let contentWidth = min(available, contentCap)
+                let safeAreaBottom = geo.safeAreaInsets.bottom
+                let safeAreaTop = geo.safeAreaInsets.top
+                // Высота тактического блока = от текущей позиции до нижней границы safe area (совпадает с красной обводкой)
+                let computedTacticalHeight = max(0, geo.size.height - safeAreaBottom - tacticalTopY)
+                let tacticalHeight = computedTacticalHeight > 0 ? computedTacticalHeight : 200
+                
+                let initialMaxTacticalHeight = tacticalHeight
+                
+                // #region agent log
+                let _ = {
+                    debugLog(
+                        hypothesisId: "A",
+                        location: "TowerView.body.geometry",
+                        message: "screenGeometry",
+                        data: [
+                            "screenWidth": geo.size.width,
+                            "screenHeight": geo.size.height,
+                            "safeAreaTop": safeAreaTop,
+                            "safeAreaBottom": safeAreaBottom,
+                            "safeAreaBottomPadding": safeAreaBottomPadding,
+                            "initialMaxTacticalHeight": initialMaxTacticalHeight,
+                            "tacticalTopY": tacticalTopY,
+                            "computedTacticalHeight": computedTacticalHeight,
+                            "contentWidth": contentWidth
+                        ]
+                    )
+                }()
+                // #endregion
 
                 ScrollView {
-                    VStack(spacing: 0) {
+                VStack(spacing: 0) {
                         // Header (приглушённый)
-                        headerRow
-                            .frame(width: contentWidth, alignment: .center)
-                            .padding(.top, topPad)
+                    headerRow
+                        .frame(width: contentWidth, alignment: .center)
+                        .padding(.top, topPad)
+                            // #region agent log
+                            .background(
+                                GeometryReader { headerGeo in
+                                    Color.clear
+                                        .onAppear {
+                                            debugLog(
+                                                hypothesisId: "B",
+                                                location: "TowerView.headerRow",
+                                                message: "sectionHeight",
+                                                data: [
+                                                    "height": headerGeo.size.height,
+                                                    "topPad": topPad,
+                                                    "totalHeight": headerGeo.size.height + topPad
+                                                ]
+                                            )
+                                        }
+                                }
+                            )
+                            // #endregion
 
-                        // Toast
-                        toastView
-                            .frame(width: contentWidth, alignment: .center)
+                    // Toast
+                    toastView
+                        .frame(width: contentWidth, alignment: .center)
+                            // #region agent log
+                            .background(
+                                GeometryReader { toastGeo in
+                                    Color.clear
+                                        .onAppear {
+                                            debugLog(
+                                                hypothesisId: "B",
+                                                location: "TowerView.toastView",
+                                                message: "sectionHeight",
+                                                data: [
+                                                    "height": toastGeo.size.height
+                                                ]
+                                            )
+                                        }
+                                }
+                            )
+                            // #endregion
 
-                        Spacer().frame(height: toastToMeta)
+                    Spacer().frame(height: toastToMeta)
 
                         // HP и прогресс (сбалансированно выделено)
-                        topInfoRow
-                            .frame(width: contentWidth, alignment: .center)
+                    topInfoRow
+                        .frame(width: contentWidth, alignment: .center)
+                            // #region agent log
+                            .background(
+                                GeometryReader { infoGeo in
+                                    Color.clear
+                                        .onAppear {
+                                            debugLog(
+                                                hypothesisId: "B",
+                                                location: "TowerView.topInfoRow",
+                                                message: "sectionHeight",
+                                                data: [
+                                                    "height": infoGeo.size.height
+                                                ]
+                                            )
+                                        }
+                                }
+                            )
+                            // #endregion
 
                         Spacer().frame(height: metaToStrategic)
 
                         // СТРАТЕГИЧЕСКАЯ СЕКЦИЯ (пустой блок для будущей реализации)
                         strategicSectionPlaceholder(contentWidth: contentWidth)
+                            // #region agent log
+                            .background(
+                                GeometryReader { strategicGeo in
+                                    Color.clear
+                                        .onAppear {
+                                            debugLog(
+                                                hypothesisId: "B",
+                                                location: "TowerView.strategicSection",
+                                                message: "sectionHeight",
+                                                data: [
+                                                    "height": strategicGeo.size.height
+                                                ]
+                                            )
+                                        }
+                                }
+                            )
+                            // #endregion
 
                         Spacer().frame(height: strategicToTactical)
 
                         // ТАКТИЧЕСКАЯ СЕКЦИЯ (большие карточки комнат)
-                        tacticalSection(contentWidth: contentWidth)
+                        tacticalSection(contentWidth: contentWidth, maxHeight: tacticalHeight, screenHeight: geo.size.height, safeAreaTop: safeAreaTop, safeAreaBottom: safeAreaBottom, safeAreaBottomPadding: safeAreaBottomPadding)
+                            .background(
+                                GeometryReader { proxy in
+                                    Color.clear.preference(key: TacticalTopYKey.self, value: proxy.frame(in: .global).minY)
+                                }
+                            )
                     }
                     .frame(maxWidth: .infinity)
+                    .onPreferenceChange(TacticalTopYKey.self) { value in
+                        tacticalTopY = value
+                        // #region agent log
+                        // geo недоступен в onPreferenceChange, используем только value
+                        debugLog(
+                            hypothesisId: "H",
+                            location: "TowerView.tacticalTopY",
+                            message: "tacticalTopYChanged",
+                            data: [
+                                "tacticalTopY": value
+                            ]
+                        )
+                        // #endregion
+                    }
+                    // #region agent log
+                    .background(
+                        GeometryReader { vstackGeo in
+                            Color.clear
+                                .onAppear {
+                                    let headerHeight = 60.0 // approximate
+                                    let toastHeight = 30.0 // approximate
+                                    let infoHeight = 70.0 // approximate
+                                    let strategicHeight = 248.0 // from code
+                                    let spacerHeights = toastToMeta + metaToStrategic + strategicToTactical
+                                    let estimatedAboveTactical = headerHeight + toastHeight + infoHeight + strategicHeight + spacerHeights
+                                    let calculatedAvailableHeight = geo.size.height - safeAreaTop - safeAreaBottom - estimatedAboveTactical - safeAreaBottomPadding
+                                    
+                                    debugLog(
+                                        hypothesisId: "C",
+                                        location: "TowerView.VStack",
+                                        message: "contentHeights",
+                                        data: [
+                                            "vstackTotalHeight": vstackGeo.size.height,
+                                            "estimatedAboveTactical": estimatedAboveTactical,
+                                            "calculatedAvailableHeight": calculatedAvailableHeight,
+                                            "safeAreaTop": safeAreaTop,
+                                            "safeAreaBottom": safeAreaBottom,
+                                            "safeAreaBottomPadding": safeAreaBottomPadding,
+                                            "spacing": [
+                                                "toastToMeta": toastToMeta,
+                                                "metaToStrategic": metaToStrategic,
+                                                "strategicToTactical": strategicToTactical
+                                            ]
+                                        ]
+                                    )
+                                }
+                        }
+                    )
+                    // #endregion
                     .safeAreaPadding(.horizontal)
                     .safeAreaPadding(.bottom, safeAreaBottomPadding)
                 }
@@ -142,7 +304,7 @@ struct TowerView: View {
         let maxHP = store.run?.playerMaxHP ?? 0
         let denom = max(1, maxHP)
         let hpFrac = Double(max(0, min(hp, denom))) / Double(denom)
-        
+
         // Цветовая индикация HP
         let hpColor: Color = {
             if hpFrac > 0.6 { return .green }
@@ -244,29 +406,101 @@ struct TowerView: View {
 
     // MARK: - Tactical Section (Большие карточки)
 
-    private func tacticalSection(contentWidth: CGFloat) -> some View {
+    private func tacticalSection(contentWidth: CGFloat, maxHeight: CGFloat, screenHeight: CGFloat, safeAreaTop: CGFloat, safeAreaBottom: CGFloat, safeAreaBottomPadding: CGFloat) -> some View {
         let options = store.run?.roomOptions ?? []
         let standardSpacing: CGFloat = 12 // Same as metaToStrategic and strategicToTactical
         
-        return VStack(spacing: standardSpacing) {
-            if options.isEmpty {
-                Text("Комнаты недоступны")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                    .padding(.vertical, 40)
-            } else {
-                ForEach(options) { option in
-                    TacticalRoomCardView(room: option) {
-                        store.selectRoom(option)
+        return HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            
+            GeometryReader { geo in
+                // Вычисляем доступную высоту блока: от текущей позиции до нижней границы safe area (с учётом стандартного отступа)
+                let blockTopY = geo.frame(in: .global).minY
+                let standardPadding: CGFloat = 12 // Стандартный отступ, такой же как metaToStrategic и strategicToTactical
+                let baseBlockHeight = max(0, screenHeight - safeAreaBottom - standardPadding - blockTopY)
+                let availableBlockHeight = baseBlockHeight * 1.2 // Увеличено на 20%
+                
+                // Вычисляем доступную высоту для карточек (высота блока - spacing между карточками)
+                let cardCount = CGFloat(options.count)
+                let totalSpacing = standardSpacing * max(0, cardCount - 1)
+                let availableHeightForCards = max(0, availableBlockHeight - totalSpacing)
+                let cardHeight = cardCount > 0 ? max(0, availableHeightForCards / cardCount) : 0
+                
+                // #region agent log
+                let _ = {
+                    debugLog(
+                        hypothesisId: "F",
+                        location: "TowerView.tacticalSection.calculation",
+                        message: "cardHeightCalculation",
+                        data: [
+                            "cardCount": cardCount,
+                            "totalSpacing": totalSpacing,
+                            "blockTopY": blockTopY,
+                            "availableBlockHeight": availableBlockHeight,
+                            "availableHeightForCards": availableHeightForCards,
+                            "cardHeight": cardHeight,
+                            "screenHeight": screenHeight,
+                            "safeAreaBottom": safeAreaBottom
+                        ]
+                    )
+                }()
+                // #endregion
+                
+                VStack(spacing: standardSpacing) {
+                    if options.isEmpty {
+                        Text("Комнаты недоступны")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                    } else {
+                        ForEach(options) { option in
+                            TacticalRoomCardView(room: option) {
+                                store.selectRoom(option)
+                            }
+                            .frame(width: contentWidth)
+                            .frame(height: cardHeight) // Фиксированная высота карточки
+                        }
                     }
-                    .frame(width: contentWidth)
-                    .frame(maxHeight: .infinity)
                 }
+                .frame(width: contentWidth)
+                .frame(height: availableBlockHeight) // Жёстко ограничиваем высоту блока до нижней границы safe area
             }
+            .frame(width: contentWidth) // Ограничиваем ширину GeometryReader
+            
+            Spacer(minLength: 0)
         }
-        .frame(width: contentWidth)
-        .frame(maxHeight: .infinity)
+    }
+
+    // MARK: - Debug logging
+    private func debugLog(
+        hypothesisId: String,
+        location: String,
+        message: String,
+        data: [String: Any]
+    ) {
+        let payload: [String: Any] = [
+            "sessionId": "debug-session",
+            "runId": "run1",
+            "hypothesisId": hypothesisId,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+        let url = URL(fileURLWithPath: "/Users/max/Desktop/xcode projects/1.7. Genesis 2 RPG/.cursor/debug.log")
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: payload, options: []),
+              let jsonLine = String(data: jsonData, encoding: .utf8) else {
+            return
+        }
+        let lineData = Data((jsonLine + "\n").utf8)
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(lineData)
+            try? handle.close()
+        } else {
+            try? lineData.write(to: url)
+        }
     }
 
 }
