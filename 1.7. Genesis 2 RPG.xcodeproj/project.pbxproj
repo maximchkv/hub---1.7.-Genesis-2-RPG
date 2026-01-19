@@ -38,10 +38,16 @@
 		7BAB9B9352D042578506B292 /* CollectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C22FFB0828A4353AC567EE2 /* CollectionState.swift */; };
 		C0A95ED7F806475DBF1917DF /* CardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0519FD2A364C4F1294D5968E /* CardDetailView.swift */; };
 		CD025EA785864DA6B78E6329 /* CollectionCardCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F5B7E741B674866978872CA /* CollectionCardCell.swift */; };
+		A1B2C3D4E5F647890ABCDEF0 /* TowerMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F647890ABCDEF1 /* TowerMap.swift */; };
+		A1B2C3D4E5F647890ABCDEF2 /* StrategicMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F647890ABCDEF3 /* StrategicMapView.swift */; };
+		A1B2C3D4E5F647890ABCDEF4 /* MapLegendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F647890ABCDEF5 /* MapLegendView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0519FD2A364C4F1294D5968E /* CardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDetailView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F647890ABCDEF1 /* TowerMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TowerMap.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F647890ABCDEF3 /* StrategicMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategicMapView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F647890ABCDEF5 /* MapLegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLegendView.swift; sourceTree = "<group>"; };
 		0F5B7E741B674866978872CA /* CollectionCardCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionCardCell.swift; sourceTree = "<group>"; };
 		507E29802F07EE5100BD8FBB /* 1.7. Genesis 2 RPG.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "1.7. Genesis 2 RPG.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		507E29982F07F0DA00BD8FBB /* PlayerMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerMeta.swift; sourceTree = "<group>"; };
@@ -130,6 +136,9 @@
 				7C22FFB0828A4353AC567EE2 /* CollectionState.swift */,
 				0F5B7E741B674866978872CA /* CollectionCardCell.swift */,
 				0519FD2A364C4F1294D5968E /* CardDetailView.swift */,
+				A1B2C3D4E5F647890ABCDEF1 /* TowerMap.swift */,
+				A1B2C3D4E5F647890ABCDEF3 /* StrategicMapView.swift */,
+				A1B2C3D4E5F647890ABCDEF5 /* MapLegendView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -246,6 +255,9 @@
 				507E29992F07F0DA00BD8FBB /* PlayerMeta.swift in Sources */,
 				507E29AF2F07F61E00BD8FBB /* BattleView.swift in Sources */,
 				507E29B12F07F62000BD8FBB /* DefeatView.swift in Sources */,
+				A1B2C3D4E5F647890ABCDEF0 /* TowerMap.swift in Sources */,
+				A1B2C3D4E5F647890ABCDEF2 /* StrategicMapView.swift in Sources */,
+				A1B2C3D4E5F647890ABCDEF4 /* MapLegendView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

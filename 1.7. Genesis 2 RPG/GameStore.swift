@@ -321,7 +321,14 @@ final class GameStore: ObservableObject {
     // MARK: - Run
     func startRun(routeToHub: Bool = true) {
         var newRun = RunState()
-        newRun.roomOptions = towerService.generateRoomOptions(run: newRun)
+        
+        // Generate the tower map for Act 1
+        let actMap = towerService.generateActMap(actIndex: 1)
+        newRun.towerMap = actMap
+        
+        // Set legacy roomOptions from map's reachable nodes for backward compat
+        newRun.roomOptions = actMap.reachableRoomOptions()
+        
         run = newRun
         
         // Auto-unlock base cards on first run
@@ -357,14 +364,36 @@ final class GameStore: ObservableObject {
     // MARK: - Tower
     func refreshRoomOptions() {
         guard var r = run else { return }
-        r.roomOptions = towerService.generateRoomOptions(run: r)
+        
+        // Use tower map if available
+        if let map = r.towerMap {
+            r.roomOptions = map.reachableRoomOptions()
+        } else {
+            // Legacy fallback
+            r.roomOptions = towerService.generateRoomOptions(run: r)
+        }
+        run = r
+    }
+    
+    /// Generate a new map for a new act
+    private func generateMapForNewAct() {
+        guard var r = run else { return }
+        let actMap = towerService.generateActMap(actIndex: r.actIndex)
+        r.towerMap = actMap
+        r.roomOptions = actMap.reachableRoomOptions()
         run = r
     }
 
     func selectRoom(_ option: RoomOption) {
-        guard let run else { return }
+        guard var r = run else { return }
         if option.kind == .chest && option.isLocked {
             return
+        }
+        
+        // Update tower map position
+        if let nodeId = r.nodeIdForRoom(option) {
+            r.moveToMapNode(nodeId: nodeId)
+            run = r
         }
 
         activeRoomKind = option.kind
@@ -601,6 +630,12 @@ final class GameStore: ObservableObject {
 
         // Unified day tick after clearing a floor
         advanceDayTick()
+        
+        // Mark current map node as completed
+        r.completeCurrentMapNode()
+        
+        // Track if we're about to change acts
+        let previousActIndex = r.actIndex
 
         // Advance run structure
         r.advanceAfterClearingCurrentFloor()
@@ -617,9 +652,21 @@ final class GameStore: ObservableObject {
             route = .victory
             return
         }
-
-        // Generate next options and return to tower
-        r.roomOptions = towerService.generateRoomOptions(run: r)
+        
+        // Check if act changed - need to generate new map
+        if r.actIndex != previousActIndex {
+            // Act changed, generate new map
+            let actMap = towerService.generateActMap(actIndex: r.actIndex)
+            r.towerMap = actMap
+            r.roomOptions = actMap.reachableRoomOptions()
+        } else if let map = r.towerMap {
+            // Same act, update room options from map
+            r.roomOptions = map.reachableRoomOptions()
+        } else {
+            // Legacy fallback
+            r.roomOptions = towerService.generateRoomOptions(run: r)
+        }
+        
         run = r
         route = .tower
     }
