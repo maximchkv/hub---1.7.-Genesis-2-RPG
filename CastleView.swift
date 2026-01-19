@@ -10,14 +10,7 @@ struct CastleView: View {
     // Layout constants
     private let gridAspect: CGFloat = 1.25 // height = width * 1.25
 
-    // Width cap helper (028B)
-    private func widthCap(for sizeClass: UserInterfaceSizeClass?, windowWidth: CGFloat) -> CGFloat {
-        switch sizeClass {
-        case .compact: return 360
-        case .regular: return windowWidth < 900 ? 600 : 720
-        default: return 360
-        }
-    }
+    // Width cap helper - удалено, теперь используется UIStyle.Layout.contentWidth
 
     // 022H: Mode button helper
     private func modePill(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
@@ -46,21 +39,20 @@ struct CastleView: View {
     }
 
     var body: some View {
-        ZStack {
-            UIStyle.background()
-                .ignoresSafeArea()
-
+        UIStyle.Layout.ScreenContainer {
             GeometryReader { geo in
-                let horizontalPadding: CGFloat = 24
-                let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
-                let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
-                let contentWidth = min(availableWidth, cap)
+                let horizontalPadding: CGFloat = UIStyle.Spacing.xl
+                let contentWidth = UIStyle.Layout.contentWidth(
+                    geometry: geo,
+                    horizontalPadding: horizontalPadding,
+                    sizeClass: hSizeClass
+                )
 
                 ScrollView {
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
 
-                        VStack(spacing: 12) {
+                        VStack(spacing: UIStyle.Spacing.m) {
                             headerCard(contentWidth: contentWidth)
                             topSummaryRow(contentWidth: contentWidth)
                             modeButtonsRow(contentWidth: contentWidth)
@@ -74,7 +66,7 @@ struct CastleView: View {
                             backToHubButton(contentWidth: contentWidth)
                         }
                         .frame(width: contentWidth, alignment: .center)
-                        .padding(.top, 12)
+                        .padding(.top, UIStyle.Spacing.m)
                         .padding(.bottom, 18)
 
                         Spacer(minLength: 0)
@@ -140,7 +132,7 @@ struct CastleView: View {
     // MARK: - Top summary (stats + image + relics)
 
     private func topSummaryRow(contentWidth: CGFloat) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: UIStyle.Spacing.m) {
             // LEFT (stats)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Buildings: \(store.castleBuildingsCount)")
@@ -209,7 +201,7 @@ struct CastleView: View {
     // MARK: - Mode buttons
 
     private func modeButtonsRow(contentWidth: CGFloat) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: UIStyle.Spacing.m) {
             modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
                     store.setCastleMode(CastleUIMode.build)
@@ -348,8 +340,9 @@ struct CastleView: View {
         Button("Back to Hub") {
             store.goToHub()
         }
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+        .buttonStyle(UIStyle.PrimaryButtonStyle())
+        .padding(.top, UIStyle.Spacing.m)
+        .padding(.bottom, UIStyle.Spacing.s)
         .frame(width: contentWidth, alignment: .center)
     }
 

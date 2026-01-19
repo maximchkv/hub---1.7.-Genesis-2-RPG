@@ -4,17 +4,15 @@ struct TowerSplashView: View {
     @EnvironmentObject private var store: GameStore
     @State private var didContinue: Bool = false
 
-    // Layout tuning
-    private let horizontalPad: CGFloat = 18
-    private let topPad: CGFloat = 12
-    private let artTopGap: CGFloat = 14
-    private let artBottomGap: CGFloat = 14
-    private let bottomPad: CGFloat = 18
+    // Layout tuning - стандартизировано через UI Kit
+    private let horizontalPad: CGFloat = UIStyle.Spacing.xl
+    private let topPad: CGFloat = UIStyle.Spacing.m
+    private let artTopGap: CGFloat = UIStyle.Spacing.l
+    private let artBottomGap: CGFloat = UIStyle.Spacing.l
+    private let bottomPad: CGFloat = UIStyle.Spacing.xl
 
     var body: some View {
-        ZStack {
-            UIStyle.background()
-                .ignoresSafeArea()
+        UIStyle.Layout.ScreenContainer {
 
             VStack(spacing: 0) {
                 header

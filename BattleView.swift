@@ -13,15 +13,15 @@ struct BattleView: View {
     private let contentCap: CGFloat = 380
     private let outerPad: CGFloat = 0
 
-    // Vertical spacing
-    private let topHeaderPad: CGFloat = 8
+    // Vertical spacing - стандартизировано через UI Kit
+    private let topHeaderPad: CGFloat = UIStyle.Spacing.s
     // Use one canonical spacing between major vertical blocks
-    private let interBlock: CGFloat = 12 // "межлогово‑карточное расстояние"
+    private let interBlock: CGFloat = UIStyle.Spacing.m // "межлогово‑карточное расстояние"
     private var headerToParticipants: CGFloat { interBlock }
     private var participantsToLog: CGFloat { interBlock }
     private var logToCards: CGFloat { interBlock }
-    private let cardsToAP: CGFloat = 12 // cards -> AP label
-    private let apToButton: CGFloat = 12
+    private let cardsToAP: CGFloat = UIStyle.Spacing.m // cards -> AP label
+    private let apToButton: CGFloat = UIStyle.Spacing.m
     // Reduced by ~1/3 (was 52) to free vertical space for participants.
     private let headerHeight: CGFloat = 35
 
@@ -38,23 +38,26 @@ struct BattleView: View {
     private let actionCardWidth: CGFloat = 120
     // Default card height (rolled back from +33%).
     private let actionCardHeight: CGFloat = 170
-    private let actionCardRowSpacing: CGFloat = 12
+    private let actionCardRowSpacing: CGFloat = UIStyle.Spacing.m
 
     // Disabled opacity (less aggressive than before)
     private let disabledOpacity: CGFloat = 0.70 // was 0.35
 
     var body: some View {
-        ZStack {
-            UIStyle.background()
-                .ignoresSafeArea()
-
+        UIStyle.Layout.ScreenContainer {
             GeometryReader { geo in
-                let available = max(0, geo.size.width - outerPad * 2)
-                let contentWidth = min(available, contentCap)
+                // Используем ContentWidthProvider для расчета ширины
+                let contentWidth = UIStyle.Layout.contentWidth(
+                    geometry: geo,
+                    horizontalPadding: outerPad,
+                    sizeClass: nil
+                )
+                // Применяем специфичный кап для BattleView
+                let finalContentWidth = min(contentWidth, contentCap)
                 // Intentionally not using safe-area bottom inset here: bottom controls are pinned to the bottom edge.
 
-                // Participants width calculation with side inset
-                let participantRowWidth = max(0, contentWidth - participantSideInset * 2)
+                        // Participants width calculation with side inset
+                let participantRowWidth = max(0, finalContentWidth - participantSideInset * 2)
 
                 VStack(spacing: 0) {
                     if let battle = store.battle {
@@ -62,7 +65,7 @@ struct BattleView: View {
 
                         // HEADER (debug left, floor centered, surrender right)
                         headerRow(floor: battle.floor, isPlayerTurn: isPlayerTurn)
-                            .frame(width: contentWidth, alignment: .center)
+                            .frame(width: finalContentWidth, alignment: .center)
                             .frame(height: headerHeight, alignment: .center)
                             .padding(.top, topHeaderPad)
                             .debugStroke(showDebugOutlines, .red)
@@ -89,7 +92,7 @@ struct BattleView: View {
                         .frame(maxHeight: .infinity, alignment: .top)
                         .layoutPriority(1)
                         .padding(.horizontal, participantSideInset)
-                        .frame(width: contentWidth, alignment: .center)
+                        .frame(width: finalContentWidth, alignment: .center)
                         .debugStroke(showDebugOutlines, .green)
 
                         Spacer().frame(height: participantsToLog)
@@ -97,7 +100,7 @@ struct BattleView: View {
 
                         // LOG (kept compact; scroll inside)
                         battleLogView
-                            .frame(width: contentWidth, alignment: .center)
+                            .frame(width: finalContentWidth, alignment: .center)
                             .frame(minHeight: logMinHeight)
                             .frame(maxHeight: logMaxHeight)
                             .debugStroke(showDebugOutlines, .orange)
@@ -107,8 +110,8 @@ struct BattleView: View {
                             .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
                         // Bottom controls (in-flow) so they naturally move up/down as the top content changes.
-                        bottomStack(contentWidth: contentWidth, battle: battle)
-                            .frame(width: contentWidth, alignment: .center)
+                        bottomStack(contentWidth: finalContentWidth, battle: battle)
+                            .frame(width: finalContentWidth, alignment: .center)
                             // Pin the bottom controls to the bottom edge (per UX request).
                             // NOTE: this will put the button closer to the home indicator.
                             .padding(.bottom, 0)
@@ -116,11 +119,11 @@ struct BattleView: View {
                             .debugStroke(showDebugOutlines, .blue)
 
                     } else {
-                        VStack(spacing: 12) {
+                        VStack(spacing: UIStyle.Spacing.m) {
                             Text("No battle state")
                             Button("Back") { store.goToTower() }
                         }
-                        .frame(width: contentWidth, alignment: .center)
+                        .frame(width: finalContentWidth, alignment: .center)
                         .padding(.top, 40)
                     }
                 }
@@ -250,7 +253,7 @@ struct BattleView: View {
     private func bottomStack(contentWidth: CGFloat, battle: BattleState) -> some View {
         VStack(spacing: 0) {
             actionCardsRow(battle: battle)
-                .frame(width: contentWidth, alignment: .center)
+                .frame(width: contentWidth, alignment: .center) // contentWidth здесь - это параметр функции
                 .debugStroke(showDebugOutlines, .blue.opacity(0.6))
 
             Spacer().frame(height: cardsToAP)

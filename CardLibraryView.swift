@@ -6,20 +6,20 @@ struct CardLibraryView: View {
     @State private var selectedCard: ActionCardKind? = nil
     @State private var hasAppeared: Bool = false
     
-    // Layout constants
-    private let horizontalPadding: CGFloat = 24
-    private let verticalPadding: CGFloat = 24
+    // Layout constants - стандартизировано через UI Kit
+    private let horizontalPadding: CGFloat = UIStyle.Spacing.xl
+    private let verticalPadding: CGFloat = UIStyle.Spacing.xl
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                UIStyle.background()
-                    .ignoresSafeArea()
-                
+            UIStyle.Layout.ScreenContainer {
                 GeometryReader { geo in
-                    let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
-                    let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
-                    let contentWidth = min(availableWidth, cap)
+                    // Используем ContentWidthProvider для расчета ширины
+                    let contentWidth = UIStyle.Layout.contentWidth(
+                        geometry: geo,
+                        horizontalPadding: horizontalPadding,
+                        sizeClass: hSizeClass
+                    )
                     
                     ScrollView {
                         VStack(spacing: 20) {
@@ -38,7 +38,7 @@ struct CardLibraryView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, horizontalPadding)
-                        .padding(.top, 8)
+                        .padding(.top, UIStyle.Spacing.s)
                         .padding(.bottom, verticalPadding)
                         .opacity(hasAppeared ? 1.0 : 0.0)
                         .offset(y: hasAppeared ? 0 : 20)
@@ -176,17 +176,7 @@ struct CardLibraryView: View {
     }
     
     // MARK: - Layout Helpers
-    
-    private func widthCap(for sizeClass: UserInterfaceSizeClass?, windowWidth: CGFloat) -> CGFloat {
-        switch sizeClass {
-        case .compact:
-            return 360 // iPhone
-        case .regular:
-            return windowWidth < 900 ? 600 : 720 // iPad
-        default:
-            return 360
-        }
-    }
+    // widthCap удален - теперь используется UIStyle.Layout.contentWidth
     
     private func gridColumns(for sizeClass: UserInterfaceSizeClass?) -> [GridItem] {
         switch sizeClass {

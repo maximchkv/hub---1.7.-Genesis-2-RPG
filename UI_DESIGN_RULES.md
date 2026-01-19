@@ -229,5 +229,132 @@ ForEach(options) { option in
 
 
 ================================================================================
-Последнее обновление: Январь 2026 (после фикса RewardView и TowerView)
+ПРИМЕРЫ МИГРАЦИИ
+================================================================================
+
+### Простой экран (EventView, ChestView, RestView, DefeatView, VictoryView)
+
+**До:**
+```swift
+var body: some View {
+    VStack(spacing: 16) {
+        Text("Заголовок")
+        // контент
+    }
+    .padding()
+}
+```
+
+**После:**
+```swift
+var body: some View {
+    UIStyle.Layout.ScreenContainer {
+        ScrollView {
+            VStack(alignment: .leading, spacing: UIStyle.Spacing.l) {
+                Text("Заголовок")
+                    .font(.system(size: 28, weight: .semibold, design: .serif))
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                // контент
+            }
+            .padding(.horizontal, UIStyle.Spacing.xl)
+            .padding(.vertical, 20)
+        }
+        .scrollIndicators(.hidden)
+        .toolbar(.hidden, for: .navigationBar)
+    }
+}
+```
+
+### Экран с фиксированным заголовком (HubView)
+
+**До:**
+```swift
+ZStack {
+    UIStyle.background().ignoresSafeArea()
+    GeometryReader { geo in
+        ZStack(alignment: .top) {
+            ScrollView { /* контент */ }
+            headerCard // fixed
+        }
+    }
+}
+```
+
+**После:**
+```swift
+UIStyle.Layout.FixedHeaderScreen(
+    headerHeight: 92,
+    headerTopPadding: 10,
+    headerBottomGap: 14,
+    header: { contentWidth in
+        headerCard
+    }
+) { contentWidth in
+    ScrollView {
+        // контент
+    }
+}
+```
+
+### Экран с динамической высотой (TowerView)
+
+**Особый случай:** TowerView использует динамическую высоту тактической секции на основе safe area через PreferenceKey. Это задокументировано в `TOWERVIEW_LAYOUT_PATTERNS.md`.
+
+**Миграция:**
+- Фон заменен на `ScreenContainer`
+- Используется `ContentWidthProvider`
+- Отступы стандартизированы
+- Динамическая высота сохранена (специфическая функциональность)
+
+### Полноэкранный экран (BattleView)
+
+**Особый случай:** BattleView использует полноэкранный layout с bottom controls, pinned to bottom edge (не используют safe area bottom).
+
+**Миграция:**
+- Фон заменен на `ScreenContainer`
+- Используется `ContentWidthProvider`
+- Отступы стандартизированы
+- Полноэкранный layout сохранен (специфическая функциональность)
+
+### Экран с interactive background (StartView)
+
+**Исключение:** StartView использует interactive background (LanternRevealLayer) с `.ignoresSafeArea()`, что требует ZStack. Оставлен как есть - это специфическая функциональность экрана входа.
+
+**Примечание:** StartView не мигрирован на ScreenContainer, так как interactive background требует особого подхода. Это допустимое исключение для экрана входа.
+
+================================================================================
+ЧЕКЛИСТ МИГРАЦИИ
+================================================================================
+
+Для каждого экрана при миграции проверять:
+
+- [ ] Заменен ZStack на `.background { }` паттерн (через ScreenContainer) или документировано исключение
+- [ ] Используется `ContentWidthProvider` для расчета ширины (или документировано исключение)
+- [ ] Используется `StandardHeader` для заголовков (или документировано исключение)
+- [ ] Отступы стандартизированы через `UIStyle.Spacing`
+- [ ] Safe area обрабатывается корректно
+- [ ] Проверено на iPhone с Dynamic Island
+- [ ] Проверено в landscape (если поддерживается)
+- [ ] Контент не выходит за пределы safe area
+- [ ] Отступы от краев минимум 20-24pt
+
+================================================================================
+ИСКЛЮЧЕНИЯ ИЗ ПРАВИЛ
+================================================================================
+
+### StartView
+- **Причина:** Interactive background (LanternRevealLayer) требует `.ignoresSafeArea()` и ZStack
+- **Решение:** Оставлен как есть, документировано как исключение
+
+### TowerView (частично)
+- **Причина:** Динамическая высота тактической секции на основе safe area через PreferenceKey
+- **Решение:** Фон мигрирован на ScreenContainer, динамическая высота сохранена
+- **Документация:** `TOWERVIEW_LAYOUT_PATTERNS.md`
+
+### BattleView (частично)
+- **Причина:** Полноэкранный layout с bottom controls pinned to bottom edge
+- **Решение:** Фон мигрирован на ScreenContainer, полноэкранный layout сохранен
+
+================================================================================
+Последнее обновление: Январь 2026 (после миграции UI Kit по всем экранам)
 ================================================================================

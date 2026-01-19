@@ -17,11 +17,12 @@ struct TowerView: View {
     private let contentCap: CGFloat = 380
     private let outerPad: CGFloat = 0
 
-    private let topPad: CGFloat = 8
-    private let toastToMeta: CGFloat = 10
-    private let metaToStrategic: CGFloat = 12
-    private let strategicToTactical: CGFloat = 12
-    private let safeAreaBottomPadding: CGFloat = 160
+    // Стандартизированные отступы через UI Kit
+    private let topPad: CGFloat = UIStyle.Spacing.s
+    private let toastToMeta: CGFloat = 10 // Специфичный отступ для toast
+    private let metaToStrategic: CGFloat = UIStyle.Spacing.m
+    private let strategicToTactical: CGFloat = UIStyle.Spacing.m
+    private let safeAreaBottomPadding: CGFloat = 160 // Специфичный отступ для safe area
     
     // Проценты высоты секций
     private let strategicSectionHeightPercent: CGFloat = 0.28
@@ -31,13 +32,16 @@ struct TowerView: View {
     private let toastHideDelay: Double = 1.2
 
     var body: some View {
-        ZStack {
-            UIStyle.background()
-                .ignoresSafeArea()
-
+        UIStyle.Layout.ScreenContainer {
             GeometryReader { geo in
-                let available = max(0, geo.size.width - outerPad * 2)
-                let contentWidth = min(available, contentCap)
+                // Используем ContentWidthProvider для расчета ширины
+                let contentWidth = UIStyle.Layout.contentWidth(
+                    geometry: geo,
+                    horizontalPadding: outerPad,
+                    sizeClass: nil
+                )
+                // Применяем специфичный кап для TowerView
+                let finalContentWidth = min(contentWidth, contentCap)
                 let safeAreaBottom = geo.safeAreaInsets.bottom
                 let safeAreaTop = geo.safeAreaInsets.top
                 // Высота тактического блока = от текущей позиции до нижней границы safe area (совпадает с красной обводкой)
@@ -61,7 +65,7 @@ struct TowerView: View {
                             "initialMaxTacticalHeight": initialMaxTacticalHeight,
                             "tacticalTopY": tacticalTopY,
                             "computedTacticalHeight": computedTacticalHeight,
-                            "contentWidth": contentWidth
+                            "contentWidth": finalContentWidth
                         ]
                     )
                 }()
@@ -71,7 +75,7 @@ struct TowerView: View {
                 VStack(spacing: 0) {
                         // Header (приглушённый)
                     headerRow
-                        .frame(width: contentWidth, alignment: .center)
+                        .frame(width: finalContentWidth, alignment: .center)
                         .padding(.top, topPad)
                             // #region agent log
                             .background(
@@ -95,7 +99,7 @@ struct TowerView: View {
 
                     // Toast
                     toastView
-                        .frame(width: contentWidth, alignment: .center)
+                        .frame(width: finalContentWidth, alignment: .center)
                             // #region agent log
                             .background(
                                 GeometryReader { toastGeo in
@@ -118,7 +122,7 @@ struct TowerView: View {
 
                         // HP и прогресс (сбалансированно выделено)
                     topInfoRow
-                        .frame(width: contentWidth, alignment: .center)
+                        .frame(width: finalContentWidth, alignment: .center)
                             // #region agent log
                             .background(
                                 GeometryReader { infoGeo in
@@ -140,7 +144,7 @@ struct TowerView: View {
                         Spacer().frame(height: metaToStrategic)
 
                         // СТРАТЕГИЧЕСКАЯ СЕКЦИЯ (пустой блок для будущей реализации)
-                        strategicSectionPlaceholder(contentWidth: contentWidth)
+                        strategicSectionPlaceholder(contentWidth: finalContentWidth)
                             // #region agent log
                             .background(
                                 GeometryReader { strategicGeo in
@@ -162,7 +166,7 @@ struct TowerView: View {
                         Spacer().frame(height: strategicToTactical)
 
                         // ТАКТИЧЕСКАЯ СЕКЦИЯ (большие карточки комнат)
-                        tacticalSection(contentWidth: contentWidth, maxHeight: tacticalHeight, screenHeight: geo.size.height, safeAreaTop: safeAreaTop, safeAreaBottom: safeAreaBottom, safeAreaBottomPadding: safeAreaBottomPadding)
+                        tacticalSection(contentWidth: finalContentWidth, maxHeight: tacticalHeight, screenHeight: geo.size.height, safeAreaTop: safeAreaTop, safeAreaBottom: safeAreaBottom, safeAreaBottomPadding: safeAreaBottomPadding)
                             .background(
                                 GeometryReader { proxy in
                                     Color.clear.preference(key: TacticalTopYKey.self, value: proxy.frame(in: .global).minY)
@@ -393,7 +397,7 @@ struct TowerView: View {
         VStack {
             // Пустой блок для будущей реализации стратегической секции
         }
-        .padding(16)
+        .padding(UIStyle.Spacing.l)
         .frame(width: contentWidth)
         .frame(height: 248)
         .background(.thinMaterial)
@@ -408,7 +412,7 @@ struct TowerView: View {
 
     private func tacticalSection(contentWidth: CGFloat, maxHeight: CGFloat, screenHeight: CGFloat, safeAreaTop: CGFloat, safeAreaBottom: CGFloat, safeAreaBottomPadding: CGFloat) -> some View {
         let options = store.run?.roomOptions ?? []
-        let standardSpacing: CGFloat = 12 // Same as metaToStrategic and strategicToTactical
+        let standardSpacing: CGFloat = UIStyle.Spacing.m // Стандартный отступ между карточками
         
         return HStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -416,7 +420,7 @@ struct TowerView: View {
             GeometryReader { geo in
                 // Вычисляем доступную высоту блока: от текущей позиции до нижней границы safe area (с учётом стандартного отступа)
                 let blockTopY = geo.frame(in: .global).minY
-                let standardPadding: CGFloat = 12 // Стандартный отступ, такой же как metaToStrategic и strategicToTactical
+                let standardPadding: CGFloat = UIStyle.Spacing.m // Стандартный отступ от safe area
                 let baseBlockHeight = max(0, screenHeight - safeAreaBottom - standardPadding - blockTopY)
                 let availableBlockHeight = baseBlockHeight * 1.2 // Увеличено на 20%
                 
