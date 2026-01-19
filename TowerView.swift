@@ -11,7 +11,9 @@ struct TowerView: View {
     private let topPad: CGFloat = UIStyle.Spacing.s
     private let toastToMeta: CGFloat = UIStyle.Spacing.s
     private let metaToMap: CGFloat = UIStyle.Spacing.m
-    private let bottomPad: CGFloat = UIStyle.Spacing.m
+    
+    // Debug mode - set to true to see layout boundaries
+    private let debugMode: Bool = false
 
     // Toast
     private let toastHideDelay: Double = 1.2
@@ -20,42 +22,53 @@ struct TowerView: View {
         UIStyle.Layout.ScreenContainer {
             GeometryReader { geo in
                 let contentWidth = min(geo.size.width - UIStyle.Spacing.xl * 2, contentCap)
-                let safeAreaBottom = geo.safeAreaInsets.bottom
-                let safeAreaTop = geo.safeAreaInsets.top
+                let totalHeight = geo.size.height
                 
-                // Расчёт высоты карты: всё пространство минус header/meta/отступы
+                // Расчёт высоты карты: geo.size — это всё пространство внутри safe area
                 let headerHeight: CGFloat = 40
                 let toastHeight: CGFloat = store.toast != nil ? 32 : 0
                 let metaHeight: CGFloat = 70
-                let spacings = topPad + toastToMeta + metaToMap + bottomPad
+                let spacings = topPad + toastToMeta + metaToMap
                 let usedHeight = headerHeight + toastHeight + metaHeight + spacings
-                let mapHeight = max(200, geo.size.height - safeAreaTop - safeAreaBottom - usedHeight)
+                let mapHeight = max(200, totalHeight - usedHeight)
                 
-                VStack(spacing: 0) {
-                    // Header
-                    headerRow
-                        .frame(width: contentWidth)
-                        .padding(.top, topPad)
+                ZStack(alignment: .top) {
+                    // Debug: full geo area (yellow)
+                    if debugMode {
+                        Rectangle()
+                            .stroke(Color.yellow, lineWidth: 2)
+                            .frame(width: geo.size.width, height: totalHeight)
+                    }
                     
-                    // Toast
-                    toastView
-                        .frame(width: contentWidth)
-                    
-                    Spacer().frame(height: toastToMeta)
-                    
-                    // HP и прогресс
-                    topInfoRow
-                        .frame(width: contentWidth)
-                    
-                    Spacer().frame(height: metaToMap)
-                    
-                    // Стратегическая карта (растянута на всё оставшееся пространство)
-                    strategicMapSection(contentWidth: contentWidth, mapHeight: mapHeight)
-                    
-                    Spacer().frame(height: bottomPad)
+                    VStack(spacing: 0) {
+                        // Header
+                        headerRow
+                            .frame(width: contentWidth)
+                            .padding(.top, topPad)
+                            .modifier(DebugBorder(color: .blue, enabled: debugMode, label: "header"))
+                        
+                        // Toast
+                        toastView
+                            .frame(width: contentWidth)
+                            .modifier(DebugBorder(color: .purple, enabled: debugMode, label: "toast"))
+                        
+                        Spacer().frame(height: toastToMeta)
+                        
+                        // HP и прогресс
+                        topInfoRow
+                            .frame(width: contentWidth)
+                            .modifier(DebugBorder(color: .orange, enabled: debugMode, label: "meta"))
+                        
+                        Spacer().frame(height: metaToMap)
+                        
+                        // Стратегическая карта (растянута до низа geo)
+                        strategicMapSection(contentWidth: contentWidth, mapHeight: mapHeight)
+                            .modifier(DebugBorder(color: .red, enabled: debugMode, label: "map h=\(Int(mapHeight))"))
+                    }
+                    .frame(width: geo.size.width, height: totalHeight, alignment: .top)
+                    .modifier(DebugBorder(color: .green, enabled: debugMode, label: "content h=\(Int(totalHeight))"))
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, (geo.size.width - contentWidth) / 2)
+                .frame(width: geo.size.width, height: totalHeight)
             }
         }
         .onAppear {
@@ -238,6 +251,33 @@ struct TowerView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.primary.opacity(0.10), lineWidth: 1)
         )
+    }
+}
+
+// MARK: - Debug Border Modifier
+
+private struct DebugBorder: ViewModifier {
+    let color: Color
+    let enabled: Bool
+    let label: String
+    
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .overlay(
+                    ZStack(alignment: .topLeading) {
+                        Rectangle()
+                            .stroke(color, lineWidth: 1)
+                        Text(label)
+                            .font(.system(size: 8))
+                            .foregroundColor(color)
+                            .padding(2)
+                            .background(Color.black.opacity(0.7))
+                    }
+                )
+        } else {
+            content
+        }
     }
 }
 

@@ -23,10 +23,10 @@ struct StrategicMapView: View {
     @EnvironmentObject private var store: GameStore
     
     // Layout constants
-    private let nodeSize: CGFloat = 36
-    private let floorSpacing: CGFloat = 52
+    private let nodeSize: CGFloat = 32
+    private let floorSpacing: CGFloat = 100  // Фиксированное расстояние между уровнями
     private let edgeLineWidth: CGFloat = 2
-    private let horizontalPadding: CGFloat = 28
+    private let horizontalPadding: CGFloat = 12
     
     var body: some View {
         GeometryReader { geo in
@@ -42,19 +42,10 @@ struct StrategicMapView: View {
     
     private func mapContent(map: TowerMap, containerSize: CGSize) -> some View {
         let totalFloors = map.totalFloors
-        // Адаптивная высота: либо вписываемся в контейнер, либо скроллим
-        let minContentHeight = CGFloat(totalFloors) * floorSpacing + nodeSize + UIStyle.Spacing.l * 2
-        let contentHeight = max(minContentHeight, containerSize.height)
         let usableWidth = containerSize.width - horizontalPadding * 2
         
-        // Пересчитываем floorSpacing чтобы вписаться в контейнер если достаточно места
-        let adaptiveFloorSpacing: CGFloat = {
-            let availableHeight = containerSize.height - nodeSize - UIStyle.Spacing.l * 2
-            let calculatedSpacing = availableHeight / CGFloat(totalFloors)
-            return max(floorSpacing, min(calculatedSpacing, 80)) // Между 52 и 80
-        }()
-        
-        let adaptiveContentHeight = CGFloat(totalFloors) * adaptiveFloorSpacing + nodeSize
+        // Фиксированная высота контента — карта скроллится
+        let contentHeight = CGFloat(totalFloors - 1) * floorSpacing + nodeSize + UIStyle.Spacing.xl * 2
         
         return ScrollViewReader { scrollProxy in
             ScrollView(.vertical, showsIndicators: false) {
@@ -63,24 +54,22 @@ struct StrategicMapView: View {
                     edgesCanvas(
                         map: map,
                         usableWidth: usableWidth,
-                        contentHeight: adaptiveContentHeight,
-                        totalFloors: totalFloors,
-                        floorSpacing: adaptiveFloorSpacing
+                        contentHeight: contentHeight,
+                        totalFloors: totalFloors
                     )
                     
                     // Draw all nodes on top
                     nodesOverlay(
                         map: map,
                         usableWidth: usableWidth,
-                        totalFloors: totalFloors,
-                        floorSpacing: adaptiveFloorSpacing
+                        totalFloors: totalFloors
                     )
                 }
-                .frame(width: containerSize.width, height: adaptiveContentHeight)
-                .padding(.vertical, UIStyle.Spacing.m)
+                .frame(width: containerSize.width, height: contentHeight)
             }
             .onAppear {
-                scrollToCurrentFloor(map: map, scrollProxy: scrollProxy, totalFloors: totalFloors)
+                // Скролл к нижней части (floor 1) при появлении
+                scrollToBottom(scrollProxy: scrollProxy)
             }
         }
     }
@@ -88,14 +77,34 @@ struct StrategicMapView: View {
     // MARK: - Coordinate Helpers
     
     /// Calculate Y position for a floor (floor 1 at bottom, boss at top)
-    private func yPositionForFloor(_ floor: Int, totalFloors: Int, floorSpacing: CGFloat) -> CGFloat {
+    private func yPositionForFloor(_ floor: Int, totalFloors: Int) -> CGFloat {
+        // Floor 1 внизу, boss (totalFloors) вверху
         let invertedFloor = totalFloors - floor
-        return CGFloat(invertedFloor) * floorSpacing + nodeSize / 2
+        return UIStyle.Spacing.xl + CGFloat(invertedFloor) * floorSpacing + nodeSize / 2
     }
     
-    /// Calculate X position for a node
-    private func xPositionForNode(_ node: MapNode, usableWidth: CGFloat) -> CGFloat {
-        return horizontalPadding + node.xPosition * usableWidth
+    /// Calculate X position for a node dynamically based on nodes count on floor
+    private func xPositionForNode(_ node: MapNode, nodesOnFloor: [MapNode], usableWidth: CGFloat) -> CGFloat {
+        let count = nodesOnFloor.count
+        
+        // Небольшой отступ от краёв чтобы узлы не вылезали
+        let edgeInset: CGFloat = nodeSize / 2 + 4
+        let effectiveWidth = usableWidth - edgeInset * 2
+        
+        guard count > 1 else {
+            // Один узел — по центру
+            return horizontalPadding + usableWidth / 2
+        }
+        
+        // Найти индекс узла на этом уровне (сортировка по xPosition для сохранения порядка)
+        let sorted = nodesOnFloor.sorted { $0.xPosition < $1.xPosition }
+        guard let index = sorted.firstIndex(where: { $0.id == node.id }) else {
+            return horizontalPadding + usableWidth / 2
+        }
+        
+        // Равномерное распределение с учётом отступов от краёв
+        let spacing = effectiveWidth / CGFloat(count - 1)
+        return horizontalPadding + edgeInset + CGFloat(index) * spacing
     }
     
     // MARK: - Edges Canvas
@@ -104,8 +113,7 @@ struct StrategicMapView: View {
         map: TowerMap,
         usableWidth: CGFloat,
         contentHeight: CGFloat,
-        totalFloors: Int,
-        floorSpacing: CGFloat
+        totalFloors: Int
     ) -> some View {
         Canvas { context, size in
             for floor in 1..<totalFloors {
@@ -113,14 +121,14 @@ struct StrategicMapView: View {
                 let nextNodes = map.nodes(onFloor: floor + 1)
                 
                 for node in currentNodes {
-                    let startX = xPositionForNode(node, usableWidth: usableWidth)
-                    let startY = yPositionForFloor(floor, totalFloors: totalFloors, floorSpacing: floorSpacing)
+                    let startX = xPositionForNode(node, nodesOnFloor: currentNodes, usableWidth: usableWidth)
+                    let startY = yPositionForFloor(floor, totalFloors: totalFloors)
                     
                     for targetId in node.edges {
                         guard let targetNode = nextNodes.first(where: { $0.id == targetId }) else { continue }
                         
-                        let endX = xPositionForNode(targetNode, usableWidth: usableWidth)
-                        let endY = yPositionForFloor(floor + 1, totalFloors: totalFloors, floorSpacing: floorSpacing)
+                        let endX = xPositionForNode(targetNode, nodesOnFloor: nextNodes, usableWidth: usableWidth)
+                        let endY = yPositionForFloor(floor + 1, totalFloors: totalFloors)
                         
                         // Edge attachment points on circle boundaries
                         let startPoint = edgeAttachmentPoint(
@@ -173,18 +181,18 @@ struct StrategicMapView: View {
     private func nodesOverlay(
         map: TowerMap,
         usableWidth: CGFloat,
-        totalFloors: Int,
-        floorSpacing: CGFloat
+        totalFloors: Int
     ) -> some View {
         ForEach(1...totalFloors, id: \.self) { floor in
             let nodes = map.nodes(onFloor: floor)
-            let y = yPositionForFloor(floor, totalFloors: totalFloors, floorSpacing: floorSpacing)
+            let y = yPositionForFloor(floor, totalFloors: totalFloors)
             
             ForEach(nodes) { node in
-                let x = xPositionForNode(node, usableWidth: usableWidth)
+                let x = xPositionForNode(node, nodesOnFloor: nodes, usableWidth: usableWidth)
                 
                 nodeView(node: node, map: map)
                     .position(x: x, y: y)
+                    .id(floor == 1 ? "floor_1" : nil) // Для скролла к началу
             }
         }
     }
@@ -235,14 +243,11 @@ struct StrategicMapView: View {
     
     // MARK: - Scroll Helper
     
-    private func scrollToCurrentFloor(map: TowerMap, scrollProxy: ScrollViewProxy, totalFloors: Int) {
-        // Scroll to show floor 1 at the bottom initially
+    private func scrollToBottom(scrollProxy: ScrollViewProxy) {
+        // Скролл к нижней части карты (floor 1) при появлении
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if map.currentNodeId == nil {
-                // No current node - scroll to bottom (floor 1)
-                withAnimation(.easeOut(duration: 0.3)) {
-                    scrollProxy.scrollTo(1, anchor: .bottom)
-                }
+            withAnimation(.easeOut(duration: 0.3)) {
+                scrollProxy.scrollTo("floor_1", anchor: .bottom)
             }
         }
     }
