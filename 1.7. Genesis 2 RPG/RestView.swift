@@ -4,22 +4,39 @@ struct RestView: View {
     @EnvironmentObject private var store: GameStore
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Rest")
-                .font(.largeTitle)
+        UIStyle.Layout.ScreenContainer {
+            ScrollView {
+                VStack(alignment: .leading, spacing: UIStyle.Spacing.l) {
+                    // Header
+                    VStack(alignment: .leading, spacing: UIStyle.Spacing.s) {
+                        Text("Отдых")
+                            .font(.system(size: 28, weight: .semibold, design: .serif))
+                            .foregroundStyle(UIStyle.Colors.inkPrimary)
 
-            Text("A short pause before the climb continues.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                        Text("Короткая передышка перед продолжением подъема.")
+                            .font(.callout)
+                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    }
+                    .padding(.bottom, UIStyle.Spacing.xs)
 
-            Text("🔥")
-                .font(.system(size: 64))
+                    // Icon
+                    Text("🔥")
+                        .font(.system(size: 64))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, UIStyle.Spacing.l)
 
-            Button("Heal +6 & Continue") {
-                store.restHealAndContinue()
+                    // Action
+                    Button("Восстановить +6 HP и продолжить") {
+                        store.restHealAndContinue()
+                    }
+                    .buttonStyle(UIStyle.PrimaryButtonStyle())
+                }
+                .padding(.horizontal, UIStyle.Spacing.xl)
+                .padding(.vertical, 20)
             }
+            .scrollIndicators(.hidden)
+            .toolbar(.hidden, for: .navigationBar)
         }
-        .padding()
     }
 }
 

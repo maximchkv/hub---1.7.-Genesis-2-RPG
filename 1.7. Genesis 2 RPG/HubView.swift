@@ -4,9 +4,9 @@ struct HubView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.horizontalSizeClass) private var hSizeClass
 
-    // Layout
-    private let horizontalPadding: CGFloat = 24
-    private let verticalPadding: CGFloat = 24
+    // Layout - используем стандартные отступы из UI Kit
+    private let horizontalPadding: CGFloat = UIStyle.Spacing.xl
+    private let verticalPadding: CGFloat = UIStyle.Spacing.xl
 
     // Fixed header (028C/028D/028E)
     private let headerHeight: CGFloat = 92      // увеличено под 2 строки лейблов
@@ -28,63 +28,42 @@ struct HubView: View {
     private let hubCardBgOpacity: Double = 0.85
 
     var body: some View {
-        ZStack {
-            UIStyle.background()
-                .ignoresSafeArea()
+        UIStyle.Layout.FixedHeaderScreen(
+            headerHeight: headerHeight,
+            headerTopPadding: headerTopPad,
+            headerBottomGap: headerBottomGap,
+            horizontalPadding: horizontalPadding,
+            header: { contentWidth in
+                headerCard
+            }
+        ) { contentWidth in
+            ZStack(alignment: .topTrailing) {
+                // CONTENT (scrollable)
+                ScrollView(.vertical) {
+                    VStack(spacing: UIStyle.Spacing.l) {
+                        toastSlot
+                            .frame(width: contentWidth)
 
-            GeometryReader { geo in
-                let availableWidth = max(0, geo.size.width - horizontalPadding * 2)
-                let cap = widthCap(for: hSizeClass, windowWidth: geo.size.width)
-                let contentWidth = min(availableWidth, cap)
-
-                ZStack(alignment: .top) {
-
-                    // CONTENT (scrollable) — ниже fixed header
-                    ScrollView(.vertical) {
-                        VStack(spacing: 16) {
-                            toastSlot
-                                .frame(width: contentWidth)
-
-                            navGrid
-                                .frame(width: contentWidth)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, horizontalPadding)
-                        .padding(.bottom, verticalPadding)
-                        .padding(.top, headerHeight + headerTopPad + headerBottomGap) // чтобы не залезать под header
+                        navGrid
+                            .frame(width: contentWidth)
                     }
-                    .scrollIndicators(.hidden)
-
-                    // HEADER (fixed)
-                    headerCard
-                        .frame(width: contentWidth, height: headerHeight)
-                        .padding(.top, headerTopPad)
-                        .frame(maxWidth: .infinity, alignment: .top)
-                        .padding(.horizontal, horizontalPadding)
-
-                    // DEBUG (fixed)
-                    debugButton
-                        .padding(.top, 8)
-                        .padding(.trailing, 8)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.bottom, verticalPadding)
                 }
+                .scrollIndicators(.hidden)
+                
+                // DEBUG (fixed)
+                debugButton
+                    .padding(.top, UIStyle.Spacing.s)
+                    .padding(.trailing, UIStyle.Spacing.s)
             }
         }
         // Удалено store.goToHub() из onAppear по T3-ARCH-BOOT-032E
     }
 
     // MARK: - Width cap
-
-    private func widthCap(for sizeClass: UserInterfaceSizeClass?, windowWidth: CGFloat) -> CGFloat {
-        switch sizeClass {
-        case .compact:
-            return 360 // iPhone
-        case .regular:
-            return windowWidth < 900 ? 600 : 720 // iPad / широкие окна
-        default:
-            return 360
-        }
-    }
+    // Удалено - теперь используется UIStyle.Layout.contentWidth через FixedHeaderScreen
 
     // MARK: - Content
 
@@ -172,8 +151,8 @@ struct HubView: View {
     // MARK: - Navigation cards (2 + 1)
 
     private var navGrid: some View {
-        VStack(spacing: 18) { // зазор между верхним рядом и Cards
-            HStack(spacing: 12) {
+        VStack(spacing: UIStyle.Spacing.l) { // зазор между верхним рядом и Cards (используем стандартный отступ)
+            HStack(spacing: UIStyle.Spacing.m) {
                 // Tower card
                 Button {
                     store.goToTowerEntry()

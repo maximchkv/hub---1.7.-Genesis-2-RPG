@@ -4,16 +4,32 @@ struct DefeatView: View {
     @EnvironmentObject private var store: GameStore
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Defeat")
-                .font(.largeTitle)
+        UIStyle.Layout.ScreenContainer {
+            ScrollView {
+                VStack(alignment: .leading, spacing: UIStyle.Spacing.l) {
+                    // Header
+                    VStack(alignment: .leading, spacing: UIStyle.Spacing.s) {
+                        Text("Поражение")
+                            .font(.system(size: 28, weight: .semibold, design: .serif))
+                            .foregroundStyle(UIStyle.Colors.inkPrimary)
 
-            Text("The run has ended.")
+                        Text("Забег завершен.")
+                            .font(.callout)
+                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    }
+                    .padding(.bottom, UIStyle.Spacing.xs)
 
-            Button("Return to Hub") {
-                store.resetRun()
+                    // Action
+                    Button("Вернуться в хаб") {
+                        store.resetRun()
+                    }
+                    .buttonStyle(UIStyle.PrimaryButtonStyle())
+                }
+                .padding(.horizontal, UIStyle.Spacing.xl)
+                .padding(.vertical, 20)
             }
+            .scrollIndicators(.hidden)
+            .toolbar(.hidden, for: .navigationBar)
         }
-        .padding()
     }
 }

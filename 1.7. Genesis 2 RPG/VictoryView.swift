@@ -4,32 +4,52 @@ struct VictoryView: View {
     @EnvironmentObject private var store: GameStore
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Victory")
-                .font(.largeTitle)
+        UIStyle.Layout.ScreenContainer {
+            ScrollView {
+                VStack(alignment: .leading, spacing: UIStyle.Spacing.l) {
+                    // Header
+                    VStack(alignment: .leading, spacing: UIStyle.Spacing.s) {
+                        Text("Победа")
+                            .font(.system(size: 28, weight: .semibold, design: .serif))
+                            .foregroundStyle(UIStyle.Colors.inkPrimary)
 
-            Text("You cleared all 3 acts.")
-                .foregroundStyle(.secondary)
+                        Text("Вы прошли все 3 акта.")
+                            .font(.callout)
+                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    }
+                    .padding(.bottom, UIStyle.Spacing.xs)
 
-            Text("👑")
-                .font(.system(size: 72))
+                    // Icon
+                    Text("👑")
+                        .font(.system(size: 72))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, UIStyle.Spacing.l)
 
-            VStack(spacing: 6) {
-                Text("Best floor: \(store.meta.bestFloor)")
-                    .font(.caption)
-                Text("Days: \(store.meta.days)")
-                    .font(.caption)
-                Text("Gold: \(store.meta.gold)")
-                    .font(.caption)
+                    // Stats
+                    VStack(alignment: .leading, spacing: UIStyle.Spacing.xs) {
+                        Text("Лучший этаж: \(store.meta.bestFloor)")
+                            .font(.caption)
+                        Text("Дней: \(store.meta.days)")
+                            .font(.caption)
+                        Text("Золото: \(store.meta.gold)")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.bottom, UIStyle.Spacing.m)
+
+                    // Action
+                    Button("Вернуться в хаб") {
+                        store.finishRunAndReturnToHub()
+                    }
+                    .buttonStyle(UIStyle.PrimaryButtonStyle())
+                }
+                .padding(.horizontal, UIStyle.Spacing.xl)
+                .padding(.vertical, 20)
             }
-            .foregroundStyle(.secondary)
-
-            Button("Return to Hub") {
-                store.finishRunAndReturnToHub()
-            }
-            .buttonStyle(.borderedProminent)
+            .scrollIndicators(.hidden)
+            .toolbar(.hidden, for: .navigationBar)
         }
-        .padding()
     }
 }
 

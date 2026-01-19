@@ -4,45 +4,69 @@ struct ChestView: View {
     @EnvironmentObject private var store: GameStore
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Chest")
-                .font(.title)
-
-            Text("🧰")
-                .font(.system(size: 64))
-
-            if let chest = store.chest {
-                if chest.isOpened, let art = chest.revealed {
-                    // Result
-                    VStack(spacing: 8) {
-                        Text("\(art.icon) \(art.name)")
-                            .font(.headline)
-                        Text(art.description)
-                            .font(.caption)
-                        Text("Income bonus: +\(art.incomeBonus)/day")
-                            .font(.caption2)
+        UIStyle.Layout.ScreenContainer {
+            ScrollView {
+                VStack(alignment: .leading, spacing: UIStyle.Spacing.l) {
+                    // Header
+                    VStack(alignment: .leading, spacing: UIStyle.Spacing.s) {
+                        Text("Сундук")
+                            .font(.system(size: 28, weight: .semibold, design: .serif))
+                            .foregroundStyle(UIStyle.Colors.inkPrimary)
                     }
-                    .padding()
-                    .background(.thinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.bottom, UIStyle.Spacing.xs)
 
-                    Button("Send to Castle & Continue") {
-                        store.claimChestRewardAndContinue()
-                    }
-                } else {
-                    // Open
-                    Button("Open Chest") {
-                        store.openChest()
+                    // Icon
+                    Text("🧰")
+                        .font(.system(size: 64))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, UIStyle.Spacing.l)
+
+                    // Content
+                    if let chest = store.chest {
+                        if chest.isOpened, let art = chest.revealed {
+                            // Result
+                            VStack(alignment: .leading, spacing: UIStyle.Spacing.s) {
+                                Text("\(art.icon) \(art.name)")
+                                    .font(.headline)
+                                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                                Text(art.description)
+                                    .font(.callout)
+                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                Text("Бонус дохода: +\(art.incomeBonus)/день")
+                                    .font(.caption)
+                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                            }
+                            .uiCard()
+                            .padding(.bottom, UIStyle.Spacing.m)
+
+                            Button("Отправить в замок и продолжить") {
+                                store.claimChestRewardAndContinue()
+                            }
+                            .buttonStyle(UIStyle.PrimaryButtonStyle())
+                        } else {
+                            // Open
+                            Button("Открыть сундук") {
+                                store.openChest()
+                            }
+                            .buttonStyle(UIStyle.PrimaryButtonStyle())
+                        }
+                    } else {
+                        VStack(spacing: UIStyle.Spacing.m) {
+                            Text("Сундук недоступен")
+                                .font(.caption)
+                                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                            Button("Вернуться в башню") {
+                                store.goToTower()
+                            }
+                            .buttonStyle(UIStyle.PrimaryButtonStyle())
+                        }
                     }
                 }
-            } else {
-                Text("No chest state (stub)")
-                    .font(.caption)
-                Button("Back to Tower") {
-                    store.goToTower()
-                }
+                .padding(.horizontal, UIStyle.Spacing.xl)
+                .padding(.vertical, 20)
             }
+            .scrollIndicators(.hidden)
+            .toolbar(.hidden, for: .navigationBar)
         }
-        .padding()
     }
 }
