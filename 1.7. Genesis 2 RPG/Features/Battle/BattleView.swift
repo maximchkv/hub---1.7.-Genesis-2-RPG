@@ -36,7 +36,7 @@ struct BattleView: View {
 
     // Action cards sizing
     private let actionCardWidth: CGFloat = 120
-    // Default card height (rolled back from +33%).
+    // Card height: 134 = 122 (VStack content + spacing) + 12 (padding)
     private let actionCardHeight: CGFloat = 170
     private let actionCardRowSpacing: CGFloat = UIStyle.Spacing.m
 
@@ -68,10 +68,8 @@ struct BattleView: View {
                             .frame(width: finalContentWidth, alignment: .center)
                             .frame(height: headerHeight, alignment: .center)
                             .padding(.top, topHeaderPad)
-                            .debugStroke(showDebugOutlines, .red)
 
                         Spacer().frame(height: headerToParticipants)
-                            .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
                         // PARTICIPANTS (rebuilt from scratch)
                         ParticipantsPanel(
@@ -84,39 +82,29 @@ struct BattleView: View {
                             enemyBlock: battle.enemyBlock,
                             enemyMaxHP: 20,
                             enemyIntent: battle.enemyIntent,
-                            debug: showDebugOutlines
+                            debug: false
                         )
                         .frame(width: participantRowWidth)
-                        // Let participants expand to consume leftover vertical space,
-                        // pushing log/cards/button down without increasing log height.
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .layoutPriority(1)
                         .padding(.horizontal, participantSideInset)
                         .frame(width: finalContentWidth, alignment: .center)
-                        .debugStroke(showDebugOutlines, .green)
 
                         Spacer().frame(height: participantsToLog)
-                            .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
                         // LOG (kept compact; scroll inside)
                         battleLogView
                             .frame(width: finalContentWidth, alignment: .center)
                             .frame(minHeight: logMinHeight)
                             .frame(maxHeight: logMaxHeight)
-                            .debugStroke(showDebugOutlines, .orange)
 
                         // Keep a stable gap between log and the bottom area.
                         Spacer().frame(height: logToCards)
-                            .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
-                        // Bottom controls (in-flow) so they naturally move up/down as the top content changes.
+                        // Spacer to push bottom controls to the bottom
+                        Spacer()
+                        
+                        // Bottom controls pinned to the bottom edge
                         bottomStack(contentWidth: finalContentWidth, battle: battle)
                             .frame(width: finalContentWidth, alignment: .center)
-                            // Pin the bottom controls to the bottom edge (per UX request).
-                            // NOTE: this will put the button closer to the home indicator.
-                            .padding(.bottom, 0)
-                            .frame(maxWidth: .infinity)
-                            .debugStroke(showDebugOutlines, .blue)
 
                     } else {
                         VStack(spacing: UIStyle.Spacing.m) {
@@ -129,7 +117,7 @@ struct BattleView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, outerPad)
-                .debugStroke(showDebugOutlines, .purple)
+                .padding(.bottom, 0)
             }
         }
     }
@@ -199,52 +187,65 @@ struct BattleView: View {
 
     // MARK: - Log
 
+    @ViewBuilder
     private var battleLogView: some View {
-        Group {
-            if let battle = store.battle {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(battle.log, id: \.id) { entry in
-                                if entry.kind == .separator || entry.text == "__DIVIDER__" {
-                                    Divider()
-                                        .padding(.vertical, 6)
-                                        .id(entry.id)
-                                } else {
-                                    Text(entry.text)
-                                        .font(.caption2)
-                                        .fontWeight(entry.isPlayer ? .bold : .regular)
-                                        .foregroundStyle(entry.kind == .system ? .secondary : .primary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .id(entry.id)
-                                }
-                            }
-
-                            Color.clear
-                                .frame(height: 1)
-                                .id("LOG_BOTTOM")
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        if let battle = store.battle {
+            logScrollView(battle: battle)
+        } else {
+            EmptyView()
+        }
+    }
+    
+    private func logScrollView(battle: BattleState) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(battle.log, id: \.id) { entry in
+                        logEntryView(entry: entry)
                     }
-                    .onChange(of: battle.log.count) { _ in
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
-                        }
-                    }
-                    .onAppear {
-                        proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
-                    }
+                    
+                    Color.clear
+                        .frame(height: 1)
+                        .id("LOG_BOTTOM")
                 }
-                .padding(8)
-                .background(.thinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: logCorner))
-                .overlay(
-                    RoundedRectangle(cornerRadius: logCorner)
-                        .stroke(Color.primary.opacity(0.12), lineWidth: 1)
-                )
-            } else {
-                EmptyView()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .onChange(of: battle.log.count) { _ in
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
+                }
+            }
+            .onAppear {
+                proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
+            }
+        }
+        .padding(8)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: logCorner))
+        .overlay(
+            RoundedRectangle(cornerRadius: logCorner)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: logCorner)
+                .stroke(Color.purple, lineWidth: 3)
+                .opacity(showDebugOutlines ? 1 : 0)
+        )
+    }
+    
+    @ViewBuilder
+    private func logEntryView(entry: CombatLogEntry) -> some View {
+        if entry.kind == .separator || entry.text == "__DIVIDER__" {
+            Divider()
+                .padding(.vertical, 6)
+                .id(entry.id)
+        } else {
+            Text(entry.text)
+                .font(.caption2)
+                .fontWeight(entry.isPlayer ? .bold : .regular)
+                .foregroundStyle(entry.kind == .system ? .secondary : .primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .id(entry.id)
         }
     }
 
@@ -254,25 +255,28 @@ struct BattleView: View {
         VStack(spacing: 0) {
             actionCardsRow(battle: battle)
                 .frame(width: contentWidth, alignment: .center) // contentWidth здесь - это параметр функции
-                .debugStroke(showDebugOutlines, .blue.opacity(0.6))
 
             Spacer().frame(height: cardsToAP)
-                .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
             apPanel(ap: battle.actionPoints)
                 .frame(maxWidth: .infinity, alignment: .center)
-                .debugStroke(showDebugOutlines, .yellow)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.orange, lineWidth: 3)
+                        .opacity(showDebugOutlines ? 1 : 0)
+                )
 
             Spacer().frame(height: apToButton)
-                .debugStroke(showDebugOutlines, .red.opacity(0.6))
 
             Button("Закончить ход") { store.endTurn() }
                 .buttonStyle(UIStyle.PrimaryButtonStyle())
                 .disabled(battle.phase != .player)
                 .opacity(battle.phase == .player ? 1.0 : 0.55)
-                .debugStroke(showDebugOutlines, .pink)
-
-            Spacer().frame(height: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.green, lineWidth: 3)
+                        .opacity(showDebugOutlines ? 1 : 0)
+                )
         }
     }
 
@@ -305,28 +309,48 @@ struct BattleView: View {
     }
 
     private func actionCardsRow(battle: BattleState) -> some View {
-        return VStack(spacing: 8) {
-            HStack(spacing: actionCardRowSpacing) {
-                ForEach(battle.hand, id: \.id) { card in
-                    let hasAP = card.cost <= battle.actionPoints
-                    let canPlay = hasAP
-                    let lvl = battle.cardLevels[card.kind, default: 1]
+        return HStack(spacing: actionCardRowSpacing) {
+            ForEach(battle.hand, id: \.id) { card in
+                let cardState = determineCardState(card: card, battle: battle)
+                let lvl = battle.cardLevels[card.kind, default: 1]
 
-                    Button {
-                        store.playCard(card)
-                    } label: {
-                        ActionCardView(card: card, disabled: !canPlay, level: lvl)
-                            .frame(width: actionCardWidth, height: actionCardHeight)
-                    }
-                    .disabled(!canPlay)
-                    .opacity(canPlay ? 1.0 : disabledOpacity)
-                    .frame(width: actionCardWidth, height: actionCardHeight)
-                    .debugStroke(showDebugOutlines, .cyan)
+                Button {
+                    store.playCard(card)
+                } label: {
+                    ActionCardView(card: card, state: cardState, level: lvl)
+                        .frame(width: actionCardWidth, height: actionCardHeight)
                 }
+                .buttonStyle(.plain) // Убираем стандартные отступы Button
+                .disabled(cardState != .available)
+                .frame(width: actionCardWidth, height: actionCardHeight)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .debugStroke(showDebugOutlines, .cyan.opacity(0.6))
         }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(height: actionCardHeight) // Точная высота = высоте карточек (134)
+        .overlay(
+            RoundedRectangle(cornerRadius: 0)
+                .stroke(Color.cyan, lineWidth: 3)
+                .opacity(showDebugOutlines ? 1 : 0)
+        )
+    }
+    
+    private func determineCardState(card: ActionCard, battle: BattleState) -> CardPlayabilityState {
+        // Проверка фазы
+        guard battle.phase == .player else {
+            return .notPlayerTurn
+        }
+        
+        // Проверка, была ли карта уже использована
+        if battle.usedCardsThisTurn.contains(card.kind) {
+            return .alreadyUsed
+        }
+        
+        // Проверка очков действий
+        if battle.actionPoints < card.cost {
+            return .insufficientAP
+        }
+        
+        return .available
     }
 }
 
@@ -382,9 +406,7 @@ private struct ParticipantsPanel: View {
                 intentText: nil,
                 portrait: .player
             )
-            // Stretch the whole card to fill available height when the panel expands.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .debugStroke(debug, .green)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
 
             participantCard(
                 name: enemyName,
@@ -394,10 +416,9 @@ private struct ParticipantsPanel: View {
                 intentText: enemyIntent.displayRU,
                 portrait: .enemy(name: enemyName)
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            .debugStroke(debug, .purple)
+            .frame(maxWidth: .infinity, alignment: .topTrailing)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private enum PortraitKind {

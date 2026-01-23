@@ -248,6 +248,21 @@ struct StartView: View {
                             .fill(UIStyle.Colors.accent)
                     )
             }
+            
+            // Debug button: start first battle
+            Button {
+                store.debugStartFirstBattle()
+            } label: {
+                Text("DEBUG: First Battle")
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
+                            .fill(Color.red.opacity(0.7))
+                    )
+            }
         }
         .frame(width: contentWidth)
     }

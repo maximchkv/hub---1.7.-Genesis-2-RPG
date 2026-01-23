@@ -341,6 +341,38 @@ final class GameStore: ObservableObject {
         }
     }
     
+    // MARK: - Debug: Start first battle on floor 1
+    func debugStartFirstBattle() {
+        // Create new run
+        startRun(routeToHub: false)
+        
+        guard var r = run, let map = r.towerMap else { return }
+        
+        // Find first combat room on floor 1 (leftmost by xPosition)
+        let floor1Nodes = map.nodes(onFloor: 1)
+        let combatNodes = floor1Nodes.filter { $0.room.kind == .combat }
+        
+        // Find leftmost combat node (smallest xPosition)
+        guard let firstCombatNode = combatNodes.min(by: { $0.xPosition < $1.xPosition }) else {
+            // Fallback: use first available combat room or first room
+            if let firstCombat = floor1Nodes.first(where: { $0.room.kind == .combat }) {
+                _ = r.moveToMapNode(nodeId: firstCombat.id)
+                run = r
+                selectRoom(firstCombat.room)
+            } else if let firstRoom = floor1Nodes.first {
+                _ = r.moveToMapNode(nodeId: firstRoom.id)
+                run = r
+                selectRoom(firstRoom.room)
+            }
+            return
+        }
+        
+        // Move to the first combat node and start battle
+        _ = r.moveToMapNode(nodeId: firstCombatNode.id)
+        run = r
+        selectRoom(firstCombatNode.room)
+    }
+    
     private func unlockBaseCards() {
         for cardKind in ActionCardKind.allCases where cardKind.isBaseCard {
             meta.unlockCard(cardKind)
@@ -836,10 +868,12 @@ final class GameStore: ObservableObject {
             self.battle = b
             performEnemyTurn()
             if let after = self.battle { b = after }
-            cycleEnemyIntent()
-            if let after2 = self.battle { b = after2 }
             pushSeparator()
         }
+        
+        // Паттерн продвигается всегда, даже если ход пропущен (оглушение)
+        cycleEnemyIntent()
+        if let after = self.battle { b = after }
 
         // 031A: Start of player turn (statuses)
         out = b.startOfTurn(for: .player)
@@ -860,23 +894,6 @@ final class GameStore: ObservableObject {
     private func performEnemyTurn() {
         guard var battle = battle else { return }
 
-        func applyEnemyOnHitStatus() {
-            switch battle.enemyRuntimeKind {
-            case .punisher:
-                battle.addStatus(.vulnerable, stacks: 1, to: .player)
-                pushLog(&battle, side: .enemy, "Enemy attack → Player: Уязвимость +1")
-            case .graphiteGolem:
-                battle.addStatus(.weak, stacks: 1, to: .player)
-                pushLog(&battle, side: .enemy, "Enemy attack → Player: Слабость +1")
-            case .zesurumiMonks:
-                battle.addStatus(.bleed, stacks: 2, to: .player)
-                pushLog(&battle, side: .enemy, "Enemy attack → Player: Кровоток +2")
-            case .feyanchа:
-                battle.addStatus(.bleed, stacks: 1, to: .player)
-                pushLog(&battle, side: .enemy, "Enemy attack → Player: Кровоток +1")
-            }
-        }
-
         switch battle.enemyIntent.kind {
         case .attack:
             let base = enemyAttackValue()
@@ -887,7 +904,6 @@ final class GameStore: ObservableObject {
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
             pushLog(&battle, side: .enemy, "Attack: dmg \(dealt) (blocked \(blocked))")
-            applyEnemyOnHitStatus()
             if battle.playerHP <= 0 {
                 self.battle = battle
                 loseBattle()
@@ -910,7 +926,6 @@ final class GameStore: ObservableObject {
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
             pushLog(&battle, side: .enemy, "Counter Stance: block +\(bVal), dmg \(dealt) (blocked \(blocked))")
-            applyEnemyOnHitStatus()
             if battle.playerHP <= 0 {
                 self.battle = battle
                 loseBattle()
@@ -924,9 +939,7 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.playerHP
             let beforeBlock = battle.playerBlock
             battle.dealDamage(amount: dmg1, to: .player, isWeaponDamage: true)
-            applyEnemyOnHitStatus()
             battle.dealDamage(amount: dmg2, to: .player, isWeaponDamage: true)
-            applyEnemyOnHitStatus()
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
             pushLog(&battle, side: .enemy, "Double Strike: dmg \(dealt) (blocked \(blocked))")

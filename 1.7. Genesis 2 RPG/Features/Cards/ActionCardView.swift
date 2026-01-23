@@ -1,12 +1,20 @@
 import SwiftUI
 
+enum CardPlayabilityState {
+    case available          // Можно играть
+    case insufficientAP     // Недостаточно очков действий
+    case alreadyUsed        // Уже использована в этом ходу
+    case notPlayerTurn      // Не ход игрока
+}
+
 struct ActionCardView: View {
     let card: ActionCard
-    let disabled: Bool
+    let state: CardPlayabilityState
     let level: Int
+    let showDebugOutlines: Bool = false
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 4) {
             // Top: centered icon, level badge in top-right
             ZStack(alignment: .topTrailing) {
                 ZStack {
@@ -33,23 +41,35 @@ struct ActionCardView: View {
                 }
             }
 
-            // Name
+            // Name - фиксированная высота, текст масштабируется
             Text(titleRU)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(UIStyle.Colors.inkPrimary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .minimumScaleFactor(0.9)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .minimumScaleFactor(0.3)
+                .frame(maxWidth: .infinity)
+                .frame(height: 20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(Color.red, lineWidth: 2)
+                        .opacity(showDebugOutlines ? 1 : 0)
+                )
 
-            // Effect (compact, 1–2 lines)
+            // Effect - фиксированная высота, текст масштабируется
             Text(effectRU)
                 .font(.caption)
                 .foregroundStyle(UIStyle.Colors.inkSecondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
-                .minimumScaleFactor(0.9)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .minimumScaleFactor(0.3)
+                .frame(maxWidth: .infinity)
+                .frame(height: 24)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(Color.blue, lineWidth: 2)
+                        .opacity(showDebugOutlines ? 1 : 0)
+                )
 
             Spacer(minLength: 0)
 
@@ -64,16 +84,21 @@ struct ActionCardView: View {
                         .fill(UIStyle.Colors.mutedFill)
                 )
         }
-        .padding(10)
+        .padding(6)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(UIStyle.Colors.cardFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                .stroke(strokeColor, lineWidth: strokeWidth)
         )
-        .opacity(disabled ? 0.60 : 1.0)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.green, lineWidth: 3)
+                .opacity(showDebugOutlines ? 1 : 0)
+        )
+        .opacity(opacity)
     }
 
     private var titleRU: String {
@@ -121,6 +146,39 @@ struct ActionCardView: View {
         case .weakDefend: return "Слабость +1 врагу. Блок +4."
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             return "Будущая карта"
+        }
+    }
+    
+    // MARK: - State-based styling
+    
+    private var opacity: Double {
+        switch state {
+        case .available:
+            return 1.0
+        case .insufficientAP, .alreadyUsed, .notPlayerTurn:
+            return 0.60
+        }
+    }
+    
+    private var strokeColor: Color {
+        switch state {
+        case .available:
+            return UIStyle.Colors.cardStroke
+        case .insufficientAP:
+            return UIStyle.Colors.cardStroke
+        case .alreadyUsed:
+            return Color.orange.opacity(0.6) // Оранжевая обводка для уже использованных
+        case .notPlayerTurn:
+            return UIStyle.Colors.cardStroke
+        }
+    }
+    
+    private var strokeWidth: CGFloat {
+        switch state {
+        case .alreadyUsed:
+            return 2.0 // Более толстая обводка для использованных
+        default:
+            return 1.0
         }
     }
 }
