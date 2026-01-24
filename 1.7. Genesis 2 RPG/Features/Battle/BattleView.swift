@@ -5,7 +5,7 @@ struct BattleView: View {
     @EnvironmentObject private var store: GameStore
 
     // Debug layout outlines (3px) to visualize real block bounds
-    private let showDebugOutlines: Bool = false
+    private let showDebugOutlines: Bool = true
 
     // MARK: - Layout constants (Contract v3.0)
 
@@ -53,7 +53,7 @@ struct BattleView: View {
                     if let battle = store.battle {
                         let isPlayerTurn = (battle.phase == .player)
 
-                        // HEADER - ограничен по ширине как карточки
+                        // БЛОК 1: HEADER - ограничен по ширине как карточки
                         headerRow(floor: battle.floor, isPlayerTurn: isPlayerTurn)
                             .frame(width: finalContentWidth)
                             .frame(height: headerHeight)
@@ -62,7 +62,7 @@ struct BattleView: View {
 
                         Spacer().frame(height: headerToParticipants)
 
-                        // PARTICIPANTS (with statuses) - ограничены по ширине как карточки
+                        // БЛОК 2: PARTICIPANTS (with statuses) - ограничены по ширине как карточки
                         ParticipantsPanel(
                             playerName: "Игрок",
                             playerHP: battle.playerHP,
@@ -75,14 +75,19 @@ struct BattleView: View {
                             enemyMaxHP: 20,
                             enemyStatuses: battle.enemyStatuses,
                             enemyIntent: battle.enemyIntent,
-                            debug: false
+                            debug: showDebugOutlines
                         )
                         .frame(width: finalContentWidth)
                         .frame(maxWidth: .infinity)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 0)
+                                .stroke(Color.blue, lineWidth: 3)
+                                .opacity(showDebugOutlines ? 1 : 0)
+                        )
 
                         Spacer().frame(height: participantsToLog)
 
-                        // LOG (always visible, fixed height 80px) - ограничен по ширине как карточки
+                        // БЛОК 3: LOG (always visible, fixed height 80px) - ограничен по ширине как карточки
                         compactLogView(battle: battle)
                             .frame(width: finalContentWidth)
                             .frame(height: logFixedHeight)
@@ -91,7 +96,7 @@ struct BattleView: View {
                         // Минимальный отступ между логом и карточками
                         Spacer().frame(height: logToCards)
 
-                        // Cards area - занимает все доступное пространство
+                        // БЛОК 4: CARDS area - занимает все доступное пространство
                         VStack(spacing: 0) {
                             // Карточки - занимают все оставшееся пространство
                             GeometryReader { cardsGeo in
@@ -106,7 +111,7 @@ struct BattleView: View {
                             
                             Spacer().frame(height: cardsToButton)
                             
-                            // Compact AP + End Turn button - ограничены по ширине как карточки
+                            // БЛОК 5: Compact AP + End Turn button - ограничены по ширине как карточки
                             compactBottomControls(battle: battle, contentWidth: finalContentWidth)
                                 .frame(width: finalContentWidth)
                                 .frame(maxWidth: .infinity)
@@ -265,11 +270,6 @@ struct BattleView: View {
             .disabled(battle.phase != .player)
             .opacity(battle.phase == .player ? 1.0 : 0.55)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.green, lineWidth: 3)
-                .opacity(showDebugOutlines ? 1 : 0)
-        )
     }
 
     private func compactAPIndicator(ap: Int) -> some View {
@@ -319,11 +319,6 @@ struct BattleView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 0)
-                .stroke(Color.cyan, lineWidth: 3)
-                .opacity(showDebugOutlines ? 1 : 0)
-        )
     }
     
     private func determineCardState(card: ActionCard, battle: BattleState) -> CardPlayabilityState {
@@ -440,11 +435,16 @@ private struct ParticipantsPanel: View {
             maxHP: maxHP,
             statuses: statuses,
             intentText: intentText,
-            portrait: portrait
+            portrait: portrait,
+            debug: debug
         )
         .padding(innerPad)
         .background(.thinMaterial, in: shape)
         .overlay(shape.stroke(UIStyle.Colors.cardStroke, lineWidth: 1))
+        .overlay(
+            shape.stroke(Color.red, lineWidth: 3)
+                .opacity(debug ? 1 : 0)
+        )
     }
 
     private func participantColumn(
@@ -454,7 +454,8 @@ private struct ParticipantsPanel: View {
         maxHP: Int,
         statuses: [StatusInstance],
         intentText: String?,
-        portrait: PortraitKind
+        portrait: PortraitKind,
+        debug: Bool
     ) -> some View {
         VStack(spacing: rowGap) {
             // 1) Name
@@ -465,35 +466,35 @@ private struct ParticipantsPanel: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .frame(maxWidth: .infinity)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(Color.orange, lineWidth: 2)
+                        .opacity(debug ? 1 : 0)
+                )
 
-            // 2) HP bar
-            HPBar(value: hp, maxValue: maxHP)
-                .frame(height: 6)
-
-            // 3) Stats
-            VStack(spacing: 2) {
-                Text("HP: \(hp)/\(maxHP)")
-                    .font(.caption2)
-                    .foregroundStyle(UIStyle.Colors.inkSecondary)
-                Text("Блок: \(block)")
-                    .font(.caption2)
-                    .foregroundStyle(UIStyle.Colors.inkSecondary)
-            }
-            .frame(maxWidth: .infinity)
-
-            // 4) Divider
-            Rectangle()
-                .fill(UIStyle.Colors.cardStroke)
-                .frame(height: dividerH)
+            // 2) HP and Block combined block (фиксированная высота 48px, контент адаптивный)
+            HPBlockStatsView(hp: hp, maxHP: maxHP, block: block, debug: debug)
+                .frame(height: 48)
+                .frame(maxWidth: .infinity)
 
             // 5) Statuses (NEW)
             if !statuses.isEmpty {
                 statusesView(statuses: statuses)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 0)
+                            .stroke(Color.cyan, lineWidth: 2)
+                            .opacity(debug ? 1 : 0)
+                    )
             } else {
                 // Spacer to maintain consistent layout
                 Spacer()
                     .frame(height: statusChipHeight)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 0)
+                            .stroke(Color.cyan, lineWidth: 2)
+                            .opacity(debug ? 1 : 0)
+                    )
             }
 
             // 6) Intent (player empty)
@@ -518,11 +519,21 @@ private struct ParticipantsPanel: View {
                 }
             }
             .frame(height: 24)
+            .overlay(
+                RoundedRectangle(cornerRadius: 0)
+                    .stroke(Color.yellow, lineWidth: 2)
+                    .opacity(debug ? 1 : 0)
+            )
 
             // 7) Portrait (square)
             portraitView(portrait)
                 .frame(maxWidth: .infinity)
                 .aspectRatio(1, contentMode: .fit)
+                .overlay(
+                    RoundedRectangle(cornerRadius: portraitCorner)
+                        .stroke(Color.pink, lineWidth: 2)
+                        .opacity(debug ? 1 : 0)
+                )
         }
         .frame(maxWidth: .infinity)
     }
@@ -609,27 +620,69 @@ private struct ParticipantsPanel: View {
     }
 }
 
-// MARK: - HP Bar (dark green)
+// MARK: - HP and Block Stats Block (фиксированная высота 48px, контент адаптивный)
 
-private struct HPBar: View {
-    let value: Int
-    let maxValue: Int
+private struct HPBlockStatsView: View {
+    let hp: Int
+    let maxHP: Int
+    let block: Int
+    let debug: Bool
+    
+    private let fixedHeight: CGFloat = 48
 
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width
-            let ratio = maxValue > 0 ? CGFloat(value) / CGFloat(maxValue) : 0
-            let fillW = max(0, min(1, ratio)) * w
-
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(.systemGray5))
-
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(UIStyle.Colors.hpGreen)
-                    .frame(width: fillW)
+            let availableHeight = geo.size.height
+            
+            // Адаптивные размеры на основе фиксированной высоты 48px
+            let iconSize = max(12, min(18, availableHeight * 0.35))
+            let fontSize = max(10, min(14, availableHeight * 0.28))
+            let spacing = max(2, min(5, availableHeight * 0.1))
+            
+            HStack(spacing: 0) {
+                // Left column: HP with heart icon
+                VStack(spacing: spacing) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: iconSize, weight: .medium))
+                        .foregroundStyle(UIStyle.Colors.hpGreen)
+                        .minimumScaleFactor(0.5)
+                    
+                    Text("\(hp)/\(maxHP)")
+                        .font(.system(size: fontSize, weight: .semibold))
+                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .minimumScaleFactor(0.3)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: .infinity)
+                
+                // Divider between columns
+                Rectangle()
+                    .fill(UIStyle.Colors.cardStroke)
+                    .frame(width: 1)
+                
+                // Right column: Block with shield icon
+                VStack(spacing: spacing) {
+                    Image(systemName: "shield.fill")
+                        .font(.system(size: iconSize, weight: .medium))
+                        .foregroundStyle(UIStyle.Colors.inkSecondary)
+                        .minimumScaleFactor(0.5)
+                    
+                    Text("\(block)")
+                        .font(.system(size: fontSize, weight: .semibold))
+                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .minimumScaleFactor(0.3)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: .infinity)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .frame(height: fixedHeight)
+        .overlay(
+            RoundedRectangle(cornerRadius: 0)
+                .stroke(Color.blue, lineWidth: 2)
+                .opacity(debug ? 1 : 0)
+        )
     }
 }
