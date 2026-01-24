@@ -29,6 +29,9 @@ enum UIStyle {
 
         // Consistent HP green (used across UI)
         static let hpGreen     = SwiftUI.Color(red: 0.12, green: 0.45, blue: 0.20)
+        
+        // Dark green for highlighting growing numbers (used in reward cards)
+        static let growthGreen = SwiftUI.Color(red: 0.10, green: 0.50, blue: 0.15)
     }
 
     // MARK: - Radius

@@ -777,9 +777,12 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.enemyHP
             let beforeBlock = battle.enemyBlock
             battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
-            triggerShake(for: .enemy) // Анимация дрожания портрета врага
             let dealt = max(0, beforeHP - battle.enemyHP)
             let blocked = max(0, beforeBlock - battle.enemyBlock)
+            // Анимация только если был реальный урон по HP
+            if dealt > 0 {
+                triggerShake(for: .enemy)
+            }
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
 
         case .defend:
@@ -794,11 +797,17 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.enemyHP
             let beforeBlock = battle.enemyBlock
             battle.dealDamage(amount: dmg1, to: .enemy, isWeaponDamage: true)
-            triggerShake(for: .enemy) // Анимация дрожания портрета врага
+            let afterFirstHP = battle.enemyHP
             battle.dealDamage(amount: dmg2, to: .enemy, isWeaponDamage: true)
-            triggerShake(for: .enemy) // Анимация дрожания портрета врага (второй удар)
             let dealt = max(0, beforeHP - battle.enemyHP)
             let blocked = max(0, beforeBlock - battle.enemyBlock)
+            // Анимация только если был реальный урон по HP
+            if max(0, beforeHP - afterFirstHP) > 0 {
+                triggerShake(for: .enemy) // Первый удар
+            }
+            if max(0, afterFirstHP - battle.enemyHP) > 0 {
+                triggerShake(for: .enemy) // Второй удар
+            }
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
 
         case .counterStance:
@@ -809,9 +818,12 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.enemyHP
             let beforeBlock = battle.enemyBlock
             battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
-            triggerShake(for: .enemy) // Анимация дрожания портрета врага
             let dealt = max(0, beforeHP - battle.enemyHP)
             let blocked = max(0, beforeBlock - battle.enemyBlock)
+            // Анимация только если был реальный урон по HP
+            if dealt > 0 {
+                triggerShake(for: .enemy)
+            }
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal), dmg \(dealt) (blocked \(blocked))")
 
         // 031B: Status cards
@@ -836,9 +848,12 @@ final class GameStore: ObservableObject {
                 let beforeHP = battle.enemyHP
                 let beforeBlock = battle.enemyBlock
                 battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
-                triggerShake(for: .enemy) // Анимация дрожания портрета врага
                 let dealt = max(0, beforeHP - battle.enemyHP)
                 let blocked = max(0, beforeBlock - battle.enemyBlock)
+                // Анимация только если был реальный урон по HP
+                if dealt > 0 {
+                    triggerShake(for: .enemy)
+                }
                 pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked), от кровотечения ×\(enemyBleedStacks))")
             } else {
                 // Если у врага нет кровотечения: наложить Bleed +2
@@ -936,9 +951,12 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.playerHP
             let beforeBlock = battle.playerBlock
             battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
-            triggerShake(for: .player) // Анимация дрожания портрета игрока
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
+            // Анимация только если был реальный урон по HP
+            if dealt > 0 {
+                triggerShake(for: .player)
+            }
             pushLog(&battle, side: .enemy, "Attack: dmg \(dealt) (blocked \(blocked))")
             if battle.playerHP <= 0 {
                 self.battle = battle
@@ -959,9 +977,12 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.playerHP
             let beforeBlock = battle.playerBlock
             battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
-            triggerShake(for: .player) // Анимация дрожания портрета игрока
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
+            // Анимация только если был реальный урон по HP
+            if dealt > 0 {
+                triggerShake(for: .player)
+            }
             pushLog(&battle, side: .enemy, "Counter Stance: block +\(bVal), dmg \(dealt) (blocked \(blocked))")
             if battle.playerHP <= 0 {
                 self.battle = battle
@@ -976,11 +997,17 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.playerHP
             let beforeBlock = battle.playerBlock
             battle.dealDamage(amount: dmg1, to: .player, isWeaponDamage: true)
-            triggerShake(for: .player) // Анимация дрожания портрета игрока
+            let afterFirstHP = battle.playerHP
             battle.dealDamage(amount: dmg2, to: .player, isWeaponDamage: true)
-            triggerShake(for: .player) // Анимация дрожания портрета игрока (второй удар)
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
+            // Анимация только если был реальный урон по HP
+            if max(0, beforeHP - afterFirstHP) > 0 {
+                triggerShake(for: .player) // Первый удар
+            }
+            if max(0, afterFirstHP - battle.playerHP) > 0 {
+                triggerShake(for: .player) // Второй удар
+            }
             pushLog(&battle, side: .enemy, "Double Strike: dmg \(dealt) (blocked \(blocked))")
             if battle.playerHP <= 0 {
                 self.battle = battle
