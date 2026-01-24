@@ -844,7 +844,9 @@ final class GameStore: ObservableObject {
             let enemyBleedStacks = battle.enemyStatuses.first(where: { $0.type == .bleed })?.stacks ?? 0
             if enemyBleedStacks > 0 {
                 // Если у врага есть кровотечение: урон = стаки × 3
-                let dmg = enemyBleedStacks * 3
+                // Урон проходит через modifiedOutgoingWeaponDamage для учета слабости
+                let baseDmg = enemyBleedStacks * 3
+                let dmg = battle.modifiedOutgoingWeaponDamage(baseDmg, from: .player)
                 let beforeHP = battle.enemyHP
                 let beforeBlock = battle.enemyBlock
                 battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
