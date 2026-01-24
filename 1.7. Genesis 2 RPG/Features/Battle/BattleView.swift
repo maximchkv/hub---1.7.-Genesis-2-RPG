@@ -373,7 +373,8 @@ private struct ParticipantsPanel: View {
     private let dividerH: CGFloat = 1
     private let interCardGap: CGFloat = 24
     private let portraitCorner: CGFloat = 14
-    private let statusChipHeight: CGFloat = 20
+    private let statusChipHeight: CGFloat = 16 // Уменьшено для компактности
+    private let statusContainerHeight: CGFloat = 35 // Фиксированная высота для 2 рядов по 2 статуса: (16 * 2) + (3 * 1) = 35
 
     var body: some View {
         HStack(alignment: .top, spacing: interCardGap) {
@@ -383,7 +384,7 @@ private struct ParticipantsPanel: View {
                 block: playerBlock,
                 maxHP: playerMaxHP,
                 statuses: playerStatuses,
-                intentText: nil,
+                intent: nil,
                 actionPoints: playerActionPoints,
                 portrait: .player
             )
@@ -395,7 +396,7 @@ private struct ParticipantsPanel: View {
                 block: enemyBlock,
                 maxHP: enemyMaxHP,
                 statuses: enemyStatuses,
-                intentText: enemyIntent.displayRU,
+                intent: enemyIntent,
                 actionPoints: nil,
                 portrait: .enemy(name: enemyName)
             )
@@ -415,7 +416,7 @@ private struct ParticipantsPanel: View {
         block: Int,
         maxHP: Int,
         statuses: [StatusInstance],
-        intentText: String?,
+        intent: EnemyIntent?,
         actionPoints: Int?,
         portrait: PortraitKind
     ) -> some View {
@@ -427,7 +428,7 @@ private struct ParticipantsPanel: View {
             block: block,
             maxHP: maxHP,
             statuses: statuses,
-            intentText: intentText,
+            intent: intent,
             actionPoints: actionPoints,
             portrait: portrait,
             debug: debug
@@ -447,7 +448,7 @@ private struct ParticipantsPanel: View {
         block: Int,
         maxHP: Int,
         statuses: [StatusInstance],
-        intentText: String?,
+        intent: EnemyIntent?,
         actionPoints: Int?,
         portrait: PortraitKind,
         debug: Bool
@@ -472,40 +473,21 @@ private struct ParticipantsPanel: View {
                 .frame(height: 48)
                 .frame(maxWidth: .infinity)
 
-            // 5) Statuses (NEW)
-            if !statuses.isEmpty {
-                statusesView(statuses: statuses)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 0)
-                            .stroke(Color.cyan, lineWidth: 2)
-                            .opacity(debug ? 1 : 0)
-                    )
-            } else {
-                // Spacer to maintain consistent layout
-                Spacer()
-                    .frame(height: statusChipHeight)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 0)
-                            .stroke(Color.cyan, lineWidth: 2)
-                            .opacity(debug ? 1 : 0)
-                    )
-            }
+            // 5) Statuses (NEW) - фиксированная высота для 2 рядов по 2 статуса
+            statusesView(statuses: statuses)
+                .frame(height: statusContainerHeight) // Фиксированная высота
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(Color.cyan, lineWidth: 2)
+                        .opacity(debug ? 1 : 0)
+                )
 
             // 6) Intent or Action Points
             Group {
-                if let intentText {
-                    // Враг: показываем интент
-                    Text(intentText)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 10)
-                        .background(UIStyle.Colors.mutedFill)
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
-                        )
+                if let intent {
+                    // Враг: показываем интент с SF Symbol иконкой
+                    intentBlock(intent: intent)
                 } else if let actionPoints = actionPoints {
                     // Игрок: показываем очки действия
                     actionPointsBlock(ap: actionPoints)
@@ -518,7 +500,7 @@ private struct ParticipantsPanel: View {
                         .opacity(0)
                 }
             }
-            .frame(height: 24)
+            .frame(height: 24) // Фиксированная высота вместо minHeight
             .overlay(
                 RoundedRectangle(cornerRadius: 0)
                     .stroke(Color.yellow, lineWidth: 2)
@@ -543,9 +525,9 @@ private struct ParticipantsPanel: View {
     @ViewBuilder
     private func statusesView(statuses: [StatusInstance]) -> some View {
         LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 4),
-            GridItem(.flexible(), spacing: 4)
-        ], spacing: 4) {
+            GridItem(.flexible(), spacing: 3),
+            GridItem(.flexible(), spacing: 3)
+        ], spacing: 3) {
             ForEach(statuses) { status in
                 statusChip(status: status)
             }
@@ -553,25 +535,25 @@ private struct ParticipantsPanel: View {
     }
     
     private func statusChip(status: StatusInstance) -> some View {
-        HStack(spacing: 4) {
-            // Иконка статуса
+        HStack(spacing: 3) {
+            // Иконка статуса (уменьшена)
             Image(systemName: status.type.iconName)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(status.type.iconColor)
             
-            // Количество стаков (всегда показываем, даже если 1)
+            // Количество стаков (уменьшен шрифт)
             Text("\(status.stacks)")
-                .font(.caption2.weight(.bold))
+                .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(UIStyle.Colors.inkPrimary)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
         .frame(height: statusChipHeight)
         .frame(maxWidth: .infinity)
         .background(UIStyle.Colors.mutedFill)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 4)
                 .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
         )
     }
@@ -591,6 +573,40 @@ private struct ParticipantsPanel: View {
             Text("\(ap)")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(UIStyle.Colors.inkPrimary)
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(UIStyle.Colors.mutedFill)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Intent Block (такой же формат как Action Points)
+    
+    private func intentBlock(intent: EnemyIntent) -> some View {
+        HStack(spacing: 6) {
+            Text("Собирается:")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .lineLimit(1)
+            
+            // SF Symbol иконка (синхронизировано с карточками)
+            Image(systemName: intent.iconName)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(intent.iconColor)
+                .imageScale(.medium)
+                .symbolRenderingMode(.hierarchical)
+            
+            // Текст интента (всегда в одну строку)
+            Text(intent.displayText)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 10)

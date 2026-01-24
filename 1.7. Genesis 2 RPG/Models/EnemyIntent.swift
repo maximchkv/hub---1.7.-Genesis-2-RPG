@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum EnemyIntentKind: String, Codable {
     case attack
@@ -12,6 +13,26 @@ struct EnemyIntent: Codable, Hashable {
     var kind: EnemyIntentKind
     var value: Int = 0
 
+    /// SF Symbol иконка (синхронизировано с карточками)
+    var iconName: String {
+        switch kind {
+        case .attack: return "flame.fill"                      // Атака (как Мощный удар)
+        case .defend: return "shield.fill"                     // Защита (как карта Защита)
+        case .counter: return "arrow.counterclockwise.circle.fill" // Контратака (как карта Контратака)
+        case .counterStance: return "arrow.counterclockwise.circle.fill" // Стойка (как карта Контратака)
+        case .doubleStrikeFixed4: return "arrow.triangle.2.circlepath" // Двойной удар (как карта Двойной удар)
+        }
+    }
+    
+    /// Цвет иконки (синхронизировано с карточками)
+    var iconColor: Color {
+        switch kind {
+        case .attack, .defend, .counter, .counterStance, .doubleStrikeFixed4:
+            return UIStyle.Colors.inkPrimary // Нейтральный цвет для базовых интентов
+        }
+    }
+
+    @available(*, deprecated, message: "Используйте iconName вместо icon")
     var icon: String {
         switch kind {
         case .attack: return "🗡️"
@@ -33,7 +54,21 @@ struct EnemyIntent: Codable, Hashable {
         }
     }
 
-    /// Compact RU description for the current intent, used in UI.
+    /// Текст для отображения (без иконки, иконка отображается отдельно)
+    var displayText: String {
+        switch kind {
+        case .attack:
+            return "\(value)"
+        case .defend:
+            return "+\(value)"
+        case .doubleStrikeFixed4:
+            return "4×2"
+        case .counter, .counterStance:
+            return titleRU
+        }
+    }
+    
+    @available(*, deprecated, message: "Используйте displayText вместо displayRU")
     var displayRU: String {
         switch kind {
         case .attack:
