@@ -164,13 +164,23 @@ struct BattleState {
         switch side {
         case .player:
             if let idx = playerStatuses.firstIndex(where: { $0.type == type }) {
-                playerStatuses[idx].stacks = newStacks
+                if newStacks > 0 {
+                    playerStatuses[idx].stacks = newStacks
+                } else {
+                    // Удаляем статус, если стаки стали 0 или меньше
+                    playerStatuses.remove(at: idx)
+                }
             } else if newStacks > 0 {
                 playerStatuses.append(StatusInstance(type: type, stacks: newStacks))
             }
         case .enemy:
             if let idx = enemyStatuses.firstIndex(where: { $0.type == type }) {
-                enemyStatuses[idx].stacks = newStacks
+                if newStacks > 0 {
+                    enemyStatuses[idx].stacks = newStacks
+                } else {
+                    // Удаляем статус, если стаки стали 0 или меньше
+                    enemyStatuses.remove(at: idx)
+                }
             } else if newStacks > 0 {
                 enemyStatuses.append(StatusInstance(type: type, stacks: newStacks))
             }

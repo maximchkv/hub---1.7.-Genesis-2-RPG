@@ -861,11 +861,13 @@ final class GameStore: ObservableObject {
         for line in out.logLines {
             b.log.append(CombatLogEntry.system(line))
         }
+        // Важно: сохраняем изменения статусов сразу после startOfTurn
+        self.battle = b
+        b = self.battle!
 
         // Enemy phase: per spec (only if not stunned)
         if !out.didSkipTurn {
             pushSeparator()
-            self.battle = b
             performEnemyTurn()
             if let after = self.battle { b = after }
             pushSeparator()
@@ -958,8 +960,14 @@ final class GameStore: ObservableObject {
 
     func cycleEnemyIntent() {
         guard var battle = battle else { return }
+        // Сохраняем текущие статусы перед изменением интента
+        let savedPlayerStatuses = battle.playerStatuses
+        let savedEnemyStatuses = battle.enemyStatuses
         battle.advanceEnemyPattern()
         battle.enemyIntent = intentFromPattern(battle)
+        // Восстанавливаем статусы (на случай если они были потеряны)
+        battle.playerStatuses = savedPlayerStatuses
+        battle.enemyStatuses = savedEnemyStatuses
         self.battle = battle
     }
 
