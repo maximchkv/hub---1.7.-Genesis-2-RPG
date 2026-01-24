@@ -641,8 +641,8 @@ private struct ParticipantsPanel: View {
         let enemyPortraitAssetName: (String) -> String?
         
         // Параметры анимации дрожания (можно легко менять)
-        private let shakeAmplitude: CGFloat = 12  // Амплитуда колебаний (размах): от -12 до +12 пикселей
-        private let shakeDuration: Double = 0.15 // Длительность одного колебания в секундах
+        private let shakeAmplitude: CGFloat = 10  // Амплитуда колебаний (размах): от -12 до +12 пикселей
+        private let shakeDuration: Double = 0.12 // Длительность одного колебания в секундах
         
         @State private var shakeX: CGFloat = 0
         @State private var shakeY: CGFloat = 0

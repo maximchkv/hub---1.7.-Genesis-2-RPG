@@ -7,54 +7,67 @@ struct RewardView: View {
     @EnvironmentObject private var store: GameStore
 
     @State private var isClaiming: Bool = false
+    @State private var showConfetti: Bool = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Header
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Награда")
-                        .font(.system(size: 28, weight: .semibold, design: .serif))
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+        ZStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Награда")
+                            .font(.system(size: 28, weight: .semibold, design: .serif))
+                            .foregroundStyle(UIStyle.Colors.inkPrimary)
 
-                    Text("Выберите 1 улучшение")
-                        .font(.callout)
-                        .foregroundStyle(UIStyle.Colors.inkSecondary)
-                }
-                .padding(.bottom, 4)
-
-                // Cards
-                if let reward = store.reward {
-                    VStack(spacing: 12) {
-                        ForEach(reward.options, id: \.self) { kind in
-                            Button {
-                                claim(kind)
-                            } label: {
-                                RewardOptionCard(
-                                    icon: icon(for: kind),
-                                    title: title(for: kind),
-                                    subtitle: "Улучшение: +1 уровень"
-                                )
-                            }
-                            .buttonStyle(UIStyle.CardButtonStyle())
-                            .disabled(isClaiming)
-                        }
+                        Text("Выберите 1 улучшение")
+                            .font(.callout)
+                            .foregroundStyle(UIStyle.Colors.inkSecondary)
                     }
-                } else {
-                    Text("Награда недоступна (debug)")
-                        .font(.caption)
-                        .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    .padding(.bottom, 4)
+
+                    // Cards
+                    if let reward = store.reward {
+                        VStack(spacing: 12) {
+                            ForEach(reward.options, id: \.self) { kind in
+                                Button {
+                                    claim(kind)
+                                } label: {
+                                    RewardOptionCard(
+                                        icon: icon(for: kind),
+                                        title: title(for: kind),
+                                        subtitle: "Улучшение: +1 уровень"
+                                    )
+                                }
+                                .buttonStyle(UIStyle.CardButtonStyle())
+                                .disabled(isClaiming)
+                            }
+                        }
+                    } else {
+                        Text("Награда недоступна (debug)")
+                            .font(.caption)
+                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    }
                 }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .scrollIndicators(.hidden)
+            .background {
+                UIStyle.background()
+                    .ignoresSafeArea()
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            
+            // Анимация конфетти
+            if showConfetti {
+                ConfettiView()
+                    .allowsHitTesting(false)
+            }
         }
-        .scrollIndicators(.hidden)
-        .background {
-            UIStyle.background()
-                .ignoresSafeArea()
+        .onAppear {
+            // Запускаем конфетти при появлении экрана
+            showConfetti = true
         }
-        .toolbar(.hidden, for: .navigationBar)
     }
 
     private func claim(_ kind: ActionCardKind) {
@@ -151,4 +164,103 @@ private struct RewardOptionCard: View {
                 .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
         )
     }
+}
+
+// MARK: - Confetti Animation
+
+private struct ConfettiView: View {
+    // Параметры анимации конфетти (можно легко менять)
+    private let particleCount: Int = 60           // Количество частиц конфетти
+    private let animationDuration: Double = 2.5  // Длительность анимации в секундах
+    private let spreadWidth: CGFloat = 400        // Ширина разброса частиц (от центра)
+    private let minFallSpeed: Double = 150       // Минимальная скорость падения
+    private let maxFallSpeed: Double = 300        // Максимальная скорость падения
+    private let rotationSpeed: Double = 360       // Скорость вращения (градусов в секунду)
+    
+    @State private var particles: [ConfettiParticle] = []
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(particles) { particle in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(particle.color)
+                        .frame(width: particle.size, height: particle.size)
+                        .rotationEffect(.degrees(particle.rotation))
+                        .position(particle.position)
+                        .opacity(particle.opacity)
+                }
+            }
+            .onAppear {
+                setupParticles(in: geometry.size)
+                startAnimation()
+            }
+        }
+    }
+    
+    private func setupParticles(in size: CGSize) {
+        particles = (0..<particleCount).map { index in
+            let startX = size.width / 2 + CGFloat.random(in: -spreadWidth / 2...spreadWidth / 2)
+            let fallSpeed = Double.random(in: minFallSpeed...maxFallSpeed)
+            let distance = Double(size.height + 100)
+            let duration = distance / fallSpeed
+            
+            return ConfettiParticle(
+                id: index,
+                position: CGPoint(x: startX, y: -20),
+                color: randomColor(),
+                size: CGFloat.random(in: 8...14),
+                opacity: Double.random(in: 0.8...1.0),
+                fallSpeed: fallSpeed,
+                horizontalDrift: CGFloat.random(in: -50...50),
+                rotation: 0,
+                rotationSpeed: Double.random(in: -rotationSpeed...rotationSpeed),
+                duration: duration,
+                screenHeight: size.height
+            )
+        }
+    }
+    
+    private func startAnimation() {
+        for index in particles.indices {
+            let particle = particles[index]
+            let finalY = particle.screenHeight + 100
+            let finalX = particle.position.x + particle.horizontalDrift
+            let finalRotation = particle.rotation + particle.rotationSpeed * particle.duration
+            
+            // Анимация падения и вращения одновременно
+            withAnimation(.linear(duration: particle.duration)) {
+                particles[index].position = CGPoint(x: finalX, y: finalY)
+                particles[index].opacity = 0
+                particles[index].rotation = finalRotation
+            }
+        }
+        
+        // Скрываем конфетти после завершения анимации
+        let maxDuration = particles.map { $0.duration }.max() ?? animationDuration
+        DispatchQueue.main.asyncAfter(deadline: .now() + maxDuration) {
+            particles = []
+        }
+    }
+    
+    private func randomColor() -> Color {
+        let colors: [Color] = [
+            .red, .blue, .green, .yellow, .orange, .purple, .pink, .cyan
+        ]
+        return colors.randomElement() ?? .red
+    }
+}
+
+private struct ConfettiParticle: Identifiable {
+    let id: Int
+    var position: CGPoint
+    let color: Color
+    let size: CGFloat
+    var opacity: Double
+    let fallSpeed: Double
+    let horizontalDrift: CGFloat
+    var rotation: Double
+    let rotationSpeed: Double
+    let duration: Double
+    let screenHeight: CGFloat
 }
