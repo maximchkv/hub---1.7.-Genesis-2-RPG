@@ -76,6 +76,8 @@ struct BattleView: View {
                             enemyMaxHP: 20,
                             enemyStatuses: battle.enemyStatuses,
                             enemyIntent: battle.enemyIntent,
+                            playerShakeTrigger: store.playerShakeTrigger,
+                            enemyShakeTrigger: store.enemyShakeTrigger,
                             debug: showDebugOutlines
                         )
                         .frame(width: finalContentWidth)
@@ -365,6 +367,8 @@ private struct ParticipantsPanel: View {
     let enemyMaxHP: Int
     let enemyStatuses: [StatusInstance]
     let enemyIntent: EnemyIntent
+    let playerShakeTrigger: Int
+    let enemyShakeTrigger: Int
     let debug: Bool
 
     private let corner: CGFloat = 16
@@ -386,7 +390,8 @@ private struct ParticipantsPanel: View {
                 statuses: playerStatuses,
                 intent: nil,
                 actionPoints: playerActionPoints,
-                portrait: .player
+                portrait: .player,
+                shakeTrigger: playerShakeTrigger
             )
             .frame(maxWidth: .infinity, alignment: .topLeading)
 
@@ -398,7 +403,8 @@ private struct ParticipantsPanel: View {
                 statuses: enemyStatuses,
                 intent: enemyIntent,
                 actionPoints: nil,
-                portrait: .enemy(name: enemyName)
+                portrait: .enemy(name: enemyName),
+                shakeTrigger: enemyShakeTrigger
             )
             .frame(maxWidth: .infinity, alignment: .topTrailing)
         }
@@ -418,7 +424,8 @@ private struct ParticipantsPanel: View {
         statuses: [StatusInstance],
         intent: EnemyIntent?,
         actionPoints: Int?,
-        portrait: PortraitKind
+        portrait: PortraitKind,
+        shakeTrigger: Int
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: corner)
 
@@ -431,6 +438,7 @@ private struct ParticipantsPanel: View {
             intent: intent,
             actionPoints: actionPoints,
             portrait: portrait,
+            shakeTrigger: shakeTrigger,
             debug: debug
         )
         .padding(innerPad)
@@ -451,6 +459,7 @@ private struct ParticipantsPanel: View {
         intent: EnemyIntent?,
         actionPoints: Int?,
         portrait: PortraitKind,
+        shakeTrigger: Int,
         debug: Bool
     ) -> some View {
         VStack(spacing: rowGap) {
@@ -507,8 +516,8 @@ private struct ParticipantsPanel: View {
                     .opacity(debug ? 1 : 0)
             )
 
-            // 7) Portrait (square)
-            portraitView(portrait)
+            // 7) Portrait (square) with shake animation
+            portraitView(portrait, shakeTrigger: shakeTrigger)
                 .frame(maxWidth: .infinity)
                 .aspectRatio(1, contentMode: .fit)
                 .overlay(
@@ -620,35 +629,98 @@ private struct ParticipantsPanel: View {
     }
     
     @ViewBuilder
-    private func portraitView(_ kind: PortraitKind) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: portraitCorner)
-                .strokeBorder(UIStyle.Colors.cardStroke, lineWidth: 1)
-                .background(
-                    RoundedRectangle(cornerRadius: portraitCorner)
-                        .fill(UIStyle.Colors.mutedFill)
-                )
+    private func portraitView(_ kind: PortraitKind, shakeTrigger: Int) -> some View {
+        PortraitShakeView(kind: kind, shakeTrigger: shakeTrigger, portraitCorner: portraitCorner, enemyPortraitAssetName: enemyPortraitAssetName)
+    }
+    
+    // Отдельный View для анимации дрожания с правильной обработкой изменений
+    private struct PortraitShakeView: View {
+        let kind: PortraitKind
+        let shakeTrigger: Int
+        let portraitCorner: CGFloat
+        let enemyPortraitAssetName: (String) -> String?
+        
+        // Параметры анимации дрожания (можно легко менять)
+        private let shakeAmplitude: CGFloat = 12  // Амплитуда колебаний (размах): от -12 до +12 пикселей
+        private let shakeDuration: Double = 0.15 // Длительность одного колебания в секундах
+        
+        @State private var shakeX: CGFloat = 0
+        @State private var shakeY: CGFloat = 0
+        
+        var body: some View {
+            ZStack {
+                RoundedRectangle(cornerRadius: portraitCorner)
+                    .strokeBorder(UIStyle.Colors.cardStroke, lineWidth: 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: portraitCorner)
+                            .fill(UIStyle.Colors.mutedFill)
+                    )
 
-            switch kind {
-            case .player:
-                Image("player")
-                    .resizable()
-                    .scaledToFill()
-                    .clipShape(RoundedRectangle(cornerRadius: portraitCorner))
-            case .enemy(let name):
-                if let asset = enemyPortraitAssetName(for: name) {
-                    Image(asset)
+                switch kind {
+                case .player:
+                    Image("player")
                         .resizable()
                         .scaledToFill()
                         .clipShape(RoundedRectangle(cornerRadius: portraitCorner))
-                } else {
-                    Image(systemName: "photo")
-                        .font(.system(size: 22, weight: .regular))
-                        .foregroundStyle(.secondary)
+                case .enemy(let name):
+                    if let asset = enemyPortraitAssetName(name) {
+                        Image(asset)
+                            .resizable()
+                            .scaledToFill()
+                            .clipShape(RoundedRectangle(cornerRadius: portraitCorner))
+                    } else {
+                        Image(systemName: "photo")
+                            .font(.system(size: 22, weight: .regular))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
+            .offset(x: shakeX, y: shakeY) // Отдельные смещения по X и Y для более заметного дрожания
+            .onChange(of: shakeTrigger) { newValue in
+                // Запускаем анимацию каждый раз при изменении триггера
+                guard newValue > 0 else {
+                    // Сбрасываем смещение, если триггер сброшен
+                    withAnimation {
+                        shakeX = 0
+                        shakeY = 0
+                    }
+                    return
+                }
+                
+                // Генерируем новое случайное смещение для каждого триггера
+                // Используем параметр shakeAmplitude для амплитуды
+                let seed = UInt64(newValue)
+                var state = seed
+                state = state &* 1103515245 &+ 12345
+                let range = Int(shakeAmplitude * 2) + 1 // Диапазон от -amplitude до +amplitude
+                let xOffset = CGFloat(Int(state) % range) - shakeAmplitude
+                
+                state = state &* 1103515245 &+ 12345
+                let yOffset = CGFloat(Int(state) % range) - shakeAmplitude
+                
+                // Сбрасываем перед новой анимацией
+                shakeX = 0
+                shakeY = 0
+                
+                // Используем параметр shakeDuration для длительности
+                let repeatCount: Int = 6 // Количество повторений
+                
+                // Запускаем анимацию дрожания с настраиваемыми параметрами
+                withAnimation(.easeInOut(duration: shakeDuration).repeatCount(repeatCount, autoreverses: true)) {
+                    shakeX = xOffset
+                    shakeY = yOffset
+                }
+                
+                // Сбрасываем смещение после завершения анимации
+                DispatchQueue.main.asyncAfter(deadline: .now() + shakeDuration * Double(repeatCount)) {
+                    withAnimation {
+                        shakeX = 0
+                        shakeY = 0
+                    }
+                }
+            }
+            .clipped()
         }
-        .clipped()
     }
 
     private func enemyPortraitAssetName(for name: String) -> String? {

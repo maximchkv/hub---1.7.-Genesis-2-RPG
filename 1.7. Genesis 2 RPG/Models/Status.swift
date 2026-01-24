@@ -59,9 +59,13 @@ enum BattleSide: Codable, Hashable {
 struct TurnStartOutcome {
     var didSkipTurn: Bool
     var logLines: [String]
+    var damageDealtToPlayer: Int = 0  // Урон, нанесенный игроку (для анимации)
+    var damageDealtToEnemy: Int = 0   // Урон, нанесенный врагу (для анимации)
 
-    init(didSkipTurn: Bool = false, logLines: [String] = []) {
+    init(didSkipTurn: Bool = false, logLines: [String] = [], damageDealtToPlayer: Int = 0, damageDealtToEnemy: Int = 0) {
         self.didSkipTurn = didSkipTurn
         self.logLines = logLines
+        self.damageDealtToPlayer = damageDealtToPlayer
+        self.damageDealtToEnemy = damageDealtToEnemy
     }
 }

@@ -29,6 +29,20 @@ final class GameStore: ObservableObject {
 
     // Reward (currently not routed, but referenced by RewardView.swift)
     @Published var reward: RewardState? = nil
+    
+    // Анимация дрожания портретов при получении урона
+    @Published var playerShakeTrigger: Int = 0
+    @Published var enemyShakeTrigger: Int = 0
+    
+    // Хелпер для триггера анимации дрожания
+    private func triggerShake(for side: BattleSide) {
+        switch side {
+        case .player:
+            playerShakeTrigger += 1
+        case .enemy:
+            enemyShakeTrigger += 1
+        }
+    }
 
     // Tracks the room currently being resolved (used for post-room progression)
     @Published var activeRoomKind: RoomKind? = nil
@@ -763,6 +777,7 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.enemyHP
             let beforeBlock = battle.enemyBlock
             battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
+            triggerShake(for: .enemy) // Анимация дрожания портрета врага
             let dealt = max(0, beforeHP - battle.enemyHP)
             let blocked = max(0, beforeBlock - battle.enemyBlock)
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
@@ -779,7 +794,9 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.enemyHP
             let beforeBlock = battle.enemyBlock
             battle.dealDamage(amount: dmg1, to: .enemy, isWeaponDamage: true)
+            triggerShake(for: .enemy) // Анимация дрожания портрета врага
             battle.dealDamage(amount: dmg2, to: .enemy, isWeaponDamage: true)
+            triggerShake(for: .enemy) // Анимация дрожания портрета врага (второй удар)
             let dealt = max(0, beforeHP - battle.enemyHP)
             let blocked = max(0, beforeBlock - battle.enemyBlock)
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
@@ -792,6 +809,7 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.enemyHP
             let beforeBlock = battle.enemyBlock
             battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
+            triggerShake(for: .enemy) // Анимация дрожания портрета врага
             let dealt = max(0, beforeHP - battle.enemyHP)
             let blocked = max(0, beforeBlock - battle.enemyBlock)
             pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal), dmg \(dealt) (blocked \(blocked))")
@@ -818,6 +836,7 @@ final class GameStore: ObservableObject {
                 let beforeHP = battle.enemyHP
                 let beforeBlock = battle.enemyBlock
                 battle.dealDamage(amount: dmg, to: .enemy, isWeaponDamage: true)
+                triggerShake(for: .enemy) // Анимация дрожания портрета врага
                 let dealt = max(0, beforeHP - battle.enemyHP)
                 let blocked = max(0, beforeBlock - battle.enemyBlock)
                 pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked), от кровотечения ×\(enemyBleedStacks))")
@@ -861,6 +880,13 @@ final class GameStore: ObservableObject {
         for line in out.logLines {
             b.log.append(CombatLogEntry.system(line))
         }
+        // Триггер анимации для урона от кровотечения
+        if out.damageDealtToEnemy > 0 {
+            triggerShake(for: .enemy)
+        }
+        if out.damageDealtToPlayer > 0 {
+            triggerShake(for: .player)
+        }
         // Важно: сохраняем изменения статусов сразу после startOfTurn
         self.battle = b
         b = self.battle!
@@ -881,6 +907,13 @@ final class GameStore: ObservableObject {
         out = b.startOfTurn(for: .player)
         for line in out.logLines {
             b.log.append(CombatLogEntry.system(line))
+        }
+        // Триггер анимации для урона от кровотечения
+        if out.damageDealtToPlayer > 0 {
+            triggerShake(for: .player)
+        }
+        if out.damageDealtToEnemy > 0 {
+            triggerShake(for: .enemy)
         }
 
         // Prepare next player turn
@@ -903,6 +936,7 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.playerHP
             let beforeBlock = battle.playerBlock
             battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
+            triggerShake(for: .player) // Анимация дрожания портрета игрока
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
             pushLog(&battle, side: .enemy, "Attack: dmg \(dealt) (blocked \(blocked))")
@@ -925,6 +959,7 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.playerHP
             let beforeBlock = battle.playerBlock
             battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
+            triggerShake(for: .player) // Анимация дрожания портрета игрока
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
             pushLog(&battle, side: .enemy, "Counter Stance: block +\(bVal), dmg \(dealt) (blocked \(blocked))")
@@ -941,7 +976,9 @@ final class GameStore: ObservableObject {
             let beforeHP = battle.playerHP
             let beforeBlock = battle.playerBlock
             battle.dealDamage(amount: dmg1, to: .player, isWeaponDamage: true)
+            triggerShake(for: .player) // Анимация дрожания портрета игрока
             battle.dealDamage(amount: dmg2, to: .player, isWeaponDamage: true)
+            triggerShake(for: .player) // Анимация дрожания портрета игрока (второй удар)
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
             pushLog(&battle, side: .enemy, "Double Strike: dmg \(dealt) (blocked \(blocked))")

@@ -76,6 +76,7 @@ struct BattleState {
         var outcome = TurnStartOutcome()
 
         // 1) Bleed applies first (Block -> HP)
+        // Урон от кровотечения отслеживается внутри applyBleedIfNeeded
         applyBleedIfNeeded(for: side, outcome: &outcome)
 
         // 2) Stun check
@@ -104,9 +105,25 @@ struct BattleState {
         let stacks = getStacks(.bleed, for: side)
         guard stacks > 0 else { return }
 
+        // Сохраняем HP до урона для отслеживания (только реальный урон по HP, не по блоку)
+        let beforeHP = (side == .player) ? playerHP : enemyHP
+
         // Status damage: NOT weapon, passes Block first
         dealDamage(amount: stacks, to: side, isWeaponDamage: false)
         outcome.logLines.append("\(side == .player ? "Player" : "Enemy") suffers Bleed (\(stacks)).")
+
+        // Проверяем, был ли нанесен реальный урон по HP (не по блоку)
+        let afterHP = (side == .player) ? playerHP : enemyHP
+        let hpDamage = max(0, beforeHP - afterHP)
+        
+        // Записываем урон в outcome для триггера анимации только если был урон по HP
+        if hpDamage > 0 {
+            if side == .player {
+                outcome.damageDealtToPlayer = hpDamage
+            } else {
+                outcome.damageDealtToEnemy = hpDamage
+            }
+        }
 
         // Decay by 3
         addOrSetStacks(.bleed, for: side, newStacks: max(0, stacks - 3))
