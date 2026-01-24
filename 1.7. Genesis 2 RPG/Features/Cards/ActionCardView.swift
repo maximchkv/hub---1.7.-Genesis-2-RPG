@@ -14,7 +14,10 @@ struct ActionCardView: View {
     let showDebugOutlines: Bool = false
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
+            // Отступ от верхней границы карточки до иконки (6px * 1.5 = 9px, padding уже 6px, добавляем 3px)
+            Spacer().frame(height: 3)
+            
             // Top: centered icon, level badge in top-right
             ZStack(alignment: .topTrailing) {
                 ZStack {
@@ -41,6 +44,9 @@ struct ActionCardView: View {
                 }
             }
 
+            // Отступ после иконки (8px * 1.5 = 12px)
+            Spacer().frame(height: 12)
+
             // Name - фиксированная высота, текст масштабируется
             Text(titleRU)
                 .font(.subheadline.weight(.semibold))
@@ -56,22 +62,32 @@ struct ActionCardView: View {
                         .opacity(showDebugOutlines ? 1 : 0)
                 )
 
-            // Effect - фиксированная высота, текст масштабируется
-            Text(effectRU)
-                .font(.caption)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
-                .minimumScaleFactor(0.3)
-                .frame(maxWidth: .infinity)
-                .frame(height: 24)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 0)
-                        .stroke(Color.blue, lineWidth: 2)
-                        .opacity(showDebugOutlines ? 1 : 0)
-                )
+            // Отступ после названия
+            Spacer().frame(height: 6)
 
-            Spacer(minLength: 0)
+            // Effect - адаптивное описание, занимает все доступное пространство
+            GeometryReader { geo in
+                VStack {
+                    Spacer()
+                    Text(effectRU)
+                        .font(.caption)
+                        .foregroundStyle(UIStyle.Colors.inkSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(6)
+                        .minimumScaleFactor(0.3)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 0)
+                                .stroke(Color.blue, lineWidth: 2)
+                                .opacity(showDebugOutlines ? 1 : 0)
+                        )
+                    Spacer()
+                }
+            }
+            .frame(maxHeight: .infinity)
+
+            // Отступ перед стоимостью
+            Spacer().frame(height: 8)
 
             // Cost
             Text("\(card.cost) ОД")

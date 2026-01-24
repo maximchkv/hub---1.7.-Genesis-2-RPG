@@ -235,11 +235,15 @@ struct BattleView: View {
     // MARK: - Bottom Controls
 
     private func compactBottomControls(battle: BattleState, contentWidth: CGFloat) -> some View {
-        HStack(spacing: UIStyle.Spacing.s) {
+        // Высота блока с очками действий (padding vertical 8px * 2 + контент ~20px = ~36px)
+        let controlHeight: CGFloat = 36
+        
+        return HStack(spacing: UIStyle.Spacing.s) {
             // Compact AP indicator
             compactAPIndicator(ap: battle.actionPoints)
+                .frame(height: controlHeight)
             
-            // End Turn button
+            // End Turn button - такая же высота как AP indicator
             Button {
                 store.endTurn()
             } label: {
@@ -250,7 +254,7 @@ struct BattleView: View {
                     Spacer()
                 }
                 .foregroundStyle(.white)
-                .frame(height: 52)
+                .frame(height: controlHeight)
                 .padding(.horizontal, UIStyle.Spacing.l)
                 .background(
                     RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
