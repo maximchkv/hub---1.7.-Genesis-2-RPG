@@ -5,7 +5,7 @@ struct BattleView: View {
     @EnvironmentObject private var store: GameStore
 
     // Debug layout outlines (3px) to visualize real block bounds
-    private let showDebugOutlines: Bool = true
+    private let showDebugOutlines: Bool = false
 
     // MARK: - Layout constants (Contract v3.0)
 
@@ -69,6 +69,7 @@ struct BattleView: View {
                             playerBlock: battle.playerBlock,
                             playerMaxHP: 20,
                             playerStatuses: battle.playerStatuses,
+                            playerActionPoints: battle.actionPoints,
                             enemyName: battle.enemyName,
                             enemyHP: battle.enemyHP,
                             enemyBlock: battle.enemyBlock,
@@ -240,36 +241,24 @@ struct BattleView: View {
     // MARK: - Bottom Controls
 
     private func compactBottomControls(battle: BattleState, contentWidth: CGFloat) -> some View {
-        // Высота блока с очками действий (padding vertical 8px * 2 + контент ~20px = ~36px)
         let controlHeight: CGFloat = 36
         
-        return HStack(spacing: UIStyle.Spacing.s) {
-            // Compact AP indicator
-            compactAPIndicator(ap: battle.actionPoints)
-                .frame(height: controlHeight)
-            
-            // End Turn button - такая же высота как AP indicator
-            Button {
-                store.endTurn()
-            } label: {
-                HStack {
-                    Text("Закончить ход")
-                        .font(.headline)
-                    
-                    Spacer()
-                }
+        return Button {
+            store.endTurn()
+        } label: {
+            Text("Закончить ход")
+                .font(.headline)
                 .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
                 .frame(height: controlHeight)
-                .padding(.horizontal, UIStyle.Spacing.l)
                 .background(
                     RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
                         .fill(UIStyle.Colors.accent)
                 )
-            }
-            .buttonStyle(.plain)
-            .disabled(battle.phase != .player)
-            .opacity(battle.phase == .player ? 1.0 : 0.55)
         }
+        .buttonStyle(.plain)
+        .disabled(battle.phase != .player)
+        .opacity(battle.phase == .player ? 1.0 : 0.55)
     }
 
     private func compactAPIndicator(ap: Int) -> some View {
@@ -368,6 +357,7 @@ private struct ParticipantsPanel: View {
     let playerBlock: Int
     let playerMaxHP: Int
     let playerStatuses: [StatusInstance]
+    let playerActionPoints: Int
 
     let enemyName: String
     let enemyHP: Int
@@ -394,6 +384,7 @@ private struct ParticipantsPanel: View {
                 maxHP: playerMaxHP,
                 statuses: playerStatuses,
                 intentText: nil,
+                actionPoints: playerActionPoints,
                 portrait: .player
             )
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -405,6 +396,7 @@ private struct ParticipantsPanel: View {
                 maxHP: enemyMaxHP,
                 statuses: enemyStatuses,
                 intentText: enemyIntent.displayRU,
+                actionPoints: nil,
                 portrait: .enemy(name: enemyName)
             )
             .frame(maxWidth: .infinity, alignment: .topTrailing)
@@ -424,6 +416,7 @@ private struct ParticipantsPanel: View {
         maxHP: Int,
         statuses: [StatusInstance],
         intentText: String?,
+        actionPoints: Int?,
         portrait: PortraitKind
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: corner)
@@ -435,6 +428,7 @@ private struct ParticipantsPanel: View {
             maxHP: maxHP,
             statuses: statuses,
             intentText: intentText,
+            actionPoints: actionPoints,
             portrait: portrait,
             debug: debug
         )
@@ -454,6 +448,7 @@ private struct ParticipantsPanel: View {
         maxHP: Int,
         statuses: [StatusInstance],
         intentText: String?,
+        actionPoints: Int?,
         portrait: PortraitKind,
         debug: Bool
     ) -> some View {
@@ -497,9 +492,10 @@ private struct ParticipantsPanel: View {
                     )
             }
 
-            // 6) Intent (player empty)
+            // 6) Intent or Action Points
             Group {
                 if let intentText {
+                    // Враг: показываем интент
                     Text(intentText)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(UIStyle.Colors.inkPrimary)
@@ -510,7 +506,11 @@ private struct ParticipantsPanel: View {
                         .overlay(
                             Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
                         )
+                } else if let actionPoints = actionPoints {
+                    // Игрок: показываем очки действия
+                    actionPointsBlock(ap: actionPoints)
                 } else {
+                    // Пустой блок для совместимости
                     Text(" ")
                         .font(.caption2.weight(.semibold))
                         .padding(.vertical, 4)
@@ -554,15 +554,15 @@ private struct ParticipantsPanel: View {
     
     private func statusChip(status: StatusInstance) -> some View {
         HStack(spacing: 4) {
-            Text(status.type.displayNameRU)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+            // Иконка статуса
+            Image(systemName: status.type.iconName)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(status.type.iconColor)
             
-            if status.stacks > 1 {
-                Text("\(status.stacks)")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
-            }
+            // Количество стаков (всегда показываем, даже если 1)
+            Text("\(status.stacks)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
@@ -576,6 +576,33 @@ private struct ParticipantsPanel: View {
         )
     }
 
+    // MARK: - Action Points Block
+    
+    private func actionPointsBlock(ap: Int) -> some View {
+        HStack(spacing: 6) {
+            Text("Очки ОД:")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(UIStyle.Colors.inkSecondary)
+            
+            Image(systemName: "bolt.fill")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.yellow)
+            
+            Text("\(ap)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(UIStyle.Colors.mutedFill)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+        )
+    }
+    
     @ViewBuilder
     private func portraitView(_ kind: PortraitKind) -> some View {
         ZStack {

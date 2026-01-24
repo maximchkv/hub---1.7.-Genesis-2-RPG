@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum StatusType: String, Codable, CaseIterable, Hashable {
     case bleed
@@ -12,6 +13,28 @@ enum StatusType: String, Codable, CaseIterable, Hashable {
         case .weak: return "Слабость"
         case .vulnerable: return "Уязвимость"
         case .stun: return "Оглушение"
+        }
+    }
+    
+    // MARK: - Status Icons System
+    
+    /// Иконка для статуса (SF Symbols)
+    var iconName: String {
+        switch self {
+        case .bleed: return "drop.fill"           // Капелька крови
+        case .weak: return "arrow.down.circle.fill" // Слабость (стрелка вниз)
+        case .vulnerable: return "exclamationmark.triangle.fill" // Уязвимость (предупреждение)
+        case .stun: return "bolt.fill"            // Оглушение (молния)
+        }
+    }
+    
+    /// Цвет иконки статуса
+    var iconColor: Color {
+        switch self {
+        case .bleed: return Color.red              // Красный для кровотечения
+        case .weak: return Color.orange            // Оранжевый для слабости
+        case .vulnerable: return Color.yellow      // Желтый для уязвимости
+        case .stun: return Color.purple            // Фиолетовый для оглушения
         }
     }
 }

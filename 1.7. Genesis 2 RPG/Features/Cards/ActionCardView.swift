@@ -23,8 +23,12 @@ struct ActionCardView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(UIStyle.Colors.mutedFill)
-                    Text(icon)
-                        .font(.title2)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(iconColor)
+                        .imageScale(.medium)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .frame(width: 44, height: 44)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -133,19 +137,40 @@ struct ActionCardView: View {
         }
     }
 
+    // MARK: - Icon System (синхронизировано со статусами)
+    
     private var icon: String {
         switch card.kind {
-        case .powerStrike: return "🗡️"
-        case .defend: return "🛡️"
-        case .doubleStrike: return "⚔️"
-        case .counterStance: return "🔁"
-        case .bleedPlus2: return "🩸"
-        case .weakPlus1: return "⬇️"
-        case .stun1: return "⚡️"
-        case .bleedStrike: return "🩸⚔️"
-        case .weakDefend: return "🛡️⬇️"
+        // Базовые карты
+        case .powerStrike: return "flame.fill"                      // Мощный удар (пламя/урон)
+        case .defend: return "shield.fill"                          // Щит
+        case .doubleStrike: return "arrow.triangle.2.circlepath"   // Двойной удар
+        case .counterStance: return "arrow.counterclockwise.circle.fill" // Контратака
+        
+        // Статусные карты (синхронизировано со статусами)
+        case .bleedPlus2: return "drop.fill"                        // Кровоток (как статус)
+        case .weakPlus1: return "arrow.down.circle.fill"            // Слабость (как статус)
+        case .stun1: return "bolt.fill"                            // Оглушение (как статус)
+        
+        // Синергийные карты (минималистичные, без многоточия)
+        case .bleedStrike: return "drop.fill"                       // Кровавый удар (капля крови, красная)
+        case .weakDefend: return "shield.fill"                     // Ослабляющий щит (щит, оранжевый)
+        
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "❓"
+            return "questionmark.circle.fill"
+        }
+    }
+    
+    /// Цвет иконки карточки (синхронизировано со статусами)
+    private var iconColor: Color {
+        switch card.kind {
+        // Статусные карты используют цвета статусов
+        case .bleedPlus2, .bleedStrike: return Color.red
+        case .weakPlus1, .weakDefend: return Color.orange
+        case .stun1: return Color.purple
+        
+        // Базовые карты - нейтральный цвет
+        default: return UIStyle.Colors.inkPrimary
         }
     }
 
