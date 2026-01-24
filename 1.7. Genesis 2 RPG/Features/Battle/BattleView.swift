@@ -1,4 +1,4 @@
-// TЗ-ARCH-BOOT-030 — BattleView layout v2 (Header+Bottom stack) + FIX-BOOT-030
+// TЗ-ARCH-BOOT-030 — BattleView layout v3 (Redesigned: statuses, collapsible log, improved cards)
 import SwiftUI
 
 struct BattleView: View {
@@ -7,41 +7,35 @@ struct BattleView: View {
     // Debug layout outlines (3px) to visualize real block bounds
     private let showDebugOutlines: Bool = false
 
-    // MARK: - Layout constants (Contract v2.0)
+    // MARK: - Layout constants (Contract v3.0)
 
     // Content width cap (centered column)
     private let contentCap: CGFloat = 380
-    private let outerPad: CGFloat = 0
+    private let outerPad: CGFloat = UIStyle.Spacing.s // 8px боковые отступы
 
     // Vertical spacing - стандартизировано через UI Kit
     private let topHeaderPad: CGFloat = UIStyle.Spacing.s
-    // Use one canonical spacing between major vertical blocks
-    private let interBlock: CGFloat = UIStyle.Spacing.m // "межлогово‑карточное расстояние"
+    private let interBlock: CGFloat = UIStyle.Spacing.m // Стандартные отступы между блоками
     private var headerToParticipants: CGFloat { interBlock }
     private var participantsToLog: CGFloat { interBlock }
     private var logToCards: CGFloat { interBlock }
-    private let cardsToAP: CGFloat = UIStyle.Spacing.m // cards -> AP label
-    private let apToButton: CGFloat = UIStyle.Spacing.m
-    // Reduced by ~1/3 (was 52) to free vertical space for participants.
+    private let cardsToButton: CGFloat = UIStyle.Spacing.m
     private let headerHeight: CGFloat = 22
 
-    // Participants sizing
-    // Keep participants row flush with the content column edges (per UX request).
-    private let participantSideInset: CGFloat = 0
 
-    // Log sizing (keep compact so bottom controls never fall off-screen)
-    private let logMinHeight: CGFloat = 104
-    private let logMaxHeight: CGFloat = 132
+    // Log sizing (always visible, ~1/3 longer than before)
+    private let logFixedHeight: CGFloat = 80 // Увеличено примерно на треть (было 60)
     private let logCorner: CGFloat = 14
 
-    // Action cards sizing
-    private let actionCardWidth: CGFloat = 120
-    // Card height: 134 = 122 (VStack content + spacing) + 12 (padding)
-    private let actionCardHeight: CGFloat = 180
+    // Action cards sizing (improved readability)
+    // Базовые размеры для расчета пропорций
+    private let actionCardBaseWidth: CGFloat = 160
+    private let actionCardBaseHeight: CGFloat = 220
     private let actionCardRowSpacing: CGFloat = UIStyle.Spacing.m
+    private let maxCardsInRow: Int = 3 // Максимальное количество карточек в ряду
 
-    // Disabled opacity (less aggressive than before)
-    private let disabledOpacity: CGFloat = 0.70 // was 0.35
+    // Disabled opacity
+    private let disabledOpacity: CGFloat = 0.70
 
     var body: some View {
         UIStyle.Layout.ScreenContainer {
@@ -54,57 +48,71 @@ struct BattleView: View {
                 )
                 // Применяем специфичный кап для BattleView
                 let finalContentWidth = min(contentWidth, contentCap)
-                // Intentionally not using safe-area bottom inset here: bottom controls are pinned to the bottom edge.
-
-                        // Participants width calculation with side inset
-                let participantRowWidth = max(0, finalContentWidth - participantSideInset * 2)
 
                 VStack(spacing: 0) {
                     if let battle = store.battle {
                         let isPlayerTurn = (battle.phase == .player)
 
-                        // HEADER (debug left, floor centered, surrender right)
+                        // HEADER - ограничен по ширине как карточки
                         headerRow(floor: battle.floor, isPlayerTurn: isPlayerTurn)
-                            .frame(width: finalContentWidth, alignment: .center)
-                            .frame(height: headerHeight, alignment: .center)
+                            .frame(width: finalContentWidth)
+                            .frame(height: headerHeight)
+                            .frame(maxWidth: .infinity)
                             .padding(.top, topHeaderPad)
 
                         Spacer().frame(height: headerToParticipants)
 
-                        // PARTICIPANTS (rebuilt from scratch)
+                        // PARTICIPANTS (with statuses) - ограничены по ширине как карточки
                         ParticipantsPanel(
                             playerName: "Игрок",
                             playerHP: battle.playerHP,
                             playerBlock: battle.playerBlock,
                             playerMaxHP: 20,
+                            playerStatuses: battle.playerStatuses,
                             enemyName: battle.enemyName,
                             enemyHP: battle.enemyHP,
                             enemyBlock: battle.enemyBlock,
                             enemyMaxHP: 20,
+                            enemyStatuses: battle.enemyStatuses,
                             enemyIntent: battle.enemyIntent,
                             debug: false
                         )
-                        .frame(width: participantRowWidth)
-                        .padding(.horizontal, participantSideInset)
-                        .frame(width: finalContentWidth, alignment: .center)
+                        .frame(width: finalContentWidth)
+                        .frame(maxWidth: .infinity)
 
                         Spacer().frame(height: participantsToLog)
 
-                        // LOG (kept compact; scroll inside)
-                        battleLogView
-                            .frame(width: finalContentWidth, alignment: .center)
-                            .frame(minHeight: logMinHeight)
-                            .frame(maxHeight: logMaxHeight)
+                        // LOG (always visible, fixed height 80px) - ограничен по ширине как карточки
+                        compactLogView(battle: battle)
+                            .frame(width: finalContentWidth)
+                            .frame(height: logFixedHeight)
+                            .frame(maxWidth: .infinity)
 
-                        // Keep a stable gap between log and the bottom area.
+                        // Минимальный отступ между логом и карточками
                         Spacer().frame(height: logToCards)
 
-                        // Spacer to push bottom controls to the bottom
-                        Spacer()
-                        
-                        // Bottom controls pinned to the bottom edge
-                        bottomStack(contentWidth: finalContentWidth, battle: battle)
-                            .frame(width: finalContentWidth, alignment: .center)
+                        // Cards area - занимает все доступное пространство
+                        VStack(spacing: 0) {
+                            // Карточки - занимают все оставшееся пространство
+                            GeometryReader { cardsGeo in
+                                let availableHeight = cardsGeo.size.height
+                                
+                                actionCardsRow(
+                                    battle: battle,
+                                    contentWidth: finalContentWidth,
+                                    availableHeight: availableHeight
+                                )
+                            }
+                            
+                            Spacer().frame(height: cardsToButton)
+                            
+                            // Compact AP + End Turn button - ограничены по ширине как карточки
+                            compactBottomControls(battle: battle, contentWidth: finalContentWidth)
+                                .frame(width: finalContentWidth)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .frame(maxHeight: .infinity)
+                        .padding(.bottom, UIStyle.Spacing.m)
 
                     } else {
                         VStack(spacing: UIStyle.Spacing.m) {
@@ -117,7 +125,6 @@ struct BattleView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, outerPad)
-                .padding(.bottom, 0)
             }
         }
     }
@@ -167,21 +174,13 @@ struct BattleView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
-    // MARK: - Log
+    // MARK: - Log (Always visible, compact - 3 lines)
 
     @ViewBuilder
-    private var battleLogView: some View {
-        if let battle = store.battle {
-            logScrollView(battle: battle)
-        } else {
-            EmptyView()
-        }
-    }
-    
-    private func logScrollView(battle: BattleState) -> some View {
+    private func compactLogView(battle: BattleState) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(battle.log, id: \.id) { entry in
                         logEntryView(entry: entry)
                     }
@@ -191,7 +190,10 @@ struct BattleView: View {
                         .id("LOG_BOTTOM")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
             }
+            .frame(height: logFixedHeight) // Ограничиваем высоту для компактности
             .onChange(of: battle.log.count) { _ in
                 withAnimation(.easeOut(duration: 0.2)) {
                     proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
@@ -201,7 +203,6 @@ struct BattleView: View {
                 proxy.scrollTo("LOG_BOTTOM", anchor: .bottom)
             }
         }
-        .padding(8)
         .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: logCorner))
         .overlay(
@@ -231,68 +232,75 @@ struct BattleView: View {
         }
     }
 
-    // MARK: - Bottom Stack
+    // MARK: - Bottom Controls
 
-    private func bottomStack(contentWidth: CGFloat, battle: BattleState) -> some View {
-        VStack(spacing: 0) {
-            actionCardsRow(battle: battle)
-                .frame(width: contentWidth, alignment: .center) // contentWidth здесь - это параметр функции
-
-            Spacer().frame(height: cardsToAP)
-
-            apPanel(ap: battle.actionPoints)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.orange, lineWidth: 3)
-                        .opacity(showDebugOutlines ? 1 : 0)
+    private func compactBottomControls(battle: BattleState, contentWidth: CGFloat) -> some View {
+        HStack(spacing: UIStyle.Spacing.s) {
+            // Compact AP indicator
+            compactAPIndicator(ap: battle.actionPoints)
+            
+            // End Turn button
+            Button {
+                store.endTurn()
+            } label: {
+                HStack {
+                    Text("Закончить ход")
+                        .font(.headline)
+                    
+                    Spacer()
+                }
+                .foregroundStyle(.white)
+                .frame(height: 52)
+                .padding(.horizontal, UIStyle.Spacing.l)
+                .background(
+                    RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
+                        .fill(UIStyle.Colors.accent)
                 )
-
-            Spacer().frame(height: apToButton)
-
-            Button("Закончить ход") { store.endTurn() }
-                .buttonStyle(UIStyle.PrimaryButtonStyle())
-                .disabled(battle.phase != .player)
-                .opacity(battle.phase == .player ? 1.0 : 0.55)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.green, lineWidth: 3)
-                        .opacity(showDebugOutlines ? 1 : 0)
-                )
+            }
+            .buttonStyle(.plain)
+            .disabled(battle.phase != .player)
+            .opacity(battle.phase == .player ? 1.0 : 0.55)
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.green, lineWidth: 3)
+                .opacity(showDebugOutlines ? 1 : 0)
+        )
     }
 
-    private func apPanel(ap: Int) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14)
+    private func compactAPIndicator(ap: Int) -> some View {
         let chipShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-
-        return HStack(spacing: 10) {
-            Text("Очки действий:")
-                .font(.footnote.weight(.semibold))
+        
+        return HStack(spacing: 6) {
+            Image(systemName: "bolt.fill")
+                .font(.caption)
+                .foregroundStyle(UIStyle.Colors.inkSecondary)
+            
+            Text("\(ap)")
+                .font(.headline)
                 .foregroundStyle(UIStyle.Colors.inkPrimary)
-
-            Spacer(minLength: 0)
-
-            Text("\(ap) ОД")
-                .font(.caption) // slightly smaller, not bold
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 10)
-                .background(UIStyle.Colors.mutedFill, in: chipShape)
-                .overlay(
-                    chipShape.stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
-                )
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12) // left inset for label, right inset for chip
-        .frame(width: actionCardWidth * 2) // x2 width (per UX request)
-        .background(.thinMaterial, in: shape)
-        .overlay(shape.stroke(UIStyle.Colors.cardStroke, lineWidth: 1))
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(.thinMaterial, in: chipShape)
+        .overlay(
+            chipShape.stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+        )
+        .frame(width: 60)
     }
 
-    private func actionCardsRow(battle: BattleState) -> some View {
+    private func actionCardsRow(battle: BattleState, contentWidth: CGFloat, availableHeight: CGFloat) -> some View {
+        // Вычисляем размер карточек так, чтобы maxCardsInRow карточек поместились по ширине
+        let cardCount = min(battle.hand.count, maxCardsInRow)
+        let spacingTotal = CGFloat(max(0, cardCount - 1)) * actionCardRowSpacing
+        let availableWidth = contentWidth - spacingTotal
+        let calculatedCardWidth = availableWidth / CGFloat(cardCount)
+        
+        // Высота карточек адаптивная - используем все доступное пространство
+        let cardHeight = availableHeight
+        
         return HStack(spacing: actionCardRowSpacing) {
-            ForEach(battle.hand, id: \.id) { card in
+            ForEach(battle.hand.prefix(maxCardsInRow), id: \.id) { card in
                 let cardState = determineCardState(card: card, battle: battle)
                 let lvl = battle.cardLevels[card.kind, default: 1]
 
@@ -300,15 +308,13 @@ struct BattleView: View {
                     store.playCard(card)
                 } label: {
                     ActionCardView(card: card, state: cardState, level: lvl)
-                        .frame(width: actionCardWidth, height: actionCardHeight)
+                        .frame(width: calculatedCardWidth, height: cardHeight)
                 }
-                .buttonStyle(.plain) // Убираем стандартные отступы Button
+                .buttonStyle(.plain)
                 .disabled(cardState != .available)
-                .frame(width: actionCardWidth, height: actionCardHeight)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .frame(height: actionCardHeight) // Точная высота = высоте карточек (134)
+        .frame(maxWidth: .infinity)
         .overlay(
             RoundedRectangle(cornerRadius: 0)
                 .stroke(Color.cyan, lineWidth: 3)
@@ -362,11 +368,13 @@ private struct ParticipantsPanel: View {
     let playerHP: Int
     let playerBlock: Int
     let playerMaxHP: Int
+    let playerStatuses: [StatusInstance]
 
     let enemyName: String
     let enemyHP: Int
     let enemyBlock: Int
     let enemyMaxHP: Int
+    let enemyStatuses: [StatusInstance]
     let enemyIntent: EnemyIntent
     let debug: Bool
 
@@ -374,9 +382,9 @@ private struct ParticipantsPanel: View {
     private let innerPad: CGFloat = 12
     private let rowGap: CGFloat = 10
     private let dividerH: CGFloat = 1
-    // Larger gap so cards read as two distinct panels and hug the outer edges more.
     private let interCardGap: CGFloat = 24
     private let portraitCorner: CGFloat = 14
+    private let statusChipHeight: CGFloat = 20
 
     var body: some View {
         HStack(alignment: .top, spacing: interCardGap) {
@@ -385,6 +393,7 @@ private struct ParticipantsPanel: View {
                 hp: playerHP,
                 block: playerBlock,
                 maxHP: playerMaxHP,
+                statuses: playerStatuses,
                 intentText: nil,
                 portrait: .player
             )
@@ -395,6 +404,7 @@ private struct ParticipantsPanel: View {
                 hp: enemyHP,
                 block: enemyBlock,
                 maxHP: enemyMaxHP,
+                statuses: enemyStatuses,
                 intentText: enemyIntent.displayRU,
                 portrait: .enemy(name: enemyName)
             )
@@ -413,6 +423,7 @@ private struct ParticipantsPanel: View {
         hp: Int,
         block: Int,
         maxHP: Int,
+        statuses: [StatusInstance],
         intentText: String?,
         portrait: PortraitKind
     ) -> some View {
@@ -423,6 +434,7 @@ private struct ParticipantsPanel: View {
             hp: hp,
             block: block,
             maxHP: maxHP,
+            statuses: statuses,
             intentText: intentText,
             portrait: portrait
         )
@@ -436,6 +448,7 @@ private struct ParticipantsPanel: View {
         hp: Int,
         block: Int,
         maxHP: Int,
+        statuses: [StatusInstance],
         intentText: String?,
         portrait: PortraitKind
     ) -> some View {
@@ -469,7 +482,17 @@ private struct ParticipantsPanel: View {
                 .fill(UIStyle.Colors.cardStroke)
                 .frame(height: dividerH)
 
-            // 5) Intent (player empty)
+            // 5) Statuses (NEW)
+            if !statuses.isEmpty {
+                statusesView(statuses: statuses)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                // Spacer to maintain consistent layout
+                Spacer()
+                    .frame(height: statusChipHeight)
+            }
+
+            // 6) Intent (player empty)
             Group {
                 if let intentText {
                     Text(intentText)
@@ -492,12 +515,50 @@ private struct ParticipantsPanel: View {
             }
             .frame(height: 24)
 
-            // 6) Portrait (square)
+            // 7) Portrait (square)
             portraitView(portrait)
                 .frame(maxWidth: .infinity)
                 .aspectRatio(1, contentMode: .fit)
         }
         .frame(maxWidth: .infinity)
+    }
+    
+    // MARK: - Statuses View
+    
+    @ViewBuilder
+    private func statusesView(statuses: [StatusInstance]) -> some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible(), spacing: 4),
+            GridItem(.flexible(), spacing: 4)
+        ], spacing: 4) {
+            ForEach(statuses) { status in
+                statusChip(status: status)
+            }
+        }
+    }
+    
+    private func statusChip(status: StatusInstance) -> some View {
+        HStack(spacing: 4) {
+            Text(status.type.displayNameRU)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(UIStyle.Colors.inkPrimary)
+            
+            if status.stacks > 1 {
+                Text("\(status.stacks)")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .frame(height: statusChipHeight)
+        .frame(maxWidth: .infinity)
+        .background(UIStyle.Colors.mutedFill)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+        )
     }
 
     @ViewBuilder
