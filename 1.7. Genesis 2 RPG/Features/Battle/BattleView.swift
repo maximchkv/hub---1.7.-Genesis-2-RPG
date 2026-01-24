@@ -23,21 +23,21 @@ struct BattleView: View {
     private let cardsToAP: CGFloat = UIStyle.Spacing.m // cards -> AP label
     private let apToButton: CGFloat = UIStyle.Spacing.m
     // Reduced by ~1/3 (was 52) to free vertical space for participants.
-    private let headerHeight: CGFloat = 35
+    private let headerHeight: CGFloat = 22
 
     // Participants sizing
     // Keep participants row flush with the content column edges (per UX request).
     private let participantSideInset: CGFloat = 0
 
     // Log sizing (keep compact so bottom controls never fall off-screen)
-    private let logMinHeight: CGFloat = 96
-    private let logMaxHeight: CGFloat = 120
+    private let logMinHeight: CGFloat = 104
+    private let logMaxHeight: CGFloat = 132
     private let logCorner: CGFloat = 14
 
     // Action cards sizing
     private let actionCardWidth: CGFloat = 120
     // Card height: 134 = 122 (VStack content + spacing) + 12 (padding)
-    private let actionCardHeight: CGFloat = 170
+    private let actionCardHeight: CGFloat = 180
     private let actionCardRowSpacing: CGFloat = UIStyle.Spacing.m
 
     // Disabled opacity (less aggressive than before)
@@ -126,41 +126,22 @@ struct BattleView: View {
 
     private func headerRow(floor: Int, isPlayerTurn: Bool) -> some View {
         ZStack {
-            // Center content (inside the red header rectangle)
-            VStack(spacing: 2) {
-                Text("Этаж \(floor)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
+            Text("Этаж \(floor)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
 
-                Text(isPlayerTurn ? "Ваш ход" : "Ход врага")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(isPlayerTurn ? UIStyle.Colors.accent : UIStyle.Colors.inkSecondary)
-                    // Slightly shorter vertically (per UX request)
-                    .padding(.vertical, 2)
-                    .padding(.horizontal, 10)
-                    .background(
-                        Capsule()
-                            .fill(isPlayerTurn ? UIStyle.Colors.accent.opacity(0.22) : Color.primary.opacity(0.08))
-                    )
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
-                    )
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-
-            // Side controls, vertically centered within the header
             HStack {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Button("win") { store.winBattle() }
-                        .font(.caption2)
+                        .font(.system(size: 11, weight: .semibold))
                         .buttonStyle(.bordered)
+                        .controlSize(.mini)
 
                     Button("lose") { store.loseBattle() }
-                        .font(.caption2)
+                        .font(.system(size: 11, weight: .semibold))
                         .buttonStyle(.bordered)
+                        .controlSize(.mini)
                 }
 
                 Spacer(minLength: 0)
@@ -169,14 +150,15 @@ struct BattleView: View {
                     store.surrenderBattle()
                 } label: {
                     Image(systemName: "flag.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.primary)
-                        .padding(8)
+                        .padding(4)
                         .background(.thinMaterial)
                         .clipShape(Circle())
                         .overlay(
                             Circle().stroke(Color.primary.opacity(0.18), lineWidth: 1)
                         )
+                        .frame(width: 30, height: 30)
                         .accessibilityLabel("Surrender")
                 }
                 .buttonStyle(.plain)
