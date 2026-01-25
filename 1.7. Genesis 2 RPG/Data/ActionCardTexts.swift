@@ -6,22 +6,153 @@ import Foundation
 /// Просто измените строки ниже - они автоматически применятся во всем приложении
 struct ActionCardTexts {
     
+    // MARK: - Система прогрессии значений карт по уровням
+    // ⚠️ ВАЖНО: Это единое место для настройки всех значений карт по уровням
+    
+    /// Формула прогрессии: множитель для каждого уровня выше 1
+    /// Измените это значение, чтобы изменить прогрессию для всех карт
+    /// Пример: 1.25 = +25% за уровень, 1.3 = +30% за уровень, 1.5 = +50% за уровень
+    static let levelProgressionMultiplier: Double = 1.25
+    
+    /// Конфигурация значений карт по уровням
+    /// Для каждой карты задается базовое значение (уровень 1) и опциональные переопределения
+    struct CardLevelConfig {
+        let baseValue: Int  // Значение для уровня 1
+        let levelOverrides: [Int: Int]?  // Переопределения для конкретных уровней [уровень: значение]
+        
+        /// Вычисляет значение для указанного уровня
+        func value(for level: Int) -> Int {
+            // Если есть переопределение для этого уровня, используем его
+            if let overrides = levelOverrides, let overrideValue = overrides[level] {
+                return overrideValue
+            }
+            
+            // Если уровень 1, возвращаем базовое значение
+            if level <= 1 {
+                return baseValue
+            }
+            
+            // Вычисляем по формуле прогрессии
+            var v = Double(baseValue)
+            for _ in 2...level {
+                v = v * ActionCardTexts.levelProgressionMultiplier
+            }
+            return Int(v.rounded())
+        }
+    }
+    
+    /// Маппинг значений карт по уровням
+    /// ⚠️ ИЗМЕНИТЕ ЭТИ ЗНАЧЕНИЯ для настройки карт
+    /// 
+    /// Для каждой карты можно задать:
+    /// - baseValue: значение для уровня 1
+    /// - levelOverrides: переопределения для конкретных уровней (опционально)
+    /// 
+    /// Примеры:
+    /// 1. Автоматическая прогрессия: baseValue: 5, levelOverrides: nil
+    ///    → Уровень 1: 5, Уровень 2: 6 (5*1.25), Уровень 3: 8 (6*1.25), и т.д.
+    /// 
+    /// 2. С переопределениями: baseValue: 5, levelOverrides: [2: 7, 3: 10]
+    ///    → Уровень 1: 5, Уровень 2: 7 (переопределено), Уровень 3: 10 (переопределено), Уровень 4: 13 (10*1.25)
+    /// 
+    /// 3. Ручная настройка всех уровней: baseValue: 5, levelOverrides: [2: 7, 3: 9, 4: 12, 5: 15]
+    ///    → Все значения заданы вручную, формула не используется
+    static var cardLevelValues: [ActionCardKind: CardLevelConfig] {
+        var configs: [ActionCardKind: CardLevelConfig] = [:]
+        
+        // Базовые карты
+        configs[.powerStrike] = CardLevelConfig(
+            baseValue: 5,
+            levelOverrides: nil  // Используется формула для всех уровней
+            // Пример переопределения: levelOverrides: [2: 7, 3: 10]
+        )
+        
+        configs[.defend] = CardLevelConfig(
+            baseValue: 5,
+            levelOverrides: nil
+        )
+        
+        configs[.doubleStrike] = CardLevelConfig(
+            baseValue: 4,  // 80% от powerStrike (5 * 0.8 = 4)
+            levelOverrides: nil
+        )
+        
+        // counterStance использует фиксированные значения (не прогрессия)
+        configs[.counterStance] = CardLevelConfig(
+            baseValue: 0,  // Не используется, т.к. фиксированные значения
+            levelOverrides: nil
+        )
+        
+        // Статусные карты (не имеют прогрессии по урону/блоку)
+        configs[.bleedPlus2] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        configs[.weakPlus1] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        configs[.stun1] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        
+        // Синергийные карты
+        configs[.bleedStrike] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        configs[.weakDefend] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        
+        // Placeholders
+        configs[.placeholder1] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        configs[.placeholder2] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        configs[.placeholder3] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        configs[.placeholder4] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        configs[.placeholder5] = CardLevelConfig(baseValue: 0, levelOverrides: nil)
+        
+        return configs
+    }
+    
+    // MARK: - Удобные функции для получения значений карт
+    
+    /// Получить урон для powerStrike на указанном уровне
+    static func powerStrikeDamage(level: Int) -> Int {
+        return value(for: .powerStrike, level: level)
+    }
+    
+    /// Получить блок для defend на указанном уровне
+    static func defendBlock(level: Int) -> Int {
+        return value(for: .defend, level: level)
+    }
+    
+    /// Получить урон за один удар для doubleStrike на указанном уровне
+    /// Вычисляется как 80% от powerStrikeDamage
+    static func doubleStrikeHit(level: Int) -> Int {
+        return Int((Double(powerStrikeDamage(level: level)) * 0.8).rounded())
+    }
+    
+    /// Получить значение карты для указанного уровня
+    static func value(for kind: ActionCardKind, level: Int) -> Int {
+        guard let config = cardLevelValues[kind] else {
+            return 0
+        }
+        return config.value(for: level)
+    }
+    
     // MARK: - Числовые значения эффектов
     // ⚠️ ИЗМЕНИТЕ ЭТИ ЗНАЧЕНИЯ, чтобы изменить числовые эффекты карт
     // Эти значения используются в описаниях автоматически
     
     // MARK: - Базовые значения урона и блока (уровень 1)
-    // Базовые значения для карт, которые растут с уровнем
+    // ⚠️ УСТАРЕЛО: Используйте value(for:level:) или удобные функции выше
+    // Оставлено для обратной совместимости с описаниями
     
     /// Базовый урон карты "Мощный удар" (уровень 1)
-    static let powerStrikeBaseDamage: Int = 5
+    /// Использует систему cardLevelValues
+    static var powerStrikeBaseDamage: Int {
+        return powerStrikeDamage(level: 1)
+    }
     
     /// Базовый блок карты "Защита" (уровень 1)
-    static let defendBaseBlock: Int = 5
+    /// Использует систему cardLevelValues
+    static var defendBaseBlock: Int {
+        return defendBlock(level: 1)
+    }
     
     /// Базовый урон за один удар карты "Двойной удар" (уровень 1, ударов два)
-    /// Вычисляется как powerStrikeBaseDamage * 0.8 (округлено)
-    static let doubleStrikeBaseHitDamage: Int = 4
+    /// Использует систему cardLevelValues
+    static var doubleStrikeBaseHitDamage: Int {
+        return doubleStrikeHit(level: 1)
+    }
     
     // MARK: - Фиксированные значения (не зависят от уровня)
     
@@ -62,7 +193,7 @@ struct ActionCardTexts {
         case .powerStrike: return "Мощный удар"
         case .defend: return "Защита"
         case .doubleStrike: return "Двойной удар"
-        case .counterStance: return "Контратака"
+        case .counterStance: return "Стойка"
         case .bleedPlus2: return "Кровоток"
         case .weakPlus1: return "Ослабить"
         case .stun1: return "Оглушить"

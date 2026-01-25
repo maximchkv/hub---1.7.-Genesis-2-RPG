@@ -546,18 +546,24 @@ final class GameStore: ObservableObject {
     }
 
     // MARK: - Combat core (031A/031B integrated)
-    private func baseValue(level: Int) -> Int {
-        var v = ActionCardTexts.powerStrikeBaseDamage // Используем константу из ActionCardTexts
-        if level <= 1 { return v }
-        for _ in 2...level {
-            v = Int((Double(v) * 1.25).rounded())
-        }
-        return v
+    // MARK: - Значения карт по уровням (используется система из ActionCardTexts)
+    
+    /// Получить урон для powerStrike на указанном уровне
+    private func powerStrikeDamage(level: Int) -> Int {
+        return ActionCardTexts.powerStrikeDamage(level: level)
     }
-
-    private func powerStrikeDamage(level: Int) -> Int { baseValue(level: level) }
-    private func defendBlock(level: Int) -> Int { baseValue(level: level) }
-    private func doubleStrikeHit(level: Int) -> Int { Int((Double(powerStrikeDamage(level: level)) * 0.8).rounded()) }
+    
+    /// Получить блок для defend на указанном уровне
+    private func defendBlock(level: Int) -> Int {
+        return ActionCardTexts.defendBlock(level: level)
+    }
+    
+    /// Получить урон за один удар для doubleStrike на указанном уровне
+    private func doubleStrikeHit(level: Int) -> Int {
+        return ActionCardTexts.doubleStrikeHit(level: level)
+    }
+    
+    // Неиспользуемые функции (оставлены для совместимости)
     private func counterDamage(level: Int) -> Int { Int((Double(powerStrikeDamage(level: level)) * 0.6).rounded()) }
     private func counterBlock(level: Int) -> Int { Int((Double(defendBlock(level: level)) * 0.8).rounded()) }
 
@@ -719,17 +725,75 @@ final class GameStore: ObservableObject {
 
     // MARK: - Reward (v1)
     private func generateReward() -> RewardState {
-        // Pick 3 unique upgrade options from a stable pool.
-        // (Full deckbuilding/rarities come later.)
-        let pool: [ActionCardKind] = [
-            .powerStrike, .defend, .doubleStrike, .counterStance,
-            .bleedPlus2, .weakPlus1, .stun1,
+        // Pick 3 unique upgrade options with weighted probability per card:
+        // - 90% probability: card costs 1 action point (weaker)
+        // - 10% probability: card costs 2 action points (stronger)
+        //
+        // ⚠️ НАСТРОЙКА: Чтобы изменить вероятности, измените значения:
+        // - probability1Cost = вероятность выбора карты за 1 очко (0.0 - 1.0)
+        // - probability2Cost = вероятность выбора карты за 2 очка (0.0 - 1.0)
+        // - Сумма должна быть равна 1.0
+        
+        let probability1Cost: Double = 0.9  // 90% вероятности для карт за 1 очко
+        let probability2Cost: Double = 0.1  // 10% вероятности для карт за 2 очка
+        
+        // Разделяем карты по стоимости
+        let pool1Cost: [ActionCardKind] = [
+            .powerStrike, .defend, .bleedPlus2, .weakPlus1
+        ]
+        let pool2Cost: [ActionCardKind] = [
+            .doubleStrike, .counterStance, .stun1,
             .bleedStrike, .weakDefend
         ]
-        let options = Array(Set(pool.shuffled().prefix(3)))
-        // Ensure exactly 3 when Set collapses (rare)
-        let fixed = (options.count == 3) ? options : Array(pool.shuffled().prefix(3))
-        return RewardState(options: fixed)
+        
+        // Перемешиваем пулы для случайности
+        var shuffledPool1 = pool1Cost.shuffled()
+        var shuffledPool2 = pool2Cost.shuffled()
+        
+        var selectedCards: [ActionCardKind] = []
+        var usedCards1: Set<ActionCardKind> = []
+        var usedCards2: Set<ActionCardKind> = []
+        
+        // Выбираем 3 уникальные карты
+        while selectedCards.count < 3 {
+            let random = Double.random(in: 0.0...1.0)
+            
+            if random < probability1Cost {
+                // Выбираем карту за 1 очко (90% вероятности)
+                if let card = shuffledPool1.first(where: { !usedCards1.contains($0) }) {
+                    selectedCards.append(card)
+                    usedCards1.insert(card)
+                } else {
+                    // Если все карты за 1 очко использованы, выбираем из пула за 2 очка
+                    if let card = shuffledPool2.first(where: { !usedCards2.contains($0) }) {
+                        selectedCards.append(card)
+                        usedCards2.insert(card)
+                    }
+                }
+            } else {
+                // Выбираем карту за 2 очка (10% вероятности)
+                if let card = shuffledPool2.first(where: { !usedCards2.contains($0) }) {
+                    selectedCards.append(card)
+                    usedCards2.insert(card)
+                } else {
+                    // Если все карты за 2 очка использованы, выбираем из пула за 1 очко
+                    if let card = shuffledPool1.first(where: { !usedCards1.contains($0) }) {
+                        selectedCards.append(card)
+                        usedCards1.insert(card)
+                    }
+                }
+            }
+            
+            // Защита от бесконечного цикла (если карт недостаточно)
+            if selectedCards.count < 3 && usedCards1.count == pool1Cost.count && usedCards2.count == pool2Cost.count {
+                break
+            }
+        }
+        
+        // Перемешиваем для случайного порядка
+        selectedCards.shuffle()
+        
+        return RewardState(options: selectedCards)
     }
 
     func claimReward(_ kind: ActionCardKind) {

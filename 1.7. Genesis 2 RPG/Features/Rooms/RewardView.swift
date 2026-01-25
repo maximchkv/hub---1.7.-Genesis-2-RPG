@@ -37,7 +37,8 @@ struct RewardView: View {
                                         title: title(for: kind),
                                         levelInfo: levelInfo(for: kind),
                                         bonusInfo: bonusInfo(for: kind),
-                                        currentLevel: store.run?.cardLevels[kind] ?? 1
+                                        currentLevel: store.run?.cardLevels[kind] ?? 1,
+                                        cost: ActionCard(kind: kind).cost
                                     )
                                 }
                                 .buttonStyle(UIStyle.CardButtonStyle())
@@ -184,6 +185,7 @@ private struct RewardOptionCard: View {
     let levelInfo: String
     let bonusInfo: (current: String, next: String)
     let currentLevel: Int
+    let cost: Int
 
     var body: some View {
         HStack(spacing: 12) {
@@ -215,11 +217,25 @@ private struct RewardOptionCard: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
+                HStack(alignment: .center, spacing: 8) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
+                    
+                    // Стоимость в очках действия
+                    Text("\(cost) ОД")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(UIStyle.Colors.mutedFill)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                        )
+                }
 
                 // Верхняя строка: информация об уровне
                 Text(levelInfo)
