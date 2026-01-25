@@ -482,17 +482,7 @@ private struct ParticipantsPanel: View {
                 .frame(height: 48)
                 .frame(maxWidth: .infinity)
 
-            // 5) Statuses (NEW) - фиксированная высота для 2 рядов по 2 статуса
-            statusesView(statuses: statuses)
-                .frame(height: statusContainerHeight) // Фиксированная высота
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 0)
-                        .stroke(Color.cyan, lineWidth: 2)
-                        .opacity(debug ? 1 : 0)
-                )
-
-            // 6) Intent or Action Points
+            // 3) Intent or Action Points (перемещено перед статусами)
             Group {
                 if let intent {
                     // Враг: показываем интент с SF Symbol иконкой
@@ -515,6 +505,24 @@ private struct ParticipantsPanel: View {
                     .stroke(Color.yellow, lineWidth: 2)
                     .opacity(debug ? 1 : 0)
             )
+
+            // 4) Statuses (NEW) - фиксированная высота для 2 рядов по 2 статуса с заливкой
+            statusesView(statuses: statuses)
+                .frame(height: statusContainerHeight) // Фиксированная высота
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .background(UIStyle.Colors.mutedFill) // Заливка по UI-гайду
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(Color.cyan, lineWidth: 2)
+                        .opacity(debug ? 1 : 0)
+                )
 
             // 7) Portrait (square) with shake animation
             portraitView(portrait, shakeTrigger: shakeTrigger)
@@ -602,6 +610,7 @@ private struct ParticipantsPanel: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(UIStyle.Colors.inkSecondary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.6) // Уменьшение шрифта если не помещается
             
             // SF Symbol иконка (синхронизировано с карточками)
             Image(systemName: intent.iconName)
@@ -609,13 +618,15 @@ private struct ParticipantsPanel: View {
                 .foregroundStyle(intent.iconColor)
                 .imageScale(.medium)
                 .symbolRenderingMode(.hierarchical)
+                .frame(width: 12, height: 12) // Фиксированный размер иконки
             
-            // Текст интента (всегда в одну строку)
+            // Текст интента (всегда в одну строку с уменьшением шрифта)
             Text(intent.displayText)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(UIStyle.Colors.inkPrimary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.4) // Агрессивное уменьшение для текста интента
+                .fixedSize(horizontal: false, vertical: true) // Разрешаем горизонтальное сжатие
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 10)
