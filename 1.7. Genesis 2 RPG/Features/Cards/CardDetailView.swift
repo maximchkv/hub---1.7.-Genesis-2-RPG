@@ -243,19 +243,7 @@ struct CardDetailView: View {
     // MARK: - Card Properties
     
     private var titleRU: String {
-        switch card {
-        case .powerStrike: return "Мощный удар"
-        case .defend: return "Защита"
-        case .doubleStrike: return "Двойной удар"
-        case .counterStance: return "Контратака"
-        case .bleedPlus2: return "Кровоток"
-        case .weakPlus1: return "Ослабить"
-        case .stun1: return "Оглушить"
-        case .bleedStrike: return "Кровавый удар"
-        case .weakDefend: return "Ослабляющий щит"
-        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "???"
-        }
+        ActionCardTexts.title(for: card)
     }
     
     private var icon: String {
@@ -275,19 +263,7 @@ struct CardDetailView: View {
     }
     
     private var effectRU: String {
-        switch card {
-        case .powerStrike: return "Наносит урон противнику. Базовая атакующая карта."
-        case .defend: return "Даёт блок, защищая от входящего урона."
-        case .doubleStrike: return "Наносит урон дважды. Эффективна против блока."
-        case .counterStance: return "Даёт блок и наносит урон одновременно."
-        case .bleedPlus2: return "Накладывает Кровоток +2 на противника. Кровоток наносит урон в начале каждого хода."
-        case .weakPlus1: return "Накладывает Слабость +1 на противника. Слабость уменьшает наносимый урон."
-        case .stun1: return "Накладывает Оглушение 1 на противника. Оглушенный пропускает следующий ход."
-        case .bleedStrike: return "Если у противника есть Кровоток: наносит урон равный стакам Кровотока × 3. Если Кровотока нет: накладывает Кровоток +2. Синергийная карта для тактики кровотечения."
-        case .weakDefend: return "Накладывает Слабость +1 на противника и даёт Блок +4. Комбинирует контроль и защиту."
-        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "Эта карта появится в будущих обновлениях. Продолжение следует..."
-        }
+        ActionCardTexts.detailedDescription(for: card)
     }
     
     private var cost: Int {

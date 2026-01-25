@@ -547,7 +547,7 @@ final class GameStore: ObservableObject {
 
     // MARK: - Combat core (031A/031B integrated)
     private func baseValue(level: Int) -> Int {
-        var v = 5
+        var v = ActionCardTexts.powerStrikeBaseDamage // Используем константу из ActionCardTexts
         if level <= 1 { return v }
         for _ in 2...level {
             v = Int((Double(v) * 1.25).rounded())
@@ -566,8 +566,8 @@ final class GameStore: ObservableObject {
     private func enemyBlockValue() -> Int { 5 }
 
     // Counter-Stance Lv1 constants (027C-A)
-    private func counterStanceBlockValue() -> Int { 4 }
-    private func counterStanceAttackValue() -> Int { 3 }
+    private func counterStanceBlockValue() -> Int { ActionCardTexts.counterStanceBlock }
+    private func counterStanceAttackValue() -> Int { ActionCardTexts.counterStanceDamage }
 
     private func intentFromPattern(_ battle: BattleState) -> EnemyIntent {
         guard !battle.enemyPattern.isEmpty else {
@@ -828,24 +828,24 @@ final class GameStore: ObservableObject {
 
         // 031B: Status cards
         case .bleedPlus2:
-            battle.addStatus(.bleed, stacks: 2, to: .enemy)
-            pushLog(&battle, side: .player, "Player uses Кровоток → Enemy: Кровоток +2")
+            battle.addStatus(.bleed, stacks: ActionCardTexts.bleedPlus2Stacks, to: .enemy)
+            pushLog(&battle, side: .player, "Player uses Кровоток → Enemy: Кровоток +\(ActionCardTexts.bleedPlus2Stacks)")
 
         case .weakPlus1:
-            battle.addStatus(.weak, stacks: 1, to: .enemy)
-            pushLog(&battle, side: .player, "Player uses Ослабить → Enemy: Слабость +1")
+            battle.addStatus(.weak, stacks: ActionCardTexts.weakPlus1Stacks, to: .enemy)
+            pushLog(&battle, side: .player, "Player uses Ослабить → Enemy: Слабость +\(ActionCardTexts.weakPlus1Stacks)")
 
         case .stun1:
-            battle.addStatus(.stun, stacks: 1, to: .enemy)
-            pushLog(&battle, side: .player, "Player uses Оглушить → Enemy: Оглушение 1")
+            battle.addStatus(.stun, stacks: ActionCardTexts.stun1Stacks, to: .enemy)
+            pushLog(&battle, side: .player, "Player uses Оглушить → Enemy: Оглушение \(ActionCardTexts.stun1Stacks)")
         
         // Синергийные карты
         case .bleedStrike:
             let enemyBleedStacks = battle.enemyStatuses.first(where: { $0.type == .bleed })?.stacks ?? 0
             if enemyBleedStacks > 0 {
-                // Если у врага есть кровотечение: урон = стаки × 3
+                // Если у врага есть кровотечение: урон = стаки × множитель
                 // Урон проходит через modifiedOutgoingWeaponDamage для учета слабости
-                let baseDmg = enemyBleedStacks * 3
+                let baseDmg = enemyBleedStacks * ActionCardTexts.bleedStrikeDamageMultiplier
                 let dmg = battle.modifiedOutgoingWeaponDamage(baseDmg, from: .player)
                 let beforeHP = battle.enemyHP
                 let beforeBlock = battle.enemyBlock
@@ -858,15 +858,15 @@ final class GameStore: ObservableObject {
                 }
                 pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked), от кровотечения ×\(enemyBleedStacks))")
             } else {
-                // Если у врага нет кровотечения: наложить Bleed +2
-                battle.addStatus(.bleed, stacks: 2, to: .enemy)
-                pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Кровоток +2")
+                // Если у врага нет кровотечения: наложить Bleed
+                battle.addStatus(.bleed, stacks: ActionCardTexts.bleedStrikeBleedStacks, to: .enemy)
+                pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Кровоток +\(ActionCardTexts.bleedStrikeBleedStacks)")
             }
         
         case .weakDefend:
-            battle.addStatus(.weak, stacks: 1, to: .enemy)
-            battle.playerBlock += 4
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Слабость +1 врагу, блок +4")
+            battle.addStatus(.weak, stacks: ActionCardTexts.weakDefendWeakStacks, to: .enemy)
+            battle.playerBlock += ActionCardTexts.weakDefendBlock
+            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Слабость +\(ActionCardTexts.weakDefendWeakStacks) врагу, блок +\(ActionCardTexts.weakDefendBlock)")
             
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             // Placeholders should never be playable
@@ -1038,19 +1038,7 @@ final class GameStore: ObservableObject {
     }
 
     private func cardTitle(_ kind: ActionCardKind) -> String {
-        switch kind {
-        case .powerStrike: return "Power Strike"
-        case .defend: return "Guard"
-        case .doubleStrike: return "Double Strike"
-        case .counterStance: return "Counter Stance"
-        case .bleedPlus2: return "Кровоток"
-        case .weakPlus1: return "Ослабить"
-        case .stun1: return "Оглушить"
-        case .bleedStrike: return "Кровавый удар"
-        case .weakDefend: return "Ослабляющий щит"
-        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "???"
-        }
+        ActionCardTexts.logTitle(for: kind)
     }
 
     // MARK: - Castle UI State

@@ -60,19 +60,7 @@ struct CollectionCardCell: View {
     }
     
     private var titleRU: String {
-        switch card {
-        case .powerStrike: return "Мощный удар"
-        case .defend: return "Защита"
-        case .doubleStrike: return "Двойной удар"
-        case .counterStance: return "Контратака"
-        case .bleedPlus2: return "Кровоток"
-        case .weakPlus1: return "Ослабить"
-        case .stun1: return "Оглушить"
-        case .bleedStrike: return "Кровавый удар"
-        case .weakDefend: return "Ослабляющий щит"
-        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "???"
-        }
+        ActionCardTexts.title(for: card)
     }
     
     private var icon: String {
