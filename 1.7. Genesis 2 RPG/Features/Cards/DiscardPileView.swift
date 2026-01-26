@@ -84,10 +84,9 @@ struct DiscardPileView: View {
         store.battle?.discardPile ?? []
     }
     
-    private var groupedCards: [(kind: ActionCardKind, cards: [ActionCard])] {
-        let grouped = Dictionary(grouping: discardPileCards) { $0.kind }
-        return grouped.map { (kind: $0.key, cards: $0.value) }
-            .sorted { $0.kind.rawValue < $1.kind.rawValue }
+    // Show each card separately (each has unique ID)
+    private var sortedCards: [ActionCard] {
+        discardPileCards.sorted { $0.kind.rawValue < $1.kind.rawValue }
     }
     
     private var infoBlock: some View {
@@ -138,12 +137,12 @@ struct DiscardPileView: View {
         let columns = gridColumns(for: hSizeClass)
         
         return LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(groupedCards, id: \.kind) { group in
+            ForEach(sortedCards, id: \.id) { card in
                 RunDeckCardCell(
-                    cards: group.cards,
-                    kind: group.kind
-                ) { card in
-                    selectedCard = card
+                    cards: [card],
+                    kind: card.kind
+                ) { selectedCard in
+                    self.selectedCard = selectedCard
                 }
             }
         }

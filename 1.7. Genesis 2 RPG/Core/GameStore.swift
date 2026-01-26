@@ -263,19 +263,6 @@ final class GameStore: ObservableObject {
         return deck
     }
 
-    private func drawHand(from drawPile: inout [ActionCard]) -> [ActionCard] {
-        // If draw pile is empty, shuffle discard pile back
-        if drawPile.isEmpty {
-            // This will be handled by the caller who has access to discardPile
-            return []
-        }
-        
-        // Take 3 cards
-        let cardsToDraw = min(3, drawPile.count)
-        let drawn = Array(drawPile.prefix(cardsToDraw))
-        drawPile.removeFirst(cardsToDraw)
-        return drawn
-    }
 
     init(meta: PlayerMeta) {
         self.meta = meta
@@ -650,8 +637,16 @@ final class GameStore: ObservableObject {
         var drawPile = (run?.runDeck ?? []).shuffled()
         var discardPile: [ActionCard] = []
         
-        // Draw initial hand of 3 cards
-        let initialHand = drawHand(from: &drawPile)
+        // Draw initial hand of 3 cards (or as many as available)
+        let cardsNeeded = 3
+        let cardsToDraw = min(cardsNeeded, drawPile.count)
+        let initialHand: [ActionCard]
+        if cardsToDraw > 0 {
+            initialHand = Array(drawPile.prefix(cardsToDraw))
+            drawPile.removeFirst(cardsToDraw)
+        } else {
+            initialHand = []
+        }
 
         var newBattle = BattleState(
             floor: floorLabel,
@@ -1063,20 +1058,23 @@ final class GameStore: ObservableObject {
 
         // Prepare next player turn
         b.playerBlock = 0
+        b.enemyBlock = 0  // Сбрасываем щит врага так же, как у игрока
         b.actionPoints = 3
         
         // Move all cards from hand to discard pile
         b.discardPile.append(contentsOf: b.hand)
         b.hand = []
         
-        // If draw pile is empty, shuffle discard pile back
-        if b.drawPile.isEmpty && !b.discardPile.isEmpty {
-            b.drawPile = b.discardPile.shuffled()
+        // If draw pile doesn't have enough cards (need 3), refresh from discard pile
+        let cardsNeeded = 3
+        if b.drawPile.count < cardsNeeded && !b.discardPile.isEmpty {
+            // Shuffle discard pile and add to draw pile
+            b.drawPile.append(contentsOf: b.discardPile.shuffled())
             b.discardPile = []
         }
         
-        // Draw 3 cards from draw pile
-        let cardsToDraw = min(3, b.drawPile.count)
+        // Draw 3 cards from draw pile (or as many as available)
+        let cardsToDraw = min(cardsNeeded, b.drawPile.count)
         if cardsToDraw > 0 {
             let drawn = Array(b.drawPile.prefix(cardsToDraw))
             b.drawPile.removeFirst(cardsToDraw)

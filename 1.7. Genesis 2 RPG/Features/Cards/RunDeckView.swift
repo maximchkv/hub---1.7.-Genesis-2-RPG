@@ -90,11 +90,9 @@ struct RunDeckView: View {
         store.run?.runDeck ?? []
     }
     
-    // Group cards by kind for display
-    private var groupedCards: [(kind: ActionCardKind, cards: [ActionCard])] {
-        let grouped = Dictionary(grouping: deckCards) { $0.kind }
-        return grouped.map { (kind: $0.key, cards: $0.value) }
-            .sorted { $0.kind.rawValue < $1.kind.rawValue }
+    // Show each card separately (each has unique ID)
+    private var sortedCards: [ActionCard] {
+        deckCards.sorted { $0.kind.rawValue < $1.kind.rawValue }
     }
     
     // MARK: - Info Block
@@ -155,12 +153,12 @@ struct RunDeckView: View {
         let columns = gridColumns(for: hSizeClass)
         
         return LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(groupedCards, id: \.kind) { group in
+            ForEach(sortedCards, id: \.id) { card in
                 RunDeckCardCell(
-                    cards: group.cards,
-                    kind: group.kind
-                ) { card in
-                    selectedCard = card
+                    cards: [card],
+                    kind: card.kind
+                ) { selectedCard in
+                    self.selectedCard = selectedCard
                 }
             }
         }
@@ -199,7 +197,7 @@ struct RunDeckView: View {
 // MARK: - Run Deck Card Cell
 
 struct RunDeckCardCell: View {
-    let cards: [ActionCard]
+    let cards: [ActionCard]  // Обычно одна карта, но оставляем массив для совместимости
     let kind: ActionCardKind
     let onTap: (ActionCard) -> Void
     
@@ -207,12 +205,13 @@ struct RunDeckCardCell: View {
     private let cardWidth: CGFloat = 160
     private let cardHeight: CGFloat = 200
     
+    private var card: ActionCard {
+        cards.first!  // Всегда одна карта теперь
+    }
+    
     var body: some View {
         Button {
-            // Use first card for detail view
-            if let firstCard = cards.first {
-                onTap(firstCard)
-            }
+            onTap(card)
         } label: {
             VStack(spacing: 8) {
                 // Icon - фиксированный размер
@@ -237,33 +236,16 @@ struct RunDeckCardCell: View {
                     .minimumScaleFactor(0.7)
                     .frame(height: 36)
                 
-                // Count and level info - масштабируется
-                VStack(spacing: 4) {
-                    if cards.count > 1 {
-                        Text("×\(cards.count)")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(UIStyle.Colors.inkSecondary)
-                    }
-                    
-                    // Show level - если все карты одного уровня, показываем его, иначе максимальный уровень
-                    let levels = Set(cards.map { $0.level })
-                    if levels.count == 1, let level = levels.first {
-                        Text("Lv\(level)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(UIStyle.Colors.accent)
-                    } else if let maxLevel = levels.max() {
-                        // Показываем максимальный уровень, если карты имеют разные уровни
-                        Text("Lv\(maxLevel)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(UIStyle.Colors.accent)
-                    }
-                }
+                // Level info - масштабируется
+                Text("Lv\(card.level)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(UIStyle.Colors.accent)
                 
                 // Cost - масштабируется
                 HStack(spacing: 4) {
                     Image(systemName: "bolt.fill")
                         .font(.caption2)
-                    Text("\(ActionCard(kind: kind).cost)")
+                    Text("\(card.cost)")
                         .font(.caption2.weight(.semibold))
                 }
                 .foregroundStyle(UIStyle.Colors.inkSecondary)
