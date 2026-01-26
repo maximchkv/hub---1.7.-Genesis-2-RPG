@@ -3,20 +3,17 @@ import Foundation
 
 struct TowerView: View {
     @EnvironmentObject private var store: GameStore
+    @State private var showRunDeck: Bool = false
 
     // MARK: - Layout constants
     private let contentCap: CGFloat = 420
     
     // Стандартизированные отступы через UI Kit
     private let topPad: CGFloat = UIStyle.Spacing.s
-    private let toastToMeta: CGFloat = UIStyle.Spacing.s
     private let metaToMap: CGFloat = UIStyle.Spacing.m
     
     // Debug mode - set to true to see layout boundaries
     private let debugMode: Bool = false
-
-    // Toast
-    private let toastHideDelay: Double = 1.2
 
     var body: some View {
         UIStyle.Layout.ScreenContainer {
@@ -26,10 +23,9 @@ struct TowerView: View {
                 
                 // Расчёт высоты карты: geo.size — это всё пространство внутри safe area
                 let headerHeight: CGFloat = 40
-                let toastHeight: CGFloat = store.toast != nil ? 32 : 0
                 let metaHeight: CGFloat = 70
-                let spacings = topPad + toastToMeta + metaToMap
-                let usedHeight = headerHeight + toastHeight + metaHeight + spacings
+                let spacings = topPad + metaToMap
+                let usedHeight = headerHeight + metaHeight + spacings
                 let mapHeight = max(200, totalHeight - usedHeight)
                 
                 ZStack(alignment: .top) {
@@ -47,12 +43,7 @@ struct TowerView: View {
                             .padding(.top, topPad)
                             .modifier(DebugBorder(color: .blue, enabled: debugMode, label: "header"))
                         
-                        // Toast
-                        toastView
-                            .frame(width: contentWidth)
-                            .modifier(DebugBorder(color: .purple, enabled: debugMode, label: "toast"))
-                        
-                        Spacer().frame(height: toastToMeta)
+                        Spacer().frame(height: metaToMap)
                         
                         // HP и прогресс
                         topInfoRow
@@ -100,37 +91,22 @@ struct TowerView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
 
-            // Symmetric spacer
-            Color.clear
-                .frame(width: 28, height: 28)
-        }
-    }
-
-    // MARK: - Toast
-
-    private var toastView: some View {
-        Group {
-            if let toast = store.toast {
-                Text(toast)
-                    .font(.caption)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(.thinMaterial)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + toastHideDelay) {
-                            if store.toast == toast {
-                                store.toast = nil
-                            }
-                        }
-                    }
-            } else {
-                EmptyView()
+            Button {
+                showRunDeck = true
+            } label: {
+                Image(systemName: "rectangle.stack.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(6)
+                    .background(Color.primary.opacity(0.05))
+                    .clipShape(Circle())
+                    .accessibilityLabel("Колода забега")
             }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showRunDeck) {
+            RunDeckView()
+                .environmentObject(store)
         }
     }
 

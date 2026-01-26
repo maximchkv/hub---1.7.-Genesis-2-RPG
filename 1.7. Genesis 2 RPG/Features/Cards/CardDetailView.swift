@@ -3,8 +3,15 @@ import SwiftUI
 struct CardDetailView: View {
     let card: ActionCardKind
     let isUnlocked: Bool
+    let currentLevel: Int?  // Текущий уровень карты в забеге (для подсветки)
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: GameStore
+    
+    init(card: ActionCardKind, isUnlocked: Bool, currentLevel: Int? = nil) {
+        self.card = card
+        self.isUnlocked = isUnlocked
+        self.currentLevel = currentLevel
+    }
     
     var body: some View {
         NavigationStack {
@@ -128,19 +135,30 @@ struct CardDetailView: View {
     }
     
     private func levelRow(level: Int) -> some View {
-        HStack {
+        let isCurrentLevel = currentLevel == level
+        
+        return HStack {
             Text("Lv\(level)")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(isCurrentLevel ? UIStyle.Colors.accent : UIStyle.Colors.inkPrimary)
                 .frame(width: 50, alignment: .leading)
             
             Text(levelEffect(level: level))
                 .font(.subheadline)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(isCurrentLevel ? UIStyle.Colors.accent : UIStyle.Colors.inkSecondary)
             
             Spacer()
+            
+            if isCurrentLevel {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(UIStyle.Colors.accent)
+            }
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, isCurrentLevel ? 8 : 0)
+        .background(isCurrentLevel ? UIStyle.Colors.accent.opacity(0.1) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
     
     private func levelEffect(level: Int) -> String {

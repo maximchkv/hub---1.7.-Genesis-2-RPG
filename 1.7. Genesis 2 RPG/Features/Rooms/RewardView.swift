@@ -8,20 +8,43 @@ struct RewardView: View {
 
     @State private var isClaiming: Bool = false
     @State private var showConfetti: Bool = false
+    @State private var showRunDeck: Bool = false
 
     var body: some View {
         ZStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     // Header
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Награда")
-                            .font(.system(size: 28, weight: .semibold, design: .serif))
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Награда")
+                                .font(.system(size: 28, weight: .semibold, design: .serif))
+                                .foregroundStyle(UIStyle.Colors.inkPrimary)
 
-                        Text("Выберите 1 улучшение")
-                            .font(.callout)
-                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+                            Text("Выберите 1 улучшение")
+                                .font(.callout)
+                                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                        }
+                        
+                        Spacer()
+                        
+                        // Кнопка колоды забега
+                        Button {
+                            showRunDeck = true
+                        } label: {
+                            Image(systemName: "rectangle.stack.fill")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                                .padding(10)
+                                .background(.thinMaterial)
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Колода забега")
                     }
                     .padding(.bottom, 4)
 
@@ -37,7 +60,7 @@ struct RewardView: View {
                                         title: title(for: kind),
                                         levelInfo: levelInfo(for: kind),
                                         bonusInfo: bonusInfo(for: kind),
-                                        currentLevel: store.run?.cardLevels[kind] ?? 1,
+                                        currentLevel: store.getCardLevelInRunDeck(kind),
                                         cost: ActionCard(kind: kind).cost
                                     )
                                 }
@@ -70,6 +93,10 @@ struct RewardView: View {
         .onAppear {
             // Запускаем конфетти при появлении экрана
             showConfetti = true
+        }
+        .sheet(isPresented: $showRunDeck) {
+            RunDeckView()
+                .environmentObject(store)
         }
     }
 
@@ -111,15 +138,15 @@ struct RewardView: View {
     }
     
     private func levelInfo(for kind: ActionCardKind) -> String {
-        // Берем реальный текущий уровень из run, а не из battle
-        let currentLevel = store.run?.cardLevels[kind] ?? 1
+        // Берем реальный текущий уровень из runDeck
+        let currentLevel = store.getCardLevelInRunDeck(kind)
         let nextLevel = currentLevel + 1
         return "Ур.\(currentLevel) → Ур.\(nextLevel)"
     }
     
     private func bonusInfo(for kind: ActionCardKind) -> (current: String, next: String) {
-        // Берем реальный текущий уровень из run, а не из battle
-        let currentLevel = store.run?.cardLevels[kind] ?? 1
+        // Берем реальный текущий уровень из runDeck
+        let currentLevel = store.getCardLevelInRunDeck(kind)
         let nextLevel = currentLevel + 1
         
         switch kind {
