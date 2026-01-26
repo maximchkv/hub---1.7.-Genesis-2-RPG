@@ -179,15 +179,29 @@ struct CardLibraryView: View {
     // widthCap удален - теперь используется UIStyle.Layout.contentWidth
     
     private func gridColumns(for sizeClass: UserInterfaceSizeClass?) -> [GridItem] {
+        // Жесткая сетка с фиксированным размером карт
+        let cardWidth: CGFloat = 160
+        let spacing: CGFloat = 16
+        
         switch sizeClass {
         case .compact:
             // 2 columns on iPhone
-            return Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)
+            return [
+                GridItem(.fixed(cardWidth), spacing: spacing),
+                GridItem(.fixed(cardWidth), spacing: spacing)
+            ]
         case .regular:
-            // 3-4 columns on iPad
-            return Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
+            // 3 columns on iPad
+            return [
+                GridItem(.fixed(cardWidth), spacing: spacing),
+                GridItem(.fixed(cardWidth), spacing: spacing),
+                GridItem(.fixed(cardWidth), spacing: spacing)
+            ]
         default:
-            return Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)
+            return [
+                GridItem(.fixed(cardWidth), spacing: spacing),
+                GridItem(.fixed(cardWidth), spacing: spacing)
+            ]
         }
     }
 }
