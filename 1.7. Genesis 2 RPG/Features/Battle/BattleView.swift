@@ -776,10 +776,12 @@ private struct ParticipantsPanel: View {
                 var state = seed
                 state = state &* 1103515245 &+ 12345
                 let range = Int(shakeAmplitude * 2) + 1 // Диапазон от -amplitude до +amplitude
-                let xOffset = CGFloat(Int(state) % range) - shakeAmplitude
+                // Safe conversion: use modulo on UInt64 first, then convert to Int
+                let xOffset = CGFloat(Int(state % UInt64(range))) - shakeAmplitude
                 
                 state = state &* 1103515245 &+ 12345
-                let yOffset = CGFloat(Int(state) % range) - shakeAmplitude
+                // Safe conversion: use modulo on UInt64 first, then convert to Int
+                let yOffset = CGFloat(Int(state % UInt64(range))) - shakeAmplitude
                 
                 // Сбрасываем перед новой анимацией
                 shakeX = 0
