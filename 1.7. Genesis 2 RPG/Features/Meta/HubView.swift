@@ -17,10 +17,6 @@ struct HubView: View {
     private let metricLabelHeight: CGFloat = 28  // место под 2 строки caption2
     private let metricValueHeight: CGFloat = 22  // место под headline
 
-    // Toast slot (фикс. высота, без сдвигов)
-    private let toastSlotHeight: CGFloat = 34
-    private let toastHideDelay: Double = 1.2
-
     // Shared card sizing/background (PATCH 032D/032 Castle image)
     private let hubCardHeight: CGFloat = 220
     private let hubThumbHeight: CGFloat = 132
@@ -41,9 +37,6 @@ struct HubView: View {
                 // CONTENT (scrollable)
                 ScrollView(.vertical) {
                     VStack(spacing: UIStyle.Spacing.l) {
-                        toastSlot
-                            .frame(width: contentWidth)
-
                         navGrid
                             .frame(width: contentWidth)
                     }
@@ -112,40 +105,6 @@ struct HubView: View {
         guard let r = store.run else { return "—" }
         // Compact: A1 F3 / 33
         return "A\(r.actIndex) F\(r.floorInAct)/\(r.globalFloorsTotal)"
-    }
-
-    // MARK: - Toast Slot (fixed height, no layout shifts)
-
-    private var toastSlot: some View {
-        ZStack {
-            // Пустой слот всегда существует и держит высоту
-            RoundedRectangle(cornerRadius: 999)
-                .fill(SwiftUI.Color.clear)
-                .frame(height: toastSlotHeight)
-
-            if let toast = store.toast, !toast.isEmpty {
-                Text(toast)
-                    .font(.caption)
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(.thinMaterial)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule().stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
-                    )
-                    .transition(.opacity)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + toastHideDelay) {
-                            if store.toast == toast {
-                                store.toast = nil
-                            }
-                        }
-                    }
-            }
-        }
-        .frame(height: toastSlotHeight)
-        .animation(.easeOut(duration: 0.18), value: store.toast)
     }
 
     // MARK: - Navigation cards (2 + 1)
