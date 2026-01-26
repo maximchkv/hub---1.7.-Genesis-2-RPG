@@ -245,14 +245,13 @@ struct BattleView: View {
     // MARK: - Bottom Controls
 
     private func compactBottomControls(battle: BattleState, contentWidth: CGFloat) -> some View {
-        let controlHeight: CGFloat = 18  // Уменьшено в 2 раза (было 36)
-        let containerSize: CGFloat = 50
+        let containerSize: CGFloat = 50  // Высота кнопки такая же как контейнеры
         
         return HStack(spacing: UIStyle.Spacing.m) {
             // Left: Draw pile container
             drawPileContainer(battle: battle, size: containerSize)
             
-            // Center: End turn button (reduced size)
+            // Center: End turn button (same height as containers)
             Button {
                 store.endTurn()
             } label: {
@@ -260,7 +259,7 @@ struct BattleView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: controlHeight)
+                    .frame(height: containerSize)
                     .background(
                         RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
                             .fill(UIStyle.Colors.accent)

@@ -890,13 +890,9 @@ final class GameStore: ObservableObject {
         if battle.usedCardsThisTurn.contains(card.kind) { return }
         guard battle.actionPoints >= card.cost else { return }
         
-        // Find and remove the card from hand
+        // Find the card in hand (don't remove it yet - cards stay in hand until turn ends)
         guard let cardIndex = battle.hand.firstIndex(where: { $0.id == card.id }) else { return }
         let playedCard = battle.hand[cardIndex]
-        battle.hand.remove(at: cardIndex)
-        
-        // Move card to discard pile
-        battle.discardPile.append(playedCard)
         
         battle.actionPoints -= card.cost
 
@@ -1068,6 +1064,10 @@ final class GameStore: ObservableObject {
         // Prepare next player turn
         b.playerBlock = 0
         b.actionPoints = 3
+        
+        // Move all cards from hand to discard pile
+        b.discardPile.append(contentsOf: b.hand)
+        b.hand = []
         
         // If draw pile is empty, shuffle discard pile back
         if b.drawPile.isEmpty && !b.discardPile.isEmpty {
