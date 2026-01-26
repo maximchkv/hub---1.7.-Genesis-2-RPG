@@ -3,6 +3,8 @@ import SwiftUI
 
 struct BattleView: View {
     @EnvironmentObject private var store: GameStore
+    @State private var showDrawPile: Bool = false
+    @State private var showDiscardPile: Bool = false
 
     // Debug layout outlines (3px) to visualize real block bounds
     private let showDebugOutlines: Bool = false
@@ -243,24 +245,95 @@ struct BattleView: View {
     // MARK: - Bottom Controls
 
     private func compactBottomControls(battle: BattleState, contentWidth: CGFloat) -> some View {
-        let controlHeight: CGFloat = 36
+        let controlHeight: CGFloat = 18  // Уменьшено в 2 раза (было 36)
+        let containerSize: CGFloat = 50
+        
+        return HStack(spacing: UIStyle.Spacing.m) {
+            // Left: Draw pile container
+            drawPileContainer(battle: battle, size: containerSize)
+            
+            // Center: End turn button (reduced size)
+            Button {
+                store.endTurn()
+            } label: {
+                Text("Закончить ход")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: controlHeight)
+                    .background(
+                        RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
+                            .fill(UIStyle.Colors.accent)
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(battle.phase != .player)
+            .opacity(battle.phase == .player ? 1.0 : 0.55)
+            
+            // Right: Discard pile container
+            discardPileContainer(battle: battle, size: containerSize)
+        }
+        .frame(width: contentWidth)
+        .sheet(isPresented: $showDrawPile) {
+            DrawPileView()
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showDiscardPile) {
+            DiscardPileView()
+                .environmentObject(store)
+        }
+    }
+    
+    private func drawPileContainer(battle: BattleState, size: CGFloat) -> some View {
+        let count = battle.drawPile.count
         
         return Button {
-            store.endTurn()
+            showDrawPile = true
         } label: {
-            Text("Закончить ход")
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: controlHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
-                        .fill(UIStyle.Colors.accent)
-                )
+            VStack(spacing: 4) {
+                Image(systemName: "rectangle.stack.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                
+                Text("\(count)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+            }
+            .frame(width: size, height: size)
+            .background(.thinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
-        .disabled(battle.phase != .player)
-        .opacity(battle.phase == .player ? 1.0 : 0.55)
+    }
+    
+    private func discardPileContainer(battle: BattleState, size: CGFloat) -> some View {
+        let count = battle.discardPile.count
+        
+        return Button {
+            showDiscardPile = true
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "trash.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                
+                Text("\(count)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+            }
+            .frame(width: size, height: size)
+            .background(.thinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func compactAPIndicator(ap: Int) -> some View {
@@ -297,7 +370,7 @@ struct BattleView: View {
         return HStack(spacing: actionCardRowSpacing) {
             ForEach(battle.hand.prefix(maxCardsInRow), id: \.id) { card in
                 let cardState = determineCardState(card: card, battle: battle)
-                let lvl = battle.cardLevels[card.kind, default: 1]
+                let lvl = card.level  // Use level from card itself
 
                 Button {
                     store.playCard(card)
