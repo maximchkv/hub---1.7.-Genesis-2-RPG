@@ -5,34 +5,41 @@ struct CollectionCardCell: View {
     let isUnlocked: Bool
     let onTap: () -> Void
     
+    // Фиксированный размер карты
+    private let cardWidth: CGFloat = 160
+    private let cardHeight: CGFloat = 200
+    
     var body: some View {
         Button {
             onTap()
         } label: {
             VStack(spacing: 8) {
-                // Icon section
+                // Icon section - фиксированный размер
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(isUnlocked ? UIStyle.Colors.mutedFill : Color.black.opacity(0.7))
                     
                     if isUnlocked {
-                        Text(icon)
-                            .font(.system(size: 48))
+                        Image(systemName: icon)
+                            .font(.system(size: 40, weight: .medium))
+                            .foregroundStyle(iconColor)
+                            .imageScale(.large)
+                            .symbolRenderingMode(.hierarchical)
                     } else {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 32))
                             .foregroundStyle(.white.opacity(0.5))
                     }
                 }
-                .frame(height: 100)
+                .frame(width: 80, height: 80)  // Фиксированный размер иконки
                 
-                // Title
+                // Title - масштабируется
                 Text(isUnlocked ? titleRU : "???")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(UIStyle.Colors.inkPrimary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.9)
+                    .minimumScaleFactor(0.7)
                     .frame(height: 36)
                 
                 // Cost
@@ -43,6 +50,7 @@ struct CollectionCardCell: View {
                 }
             }
             .padding(10)
+            .frame(width: cardWidth, height: cardHeight)  // Фиксированный размер карты
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(isUnlocked ? UIStyle.Colors.cardFill : Color.black.opacity(0.3))
@@ -63,19 +71,40 @@ struct CollectionCardCell: View {
         ActionCardTexts.title(for: card)
     }
     
+    // MARK: - Icon System (синхронизировано с ActionCardView)
+    
     private var icon: String {
         switch card {
-        case .powerStrike: return "🗡️"
-        case .defend: return "🛡️"
-        case .doubleStrike: return "⚔️"
-        case .counterStance: return "🔁"
-        case .bleedPlus2: return "🩸"
-        case .weakPlus1: return "⬇️"
-        case .stun1: return "⚡️"
-        case .bleedStrike: return "🩸⚔️"
-        case .weakDefend: return "🛡️⬇️"
+        // Базовые карты
+        case .powerStrike: return "flame.fill"                      // Мощный удар (пламя/урон)
+        case .defend: return "shield.fill"                          // Щит
+        case .doubleStrike: return "arrow.triangle.2.circlepath"   // Двойной удар
+        case .counterStance: return "arrow.counterclockwise.circle.fill" // Контратака
+        
+        // Статусные карты (синхронизировано со статусами)
+        case .bleedPlus2: return "drop.fill"                        // Кровоток (как статус)
+        case .weakPlus1: return "arrow.down.circle.fill"            // Слабость (как статус)
+        case .stun1: return "bolt.fill"                            // Оглушение (как статус)
+        
+        // Синергийные карты (минималистичные, без многоточия)
+        case .bleedStrike: return "drop.fill"                       // Кровавый удар (капля крови, красная)
+        case .weakDefend: return "shield.fill"                     // Ослабляющий щит (щит, оранжевый)
+        
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "❓"
+            return "questionmark.circle.fill"
+        }
+    }
+    
+    /// Цвет иконки карточки (синхронизировано со статусами)
+    private var iconColor: Color {
+        switch card {
+        // Статусные карты используют цвета статусов
+        case .bleedPlus2, .bleedStrike: return Color.red
+        case .weakPlus1, .weakDefend: return Color.orange
+        case .stun1: return Color.purple
+        
+        // Базовые карты - нейтральный цвет
+        default: return UIStyle.Colors.inkPrimary
         }
     }
     
