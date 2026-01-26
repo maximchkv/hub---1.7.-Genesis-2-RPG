@@ -390,8 +390,8 @@ struct BattleView: View {
             return .notPlayerTurn
         }
         
-        // Проверка, была ли карта уже использована
-        if battle.usedCardsThisTurn.contains(card.kind) {
+        // Проверка, была ли карта уже использована (по id, не по kind)
+        if battle.usedCardsThisTurn.contains(card.id) {
             return .alreadyUsed
         }
         

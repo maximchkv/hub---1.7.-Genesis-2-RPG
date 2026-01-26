@@ -882,7 +882,7 @@ final class GameStore: ObservableObject {
 
         guard var battle = battle else { return }
         guard battle.phase == .player else { return }
-        if battle.usedCardsThisTurn.contains(card.kind) { return }
+        if battle.usedCardsThisTurn.contains(card.id) { return }
         guard battle.actionPoints >= card.cost else { return }
         
         // Find the card in hand (don't remove it yet - cards stay in hand until turn ends)
@@ -996,7 +996,7 @@ final class GameStore: ObservableObject {
             break
         }
 
-        battle.usedCardsThisTurn.insert(playedCard.kind)
+        battle.usedCardsThisTurn.insert(playedCard.id)
         self.battle = battle
         
         // Track card usage in collection
@@ -1058,7 +1058,7 @@ final class GameStore: ObservableObject {
 
         // Prepare next player turn
         b.playerBlock = 0
-        b.enemyBlock = 0  // Сбрасываем щит врага так же, как у игрока
+        // enemyBlock will be reset at the start of enemy turn (not here)
         b.actionPoints = 3
         
         // Move all cards from hand to discard pile
@@ -1091,6 +1091,9 @@ final class GameStore: ObservableObject {
 
     private func performEnemyTurn() {
         guard var battle = battle else { return }
+        
+        // Reset enemy block at the start of enemy turn (after player's turn)
+        battle.enemyBlock = 0
 
         switch battle.enemyIntent.kind {
         case .attack:
