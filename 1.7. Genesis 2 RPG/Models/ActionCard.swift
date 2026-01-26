@@ -46,6 +46,8 @@ enum ActionCardKind: String, Codable, Hashable, CaseIterable, Identifiable {
 struct ActionCard: Identifiable, Codable {
     let id: UUID
     let kind: ActionCardKind
+    var level: Int
+    var cardClass: String
 
     var cost: Int {
         switch kind {
@@ -63,8 +65,10 @@ struct ActionCard: Identifiable, Codable {
         }
     }
 
-    init(kind: ActionCardKind) {
+    init(kind: ActionCardKind, level: Int = 1, cardClass: String = "initial") {
         self.id = UUID()
         self.kind = kind
+        self.level = level
+        self.cardClass = cardClass
     }
 }

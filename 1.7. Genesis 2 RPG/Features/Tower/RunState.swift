@@ -12,6 +12,9 @@ struct RunState {
     /// Card upgrade levels persisted for the whole run.
     /// Default is 1 for any card kind not present in the dictionary.
     var cardLevels: [ActionCardKind: Int]
+    
+    /// Run deck: all cards in the current run with their individual levels
+    var runDeck: [ActionCard]
 
     /// 1...actCount
     var actIndex: Int
@@ -131,5 +134,6 @@ struct RunState {
         self.nonCombatStreak = 0
         self.roomOptions = []
         self.towerMap = nil
+        self.runDeck = []
     }
 }

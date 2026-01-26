@@ -23,6 +23,8 @@ struct BattleState {
     // Карточная часть
     var actionPoints: Int
     var hand: [ActionCard]
+    var drawPile: [ActionCard] = []  // Стопка добора (оставшиеся карты)
+    var discardPile: [ActionCard] = []  // Стопка сброса (сыгранные карты)
 
     // Интент и лог
     var enemyIntent: EnemyIntent
