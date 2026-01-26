@@ -281,7 +281,8 @@ struct CardDetailView: View {
     }
     
     private var effectRU: String {
-        ActionCardTexts.detailedDescription(for: card)
+        let cardLevel = currentLevel ?? 1
+        return ActionCardTexts.detailedDescription(for: card, level: cardLevel)
     }
     
     private var cost: Int {

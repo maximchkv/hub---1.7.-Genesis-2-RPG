@@ -209,10 +209,21 @@ struct ActionCardTexts {
     // Числовые значения берутся из констант выше автоматически
     
     static func shortDescription(for kind: ActionCardKind) -> String {
+        // Use level 1 as default for backward compatibility
+        return shortDescription(for: kind, level: 1)
+    }
+    
+    static func shortDescription(for kind: ActionCardKind, level: Int) -> String {
         switch kind {
-        case .powerStrike: return "Наносит урон \(powerStrikeBaseDamage)."
-        case .defend: return "Даёт блок \(defendBaseBlock)."
-        case .doubleStrike: return "Наносит урон \(doubleStrikeBaseHitDamage) дважды."
+        case .powerStrike:
+            let damage = value(for: .powerStrike, level: level)
+            return "Наносит урон \(damage)."
+        case .defend:
+            let block = value(for: .defend, level: level)
+            return "Даёт блок \(block)."
+        case .doubleStrike:
+            let hitDamage = doubleStrikeHit(level: level)
+            return "Наносит урон \(hitDamage) дважды."
         case .counterStance: return "Блок \(counterStanceBlock), урон \(counterStanceDamage)."
         case .bleedPlus2: return "Накладывает Кровоток +\(bleedPlus2Stacks)."
         case .weakPlus1: return "Накладывает Слабость +\(weakPlus1Stacks)."
@@ -229,10 +240,21 @@ struct ActionCardTexts {
     // Числовые значения берутся из констант выше автоматически
     
     static func detailedDescription(for kind: ActionCardKind) -> String {
+        // Use level 1 as default for backward compatibility
+        return detailedDescription(for: kind, level: 1)
+    }
+    
+    static func detailedDescription(for kind: ActionCardKind, level: Int) -> String {
         switch kind {
-        case .powerStrike: return "Наносит урон \(powerStrikeBaseDamage) противнику (базовое значение, растёт с уровнем). Базовая атакующая карта."
-        case .defend: return "Даёт блок \(defendBaseBlock) (базовое значение, растёт с уровнем), защищая от входящего урона."
-        case .doubleStrike: return "Наносит урон \(doubleStrikeBaseHitDamage) дважды (базовое значение за удар, растёт с уровнем). Эффективна против блока."
+        case .powerStrike:
+            let damage = value(for: .powerStrike, level: level)
+            return "Наносит урон \(damage) противнику (текущий уровень \(level), растёт с уровнем). Базовая атакующая карта."
+        case .defend:
+            let block = value(for: .defend, level: level)
+            return "Даёт блок \(block) (текущий уровень \(level), растёт с уровнем), защищая от входящего урона."
+        case .doubleStrike:
+            let hitDamage = doubleStrikeHit(level: level)
+            return "Наносит урон \(hitDamage) дважды (текущий уровень \(level), растёт с уровнем). Эффективна против блока."
         case .counterStance: return "Даёт блок \(counterStanceBlock) и наносит урон \(counterStanceDamage) одновременно."
         case .bleedPlus2: return "Накладывает Кровоток +\(bleedPlus2Stacks) на противника. Кровоток наносит урон в начале каждого хода."
         case .weakPlus1: return "Накладывает Слабость +\(weakPlus1Stacks) на противника. Слабость уменьшает наносимый урон."

@@ -163,7 +163,7 @@ struct ActionCardView: View {
     }
 
     private var effectRU: String {
-        ActionCardTexts.shortDescription(for: card.kind)
+        ActionCardTexts.shortDescription(for: card.kind, level: level)
     }
     
     // MARK: - State-based styling
