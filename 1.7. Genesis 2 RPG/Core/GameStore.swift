@@ -22,7 +22,6 @@ final class GameStore: ObservableObject {
     @Published var meta: PlayerMeta
     @Published var run: RunState? = nil
     @Published var route: Route = .start
-    @Published var toast: String? = nil
     @Published var chest: ChestState? = nil
     @Published var battle: BattleState? = nil
     @Published var event: EventState? = nil
@@ -181,7 +180,6 @@ final class GameStore: ObservableObject {
 
     func setCastleMode(_ mode: CastleMode) {
         castleMode = mode
-        toast = "\(mode.rawValue) mode"
     }
 
     func isCastleTileEmpty(_ index: Int) -> Bool {
@@ -232,10 +230,51 @@ final class GameStore: ObservableObject {
         .bleedStrike,
         .weakDefend
     ]
+    
+    // MARK: - Run Deck Generation
+    
+    /// Generate starting deck for a new run
+    /// 1-cost cards: 2 copies each
+    /// 2-cost cards: 1 copy each
+    /// All cards marked as "initial" class
+    private func generateStartingDeck() -> [ActionCard] {
+        var deck: [ActionCard] = []
+        
+        // Get all base cards
+        let baseCards = ActionCardKind.allCases.filter { $0.isBaseCard }
+        
+        for cardKind in baseCards {
+            let card = ActionCard(kind: cardKind)
+            let copies: Int
+            
+            if card.cost == 1 {
+                copies = 2
+            } else if card.cost == 2 {
+                copies = 1
+            } else {
+                copies = 1  // Fallback
+            }
+            
+            for _ in 0..<copies {
+                deck.append(ActionCard(kind: cardKind, level: 1, cardClass: "initial"))
+            }
+        }
+        
+        return deck
+    }
 
-    private func drawHand() -> [ActionCard] {
-        let shuffled = allCards.shuffled()
-        return Array(shuffled.prefix(5)).map { ActionCard(kind: $0) }
+    private func drawHand(from drawPile: inout [ActionCard]) -> [ActionCard] {
+        // If draw pile is empty, shuffle discard pile back
+        if drawPile.isEmpty {
+            // This will be handled by the caller who has access to discardPile
+            return []
+        }
+        
+        // Take 3 cards
+        let cardsToDraw = min(3, drawPile.count)
+        let drawn = Array(drawPile.prefix(cardsToDraw))
+        drawPile.removeFirst(cardsToDraw)
+        return drawn
     }
 
     init(meta: PlayerMeta) {
@@ -323,18 +362,24 @@ final class GameStore: ObservableObject {
     func unlockCard(_ kind: ActionCardKind) {
         let wasUnlocked = meta.collection.isUnlocked(kind)
         meta.unlockCard(kind)
-        if !wasUnlocked {
-            toast = "Карта разблокирована: \(cardTitle(kind))"
-        }
     }
     
     func incrementCardUsage(_ kind: ActionCardKind) {
         meta.incrementCardUsage(kind)
     }
+    
+    /// Get current level of a card kind from run deck (first card found)
+    func getCardLevelInRunDeck(_ kind: ActionCardKind) -> Int {
+        guard let run = run else { return 1 }
+        return run.runDeck.first(where: { $0.kind == kind })?.level ?? 1
+    }
 
     // MARK: - Run
     func startRun(routeToHub: Bool = true) {
         var newRun = RunState()
+        
+        // Generate starting deck
+        newRun.runDeck = generateStartingDeck()
         
         // Generate the tower map for Act 1
         let actMap = towerService.generateActMap(actIndex: 1)
@@ -470,7 +515,6 @@ final class GameStore: ObservableObject {
     }
 
     func chooseEventOption(_ option: EventState.Option) {
-        toast = option.toast
         event = nil
         completeNonCombatRoomAndContinue(kind: .event)
     }
@@ -488,7 +532,6 @@ final class GameStore: ObservableObject {
         let before = r.playerHP
         r.playerHP = min(r.playerMaxHP, r.playerHP + healAmount)
         run = r
-        toast = "Rest: +\(r.playerHP - before) HP"
         completeNonCombatRoomAndContinue(kind: .rest)
     }
 
@@ -513,7 +556,6 @@ final class GameStore: ObservableObject {
     func applyDayTick() {
         meta.days += 1
         meta.gold += meta.incomePerDay
-        toast = "Day +1  •  Gold +\(meta.incomePerDay)"
     }
 
     // MARK: - Chest
@@ -540,7 +582,6 @@ final class GameStore: ObservableObject {
     func claimChestRewardAndContinue() {
         guard let chest, chest.isOpened, let art = chest.revealed else { return }
         meta.artifacts.append(art)
-        toast = "\(art.icon) \(art.name) added (+\(art.incomeBonus)/day)"
         self.chest = nil
         completeNonCombatRoomAndContinue(kind: .chest)
     }
@@ -605,6 +646,13 @@ final class GameStore: ObservableObject {
         let enemyHP: Int = (kind == .boss) ? 40 : (kind == .elite ? 28 : 20)
         let playerHP: Int = run?.playerHP ?? 20
 
+        // Initialize draw pile from run deck
+        var drawPile = (run?.runDeck ?? []).shuffled()
+        var discardPile: [ActionCard] = []
+        
+        // Draw initial hand of 3 cards
+        let initialHand = drawHand(from: &drawPile)
+
         var newBattle = BattleState(
             floor: floorLabel,
             enemyName: (kind == .boss) ? "Boss: \(enemy.name)" : (kind == .elite ? "Elite: \(enemy.name)" : enemy.name),
@@ -613,7 +661,9 @@ final class GameStore: ObservableObject {
             enemyHP: enemyHP,
             enemyBlock: 0,
             actionPoints: 3,
-            hand: drawHand(),
+            hand: initialHand,
+            drawPile: drawPile,
+            discardPile: discardPile,
             enemyIntent: EnemyIntent(kind: .attack, value: 5),
             log: [],
             enemyAttackedThisTurn: false,
@@ -647,7 +697,6 @@ final class GameStore: ObservableObject {
         }
 
         battle = nil
-        toast = (kind == .boss) ? "Boss defeated" : "Victory"
 
         // Reward gate (v1): choose 1 card upgrade after every win
         reward = generateReward()
@@ -803,14 +852,24 @@ final class GameStore: ObservableObject {
             return
         }
 
-        let old = r.cardLevels[kind] ?? 1
-        r.cardLevels[kind] = old + 1
+        // Find first card of this kind in runDeck and upgrade it
+        if let cardIndex = r.runDeck.firstIndex(where: { $0.kind == kind }) {
+            let oldLevel = r.runDeck[cardIndex].level
+            r.runDeck[cardIndex].level = oldLevel + 1
+            
+            // Also update cardLevels for backward compatibility
+            r.cardLevels[kind] = oldLevel + 1
+        } else {
+            // Card not found in deck (shouldn't happen, but fallback)
+            let old = r.cardLevels[kind] ?? 1
+            r.cardLevels[kind] = old + 1
+        }
+        
         run = r
         
         // Unlock card in collection if first time
         unlockCard(kind)
 
-        toast = "Upgraded \(kind.rawValue) → Lv\(old + 1)"
         reward = nil
 
         // Now advance the floor and return to tower/victory
@@ -830,11 +889,20 @@ final class GameStore: ObservableObject {
         guard battle.phase == .player else { return }
         if battle.usedCardsThisTurn.contains(card.kind) { return }
         guard battle.actionPoints >= card.cost else { return }
+        
+        // Find and remove the card from hand
+        guard let cardIndex = battle.hand.firstIndex(where: { $0.id == card.id }) else { return }
+        let playedCard = battle.hand[cardIndex]
+        battle.hand.remove(at: cardIndex)
+        
+        // Move card to discard pile
+        battle.discardPile.append(playedCard)
+        
         battle.actionPoints -= card.cost
 
-        let lvl = battle.cardLevels[card.kind, default: 1]
+        let lvl = playedCard.level
 
-        switch card.kind {
+        switch playedCard.kind {
         case .powerStrike:
             let base = powerStrikeDamage(level: lvl)
             let dmg = battle.modifiedOutgoingWeaponDamage(base, from: .player)
@@ -847,12 +915,12 @@ final class GameStore: ObservableObject {
             if dealt > 0 {
                 triggerShake(for: .enemy)
             }
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
+            pushLog(&battle, side: .player, "\(cardTitle(playedCard.kind)) (-\(playedCard.cost) AP): dmg \(dealt) (blocked \(blocked))")
 
         case .defend:
             let bVal = defendBlock(level: lvl)
             battle.playerBlock += bVal
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal)")
+            pushLog(&battle, side: .player, "\(cardTitle(playedCard.kind)) (-\(playedCard.cost) AP): block +\(bVal)")
 
         case .doubleStrike:
             let hit = doubleStrikeHit(level: lvl)
@@ -872,7 +940,7 @@ final class GameStore: ObservableObject {
             if max(0, afterFirstHP - battle.enemyHP) > 0 {
                 triggerShake(for: .enemy) // Второй удар
             }
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked))")
+            pushLog(&battle, side: .player, "\(cardTitle(playedCard.kind)) (-\(playedCard.cost) AP): dmg \(dealt) (blocked \(blocked))")
 
         case .counterStance:
             let bVal = counterStanceBlockValue()
@@ -888,7 +956,7 @@ final class GameStore: ObservableObject {
             if dealt > 0 {
                 triggerShake(for: .enemy)
             }
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): block +\(bVal), dmg \(dealt) (blocked \(blocked))")
+            pushLog(&battle, side: .player, "\(cardTitle(playedCard.kind)) (-\(playedCard.cost) AP): block +\(bVal), dmg \(dealt) (blocked \(blocked))")
 
         // 031B: Status cards
         case .bleedPlus2:
@@ -920,28 +988,28 @@ final class GameStore: ObservableObject {
                 if dealt > 0 {
                     triggerShake(for: .enemy)
                 }
-                pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): dmg \(dealt) (blocked \(blocked), от кровотечения ×\(enemyBleedStacks))")
+                pushLog(&battle, side: .player, "\(cardTitle(playedCard.kind)) (-\(playedCard.cost) AP): dmg \(dealt) (blocked \(blocked), от кровотечения ×\(enemyBleedStacks))")
             } else {
                 // Если у врага нет кровотечения: наложить Bleed
                 battle.addStatus(.bleed, stacks: ActionCardTexts.bleedStrikeBleedStacks, to: .enemy)
-                pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Кровоток +\(ActionCardTexts.bleedStrikeBleedStacks)")
+                pushLog(&battle, side: .player, "\(cardTitle(playedCard.kind)) (-\(playedCard.cost) AP): Кровоток +\(ActionCardTexts.bleedStrikeBleedStacks)")
             }
         
         case .weakDefend:
             battle.addStatus(.weak, stacks: ActionCardTexts.weakDefendWeakStacks, to: .enemy)
             battle.playerBlock += ActionCardTexts.weakDefendBlock
-            pushLog(&battle, side: .player, "\(cardTitle(card.kind)) (-\(card.cost) AP): Слабость +\(ActionCardTexts.weakDefendWeakStacks) врагу, блок +\(ActionCardTexts.weakDefendBlock)")
+            pushLog(&battle, side: .player, "\(cardTitle(playedCard.kind)) (-\(playedCard.cost) AP): Слабость +\(ActionCardTexts.weakDefendWeakStacks) врагу, блок +\(ActionCardTexts.weakDefendBlock)")
             
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
             // Placeholders should never be playable
             break
         }
 
-        battle.usedCardsThisTurn.insert(card.kind)
+        battle.usedCardsThisTurn.insert(playedCard.kind)
         self.battle = battle
         
         // Track card usage in collection
-        incrementCardUsage(card.kind)
+        incrementCardUsage(playedCard.kind)
 
         if battle.enemyHP <= 0 {
             winBattle()
@@ -1000,7 +1068,23 @@ final class GameStore: ObservableObject {
         // Prepare next player turn
         b.playerBlock = 0
         b.actionPoints = 3
-        b.hand = drawHand()
+        
+        // If draw pile is empty, shuffle discard pile back
+        if b.drawPile.isEmpty && !b.discardPile.isEmpty {
+            b.drawPile = b.discardPile.shuffled()
+            b.discardPile = []
+        }
+        
+        // Draw 3 cards from draw pile
+        let cardsToDraw = min(3, b.drawPile.count)
+        if cardsToDraw > 0 {
+            let drawn = Array(b.drawPile.prefix(cardsToDraw))
+            b.drawPile.removeFirst(cardsToDraw)
+            b.hand = drawn
+        } else {
+            b.hand = []
+        }
+        
         b.usedCardsThisTurn.removeAll()
         b.phase = .player
         pushLog(&b, side: .system, "New turn: hand refreshed")
@@ -1191,7 +1275,6 @@ final class GameStore: ObservableObject {
         meta.gold += incomeBeforeApplying
         applyCastlePending()
         recomputeCastleEconomy()
-        toast = "Day +1  •  Gold +\(incomeBeforeApplying)"
         for tile in castleTiles {
             if case .built(_, let level) = tile.state {
                 assert(level >= 1)
