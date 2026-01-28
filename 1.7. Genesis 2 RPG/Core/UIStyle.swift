@@ -50,7 +50,7 @@ enum UIStyle {
             Image("bg_parchment")
                 .resizable()
                 .scaledToFill()
-                .opacity(0.22)
+                .opacity(1.22)
                 .blur(radius: 1)
                 .blendMode(.softLight)
         }
