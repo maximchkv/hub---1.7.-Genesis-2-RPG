@@ -7,6 +7,9 @@ enum EnemyIntentKind: String, Codable {
     case counter
     case counterStance
     case doubleStrikeFixed4
+    case bleed
+    case weak
+    case stun
 }
 
 struct EnemyIntent: Codable, Hashable {
@@ -21,13 +24,16 @@ struct EnemyIntent: Codable, Hashable {
         case .counter: return "arrow.counterclockwise.circle.fill" // Контратака (как карта Контратака)
         case .counterStance: return "arrow.counterclockwise.circle.fill" // Стойка (как карта Контратака)
         case .doubleStrikeFixed4: return "arrow.triangle.2.circlepath" // Двойной удар (как карта Двойной удар)
+        case .bleed: return "drop.fill"
+        case .weak: return "arrow.down.circle.fill"
+        case .stun: return "bolt.circle.fill"
         }
     }
     
     /// Цвет иконки (синхронизировано с карточками)
     var iconColor: Color {
         switch kind {
-        case .attack, .defend, .counter, .counterStance, .doubleStrikeFixed4:
+        case .attack, .defend, .counter, .counterStance, .doubleStrikeFixed4, .bleed, .weak, .stun:
             return UIStyle.Colors.inkPrimary // Нейтральный цвет для базовых интентов
         }
     }
@@ -40,6 +46,9 @@ struct EnemyIntent: Codable, Hashable {
         case .counter: return "🔁"
         case .counterStance: return "🔁"
         case .doubleStrikeFixed4: return "⚔️"
+        case .bleed: return "🩸"
+        case .weak: return "⬇️"
+        case .stun: return "⚡️"
         }
     }
 
@@ -51,6 +60,9 @@ struct EnemyIntent: Codable, Hashable {
         case .counter: return "Контратака"
         case .counterStance: return "Стойка"
         case .doubleStrikeFixed4: return "Двойной удар"
+        case .bleed: return "Кровоток"
+        case .weak: return "Слабость"
+        case .stun: return "Оглушение"
         }
     }
 
@@ -63,6 +75,8 @@ struct EnemyIntent: Codable, Hashable {
             return "+\(value)"
         case .doubleStrikeFixed4:
             return "4×2"
+        case .bleed, .weak, .stun:
+            return "+\(value)"
         case .counter, .counterStance:
             return titleRU
         }
@@ -77,6 +91,8 @@ struct EnemyIntent: Codable, Hashable {
             return "\(icon) +\(value)"
         case .doubleStrikeFixed4:
             return "\(icon) 4×2"
+        case .bleed, .weak, .stun:
+            return "\(icon) +\(value)"
         case .counter, .counterStance:
             return "\(icon) \(titleRU)"
         }
@@ -89,6 +105,9 @@ struct EnemyIntent: Codable, Hashable {
         case .counter: return "Контратака"
         case .counterStance: return "Стойка"
         case .doubleStrikeFixed4: return "Двойной удар"
+        case .bleed: return "Кровоток"
+        case .weak: return "Слабость"
+        case .stun: return "Оглушение"
         }
     }
 }

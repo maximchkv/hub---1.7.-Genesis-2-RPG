@@ -22,6 +22,12 @@ struct BattleState {
     var enemyPattern: [RuntimeEnemyMove] = []
     var enemyPatternIndex: Int = 0
 
+    // v2: Паттерн и пул карт врага, основанные на тегах карт
+    var enemyTagPattern: [EnemyPatternStepByTag] = []
+    var enemyCardPool: [ActionCardKind] = []
+    /// v2: конкретная карта, выбранная под текущий интент (чтобы ход врага применял именно её)
+    var enemySelectedCard: ActionCardKind? = nil
+
     // Карточная часть
     var actionPoints: Int
     var hand: [ActionCard]
@@ -179,6 +185,11 @@ struct BattleState {
         case .enemy:
             return enemyStatuses.first(where: { $0.type == type })?.stacks ?? 0
         }
+    }
+
+    /// Публичный доступ к стакам статусов (для логики врага/интентов)
+    func stacks(_ type: StatusType, for side: BattleSide) -> Int {
+        getStacks(type, for: side)
     }
 
     private mutating func addOrSetStacks(_ type: StatusType, for side: BattleSide, newStacks: Int) {

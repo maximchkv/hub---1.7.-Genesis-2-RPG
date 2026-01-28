@@ -16,6 +16,118 @@ enum EnemyPatternIntentKind: String, Codable {
     case multiHitAttack
 }
 
+/// Шаг паттерна врага, основанный на тегах карт действий
+/// Используется новой v2-системой, где враг выбирает конкретную карту по тегам.
+struct EnemyCardCandidate: Codable, Hashable {
+    let kind: ActionCardKind
+    let weight: Int
+}
+
+struct EnemyPatternStepByTag: Codable, Hashable {
+    /// Позиция шага в паттерне (0-based), помогает понимать, к какому месту цикла относится шаг
+    let index: Int
+
+    /// Набор тегов, которые карта ДОЛЖНА содержать
+    let requiredTags: Set<ActionCardTag>
+
+    /// Набор тегов, которые карта ЖЕЛАТЕЛЬНО содержит (используется для приоритизации, но не обязателен)
+    let preferredTags: Set<ActionCardTag>
+
+    /// Минимальный и максимальный \"tier\" сложности/силы карты (опционально)
+    let minTier: Int?
+    let maxTier: Int?
+
+    /// Опционально: явный список кандидатов с весами.
+    /// Если задан, выбор делается ТОЛЬКО из него (после фильтров по requiredTags/tier).
+    let candidates: [EnemyCardCandidate]?
+}
+
+/// Вспомогательный селектор карт для врага по шагу паттерна
+struct EnemyCardSelector {
+    private static func weightedPick<T>(_ items: [(item: T, weight: Int)]) -> T? {
+        let sanitized = items
+            .map { (item: $0.item, weight: max(0, $0.weight)) }
+            .filter { $0.weight > 0 }
+        guard !sanitized.isEmpty else { return nil }
+
+        let total = sanitized.reduce(0) { $0 + $1.weight }
+        guard total > 0 else { return nil }
+
+        var roll = Int.random(in: 1...total)
+        for entry in sanitized {
+            roll -= entry.weight
+            if roll <= 0 { return entry.item }
+        }
+        return sanitized.last?.item
+    }
+
+    /// Выбрать подходящую карту из пула по описанию шага паттерна.
+    /// - Parameters:
+    ///   - pool: доступные типы карт врага
+    ///   - step: шаг паттерна с требованиями по тегам и tier
+    /// - Returns: выбранный тип карты или nil, если ничего не подошло
+    static func pickCard(from pool: [ActionCardKind], for step: EnemyPatternStepByTag) -> ActionCardKind? {
+        guard !pool.isEmpty else { return nil }
+
+        // 0. Если задан явный список кандидатов — выбираем только из него (взвешенно)
+        if let candidates = step.candidates, !candidates.isEmpty {
+            let allowed = Set(pool)
+            let filtered: [(item: ActionCardKind, weight: Int)] = candidates.compactMap { c in
+                guard allowed.contains(c.kind) else { return nil }
+                let tags = Set(c.kind.tags)
+                if !step.requiredTags.isSubset(of: tags) { return nil }
+                let tier = c.kind.enemyTier
+                if let min = step.minTier, tier < min { return nil }
+                if let max = step.maxTier, tier > max { return nil }
+                return (item: c.kind, weight: c.weight)
+            }
+            if let picked = weightedPick(filtered) {
+                return picked
+            }
+            // если кандидаты заданы, но все отфильтровались — откатываемся к общей логике ниже
+        }
+
+        // 1. Фильтрация по обязательным тегам
+        let byTags = pool.filter { kind in
+            let tags = Set(kind.tags)
+            return step.requiredTags.isSubset(of: tags)
+        }
+        let tagCandidates = byTags.isEmpty ? pool : byTags
+
+        // 2. Фильтрация по tier, если задан min/max
+        let hasTierBounds = (step.minTier != nil || step.maxTier != nil)
+        let tierCandidates: [ActionCardKind]
+        if hasTierBounds {
+            tierCandidates = tagCandidates.filter { kind in
+                let tier = kind.enemyTier
+                if let min = step.minTier, tier < min { return false }
+                if let max = step.maxTier, tier > max { return false }
+                return true
+            }
+        } else {
+            tierCandidates = tagCandidates
+        }
+
+        let baseCandidates = tierCandidates.isEmpty ? tagCandidates : tierCandidates
+        guard !baseCandidates.isEmpty else { return nil }
+
+        // 3. Взвешенный выбор на основе preferredTags:
+        // weight = 1 + количество совпавших preferredTag
+        if !step.preferredTags.isEmpty {
+            let weighted: [(item: ActionCardKind, weight: Int)] = baseCandidates.map { kind in
+                let score = Set(kind.tags).intersection(step.preferredTags).count
+                return (item: kind, weight: 1 + score)
+            }
+            if let picked = weightedPick(weighted) {
+                return picked
+            }
+        }
+
+        // 4. Если preferredTags не заданы — равновероятный выбор
+        return baseCandidates.randomElement()
+    }
+}
+
 struct EnemyIntentStep: Identifiable, Codable, Equatable {
     let id = UUID()
     let kind: EnemyPatternIntentKind

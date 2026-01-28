@@ -1,5 +1,14 @@
 import Foundation
 
+enum ActionCardTag: String, Codable, Hashable, CaseIterable {
+    case attacking
+    case defending
+    case debuff
+    case controlling
+    case support
+    case weapon
+}
+
 enum ActionCardKind: String, Codable, Hashable, CaseIterable, Identifiable {
     var id: String { self.rawValue }
     // Базовые карты (разблокированы с начала)
@@ -39,6 +48,53 @@ enum ActionCardKind: String, Codable, Hashable, CaseIterable, Identifiable {
             return true
         default:
             return false
+        }
+    }
+
+    /// Теги, описывающие функциональную роль карты
+    var tags: [ActionCardTag] {
+        switch self {
+        case .powerStrike:
+            return [.attacking, .weapon]
+        case .defend:
+            return [.defending]
+        case .doubleStrike:
+            return [.attacking, .weapon]
+        case .counterStance:
+            return [.attacking, .defending, .weapon]
+        case .bleedPlus2:
+            return [.debuff]
+        case .weakPlus1:
+            return [.debuff]
+        case .stun1:
+            return [.debuff, .controlling]
+        case .bleedStrike:
+            return [.attacking, .debuff, .weapon]
+        case .weakDefend:
+            return [.defending, .debuff]
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return []
+        }
+    }
+
+    /// Условный \"tier\" карты для вражеских паттернов (1 — базовые, 2+ — более сложные/сильные)
+    var enemyTier: Int {
+        switch self {
+        case .powerStrike, .defend, .bleedPlus2, .weakPlus1:
+            return 1
+        case .doubleStrike, .counterStance, .stun1, .bleedStrike, .weakDefend:
+            return 2
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return 0
+        }
+    }
+
+    /// Удобный фильтр: все виды карт, содержащие заданный набор тегов
+    static func all(with requiredTags: Set<ActionCardTag>) -> [ActionCardKind] {
+        guard !requiredTags.isEmpty else { return Array(Self.allCases) }
+        return Self.allCases.filter { kind in
+            let cardTags = Set(kind.tags)
+            return requiredTags.isSubset(of: cardTags)
         }
     }
 }
