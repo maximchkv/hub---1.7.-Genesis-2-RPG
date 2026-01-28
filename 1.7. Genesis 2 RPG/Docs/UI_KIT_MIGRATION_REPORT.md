@@ -1,10 +1,11 @@
 ================================================================================
-                    UI KIT MIGRATION REPORT — GENESIS 2 RPG
+           UI KIT + LIQUID INK MIGRATION REPORT — GENESIS 2 RPG
 ================================================================================
 
-Отчет о миграции всех экранов приложения на UI Kit систему.
+Отчет о миграции всех экранов приложения на UI Kit систему
+и обновлённый liquid ink / chrome визуальный слой.
 
-Дата: Январь 2026
+Дата: Январь 2026 / Liquid Ink pass 1
 
 
 ================================================================================
@@ -68,6 +69,23 @@
 - Два инициализатора: с/без trailing content
 - Использует @ViewBuilder для trailing content
 
+### Liquid Ink расширения
+- Обновлён `UIStyle.background()`:
+  - ink-градиент (`bgInkDeep → bgInkSoft → bgInkCenter`),
+  - крупные размазанные иридесцентные блики по краям (особенно снизу),
+  - спокойный центр под контент.
+- Обновлён `UIStyle.Colors`:
+  - базовые ink-цвета, liquid glass токены, текстовые токены,
+  - chrome gold и iridescent light-токены,
+  - сохранены алиасы для старых имён (`parchment`, `inkPrimary`, `cardFill` и т.п.).
+- Обновлён `uiCard()`:
+  - карточки/панели выглядят как synthetic glass skin (liquidGlassMid, liquidStroke, мягкие тени).
+- Новые кнопки:
+  - `PrimaryButtonStyle` — liquid gold pill с градиентом и specular-line,
+  - `SecondaryButtonStyle` — liquid glass кнопка с иридесцентной обводкой.
+- Новый компонент сегментов:
+  - `UIStyle.LiquidSegmentedControl` — glass rail + liquid chrome active сегмент, анимация «скольжения света».
+
 
 ================================================================================
 СТАТИСТИКА МИГРАЦИИ
@@ -112,9 +130,13 @@
 ================================================================================
 
 ### Обновленные документы:
-- `UI_DESIGN_RULES.md` - добавлен раздел "Динамические layout'ы", примеры миграции, чеклист
-- `TOWERVIEW_LAYOUT_PATTERNS.md` - детальное описание паттернов TowerView
-- `UI_KIT_MIGRATION_REPORT.md` - этот отчет
+- `UI_DESIGN_RULES.md` - добавлен раздел "Динамические layout'ы", чеклист, а также блоки:
+  - материалы и цветовая система Liquid Ink / Chrome,
+  - synthetic skin карточки/панели,
+  - liquid gold/liquid glass кнопки,
+  - liquid segmented control.
+- `TOWERVIEW_LAYOUT_PATTERNS.md` - детальное описание паттернов TowerView.
+- `UI_KIT_MIGRATION_REPORT.md` - этот отчет (дополнен разделом про Liquid Ink расширения).
 
 ### Планы:
 - `ui_kit_system_fb314574.plan.md` - обновлен с новыми паттернами

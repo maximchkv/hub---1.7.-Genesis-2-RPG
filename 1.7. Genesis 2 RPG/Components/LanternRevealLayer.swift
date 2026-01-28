@@ -25,9 +25,8 @@ struct LanternRevealLayer: View {
             let innerStop = clamp01((r - f) / r)
 
             ZStack {
-                // Revealed ink layer
+                // Revealed ink layer — abstract runes + dust (без силуэта башни)
                 ZStack {
-                    towerInkLayer(in: safeSize)
                     runeField(in: safeSize)
                     LanternDust(count: dustCount)
                 }
@@ -74,17 +73,10 @@ struct LanternRevealLayer: View {
     // MARK: - Layers
 
     private func towerInkLayer(in size: CGSize) -> some View {
-        Image("tower")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size.width * 0.92)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .offset(y: 10)
-            .opacity(0.36)
-            .saturation(0.0)
-            .contrast(1.05)
-            .blendMode(.multiply)
-            .blur(radius: 0.25)
+        // Deprecated: ранее использовал силуэт башни.
+        // Оставлено как пустой слой на случай будущего переиспользования.
+        Color.clear
+            .frame(width: size.width, height: size.height)
     }
 
     private func runeField(in size: CGSize) -> some View {

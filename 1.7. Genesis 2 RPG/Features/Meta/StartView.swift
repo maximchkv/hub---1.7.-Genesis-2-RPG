@@ -234,20 +234,11 @@ struct StartView: View {
             )
             .animation(.easeInOut(duration: 0.22), value: selectedChip)
 
-            // CTA button
-            Button {
+            // CTA button — Liquid Gold
+            Button("Start Run") {
                 store.startRun()
-            } label: {
-                Text("Start Run")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(
-                        RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
-                            .fill(UIStyle.Colors.accent)
-                    )
             }
+            .buttonStyle(UIStyle.PrimaryButtonStyle())
             
             // Debug button: start first battle
             Button {
@@ -271,52 +262,11 @@ struct StartView: View {
 
     @ViewBuilder
     private func chipRow() -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) {
-                ForEach(Chip.allCases) { chip in
-                    chipView(chip)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(Chip.allCases) { chip in
-                        chipView(chip)
-                    }
-                }
-                .padding(.horizontal, 2)
-            }
-        }
-    }
-
-    private func chipView(_ chip: Chip) -> some View {
-        let isSelected = (chip == selectedChip)
-
-        return Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.92)) {
-                selectedChip = chip
-            }
-        } label: {
-            Text(chip.title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isSelected ? .white : UIStyle.Colors.inkPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? UIStyle.Colors.accent : UIStyle.Colors.mutedFill)
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? UIStyle.Colors.accent.opacity(0.35) : UIStyle.Colors.cardStroke, lineWidth: 1)
-                )
-                .scaleEffect(isSelected ? 1.02 : 1.0)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(chip.title))
-        .accessibilityValue(Text(isSelected ? "Selected" : "Not selected"))
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        UIStyle.LiquidSegmentedControl(
+            options: Chip.allCases,
+            titleProvider: { $0.title },
+            selection: $selectedChip
+        )
     }
 
     private func onboardingContent(for chip: Chip) -> some View {

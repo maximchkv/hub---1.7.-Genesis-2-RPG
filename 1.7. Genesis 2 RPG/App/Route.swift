@@ -1,7 +1,6 @@
 enum Route: Hashable {
     case start
     case hub
-    case towerSplash
     case tower
     case chest
     case battle

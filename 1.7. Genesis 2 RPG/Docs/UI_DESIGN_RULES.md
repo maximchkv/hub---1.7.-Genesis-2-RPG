@@ -1,8 +1,10 @@
 ================================================================================
-                         UI RULES (SwiftUI) — GENESIS 2 RPG
+                 UI RULES (SwiftUI) — GENESIS 2 RPG (Liquid Ink)
 ================================================================================
 
-Цель: чтобы **ни один экран** не "уезжал" под вырез/края и выглядел консистентно.
+Цель: чтобы **ни один экран** не "уезжал" под вырез/края и выглядел консистентно
+и при этом ощущался как интерфейс из жидкого стекла и хрома,
+освещённый мягким неоном (Liquid Ink × Prismatic Chrome × Ethereal Anime).
 
 
 ================================================================================
@@ -56,12 +58,42 @@ SAFE AREA — ЧЕКЛИСТ
 
 
 ================================================================================
-ПРОСТЫЕ ПРАВИЛА
+МАТЕРИАЛЫ И ЦВЕТА (LIQUID INK / CHROME)
+================================================================================
+
+Все визуальные решения опираются на `UIStyle.Colors`:
+
+- База (Ink Background):
+  - `bgInkDeep`, `bgInkSoft`, `bgInkCenter` — тёмный ink-градиент сцены.
+- Стекло (Liquid Glass):
+  - `liquidGlassLow`, `liquidGlassMid`, `liquidGlassHigh`, `liquidStroke`.
+- Текст:
+  - `textPrimary`, `textSecondary`, `textMuted` — спокойная, приглушённая типографика.
+- Акцент (Chrome Gold):
+  - `chromeGold`, `chromeGoldHighlight` — хромированное золото для primary-акцентов.
+- Иридесценция (только свет, не solid!):
+  - `iridescentCyan`, `iridescentMagenta` — используются **только** как glows/рефлексы.
+  - `edgeCyanGlow`, `edgeMagentaGlow`, `specularLineSoft`, `reflectionCyan`, `reflectionMagenta`.
+
+Запрет:
+- Не использовать `iridescentCyan`/`iridescentMagenta` как сплошную заливку.
+- Только:
+  - мягкие edge-glow,
+  - размазанные пятна фона,
+  - тонкие specular-линии.
+
+
+================================================================================
+ПРОСТЫЕ ПРАВИЛА LAYOUT + ФОН
 ================================================================================
 
 ### Фон
 - Всегда через `.background { UIStyle.background().ignoresSafeArea() }`
-- НЕ через ZStack с фоном первым элементом
+- НЕ через ZStack с фоном первым элементом (кроме задокументированных исключений)
+- `UIStyle.background()` уже содержит:
+  - ink-градиент,
+  - крупные размазанные призматические блики по краям (особенно снизу),
+  - спокойный центр под контент.
 
 ### Отступы
 - Простой `.padding()` на контенте внутри ScrollView
@@ -84,26 +116,115 @@ SAFE AREA — ЧЕКЛИСТ
 ```swift
 struct SomeScreen: View {
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Заголовок")
-                    .font(.system(size: 28, weight: .semibold, design: .serif))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
-                
-                // остальной контент...
+        UIStyle.Layout.ScreenContainer {
+            ScrollView {
+                VStack(alignment: .leading, spacing: UIStyle.Spacing.l) {
+                    Text("Заголовок")
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .kerning(-0.6)
+                        .foregroundStyle(UIStyle.Colors.textPrimary)
+                    
+                    // остальной контент...
+                }
+                .padding(.horizontal, UIStyle.Spacing.xl)
+                .padding(.vertical, 20)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
+            .scrollIndicators(.hidden)
+            .toolbar(.hidden, for: .navigationBar)
         }
-        .scrollIndicators(.hidden)
-        .background {
-            UIStyle.background()
-                .ignoresSafeArea()
-        }
-        .toolbar(.hidden, for: .navigationBar)
     }
 }
 ```
+
+
+================================================================================
+ТИПОГРАФИКА (МИНИМАЛЬНАЯ МИМИКА)
+================================================================================
+
+- Базовый стиль:
+  - `SF Pro Rounded` / Display.
+- Заголовки:
+  - Semibold, дизайн `.rounded`, `kerning(-0.6)`.
+  - Без экстремальных размеров и жирности.
+- Body:
+  - Regular / Medium, увеличенный `lineSpacing`, цвета `textSecondary` по умолчанию.
+- Кнопки:
+  - Semibold, Sentence case (без UPPERCASE), дизайн `.rounded`.
+
+Принцип:
+- Читаемость и иерархия за счёт веса, kerning и слоя (фон/материал), а не за счёт резкого контраста.
+
+
+================================================================================
+КАРТОЧКИ / ПАНЕЛИ — SYNTHETIC SKIN
+================================================================================
+
+Все карточные/панельные поверхности должны ходить через `View.uiCard()` — это единая реализация
+\"synthetic skin\" (liquid glass + мягкие тени + иридесцентный край).
+
+```swift
+VStack {
+    // контент карточки
+}
+.uiCard()
+```
+
+`uiCard()`:
+- фон: `liquidGlassMid` поверх `bgInkCenter`,
+- бордер: `liquidStroke` + мягкий edge-glow,
+- тень: широкая, мягкая, без резких линий.
+
+Запрет:
+- не рисовать свои `.background(.thinMaterial)` и `.stroke` вокруг карточек,
+  если можно использовать `.uiCard()`.
+
+
+================================================================================
+КНОПКИ — LIQUID GOLD / LIQUID GLASS
+================================================================================
+
+Primary (Liquid Gold):
+- `Button { ... }.buttonStyle(UIStyle.PrimaryButtonStyle())`
+- Pill-форма (RoundedRectangle с большим радиусом),
+- фон: градиент `chromeGold → chromeGoldHighlight`,
+- тонкая specular-линия сверху,
+- press:
+  - `scaleEffect(0.98)`,
+  - лёгкое затемнение и смещение хайлайта,
+  - тень чуть короче.
+
+Secondary (Liquid Glass):
+- `Button { ... }.buttonStyle(UIStyle.SecondaryButtonStyle())`
+- фон: `liquidGlassLow → liquidGlassMid` с мягким inner light,
+- stroke: иридесцентный, но слабый (`edgeCyanGlow`, `edgeMagentaGlow`),
+- press:
+  - небольшое уменьшение opacity и scale,
+  - без резких скачков цвета.
+
+
+================================================================================
+СЕГМЕНТЫ / ТАБЫ — LIQUID RAIL
+================================================================================
+
+Для сегментов Climb / Cards / Castle / Collect и похожих переключателей
+используется `UIStyle.LiquidSegmentedControl`.
+
+```swift
+UIStyle.LiquidSegmentedControl(
+    options: [CastleUIMode.build, CastleUIMode.upgrade],
+    titleProvider: { $0.rawValue },
+    selection: $store.castleModeUI
+)
+```
+
+Rail:
+- стеклянный контейнер (liquid glass + liquidStroke),
+- мягкая широкая тень.
+
+Активный сегмент:
+- капля жидкого хрома (chromeGold + chromeGoldHighlight),
+- мягкий edge glow и specular-линия,
+- анимация переключения — `easeInOut(0.22)`, двигается в основном **свет**, а не геометрия.
 
 ================================================================================
 ДИНАМИЧЕСКИЕ LAYOUT'Ы И GEOMETRYREADER
@@ -229,7 +350,7 @@ ForEach(options) { option in
 
 
 ================================================================================
-ПРИМЕРЫ МИГРАЦИИ
+ПРИМЕРЫ МИГРАЦИИ (LAYOUT)
 ================================================================================
 
 ### Простой экран (EventView, ChestView, RestView, DefeatView, VictoryView)

@@ -12,31 +12,7 @@ struct CastleView: View {
 
     // Width cap helper - удалено, теперь используется UIStyle.Layout.contentWidth
 
-    // 022H: Mode button helper
-    private func modePill(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 16)
-                .frame(minWidth: 92)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(isActive ? Color.white : Color.accentColor)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(isActive ? Color.accentColor : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.accentColor.opacity(isActive ? 0.0 : 0.35), lineWidth: 1.5)
-        )
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(isActive ? Color.clear : Color.black.opacity(0.04))
-        )
-    }
+    // 022H: Mode segmented control
 
     var body: some View {
         UIStyle.Layout.ScreenContainer {
@@ -201,20 +177,20 @@ struct CastleView: View {
     // MARK: - Mode buttons
 
     private func modeButtonsRow(contentWidth: CGFloat) -> some View {
-        HStack(spacing: UIStyle.Spacing.m) {
-            modePill("Build", isActive: store.castleModeUI == CastleUIMode.build) {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                    store.setCastleMode(CastleUIMode.build)
+        UIStyle.LiquidSegmentedControl(
+            options: [CastleUIMode.build, CastleUIMode.upgrade],
+            titleProvider: { $0.rawValue },
+            selection: Binding(
+                get: { store.castleModeUI },
+                set: { mode in
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        store.setCastleMode(mode)
+                    }
                 }
-            }
-
-            modePill("Upgrade", isActive: store.castleModeUI == CastleUIMode.upgrade) {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                    store.setCastleMode(CastleUIMode.upgrade)
-                }
-            }
-        }
-        .frame(width: contentWidth, alignment: .center)
+            )
+        )
+        .frame(width: contentWidth)
+        .padding(.top, UIStyle.Spacing.s)
     }
 
     #if DEBUG
@@ -222,7 +198,7 @@ struct CastleView: View {
         Button("Next Day (debug)") {
             store.castleAdvanceDay()
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(UIStyle.SecondaryButtonStyle())
         .padding(.top, 6)
         .frame(width: contentWidth, alignment: .center)
     }
@@ -550,7 +526,7 @@ private struct CastleUpgradeSheetView: View {
             .padding(.horizontal)
 
             Button("Upgrade (stub)") { onUpgrade() }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(UIStyle.PrimaryButtonStyle())
 
             Button("Close") { onClose() }
         }

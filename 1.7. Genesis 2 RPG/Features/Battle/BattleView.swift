@@ -252,20 +252,10 @@ struct BattleView: View {
             drawPileContainer(battle: battle, size: containerSize)
             
             // Center: End turn button (same height as containers)
-            Button {
+            Button("Закончить ход") {
                 store.endTurn()
-            } label: {
-                Text("Закончить ход")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: containerSize)
-                    .background(
-                        RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
-                            .fill(UIStyle.Colors.accent)
-                    )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(UIStyle.PrimaryButtonStyle())
             .disabled(battle.phase != .player)
             .opacity(battle.phase == .player ? 1.0 : 0.55)
             
