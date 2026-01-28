@@ -57,6 +57,7 @@ struct RewardView: View {
                                 } label: {
                                     RewardOptionCard(
                                         icon: icon(for: kind),
+                                        iconColor: iconColor(for: kind),
                                         title: title(for: kind),
                                         levelInfo: levelInfo(for: kind),
                                         bonusInfo: bonusInfo(for: kind),
@@ -121,19 +122,43 @@ struct RewardView: View {
         ActionCardTexts.title(for: kind)
     }
 
+    /// SF Symbol иконка для карты награды (синхронизировано с ActionCardView)
     private func icon(for kind: ActionCardKind) -> String {
         switch kind {
-        case .powerStrike: return "🗡️"
-        case .defend: return "🛡️"
-        case .doubleStrike: return "⚔️"
-        case .counterStance: return "🔁"
-        case .bleedPlus2: return "🩸"
-        case .weakPlus1: return "⬇️"
-        case .stun1: return "⚡️"
-        case .bleedStrike: return "🩸⚔️"
-        case .weakDefend: return "🛡️⬇️"
+        // Базовые карты
+        case .powerStrike: return "flame.fill"                      // Мощный удар (пламя/урон)
+        case .defend: return "shield.fill"                          // Щит
+        case .doubleStrike: return "arrow.triangle.2.circlepath"    // Двойной удар
+        case .counterStance: return "arrow.counterclockwise.circle.fill" // Контратака
+
+        // Статусные карты
+        case .bleedPlus2: return "drop.fill"                        // Кровоток
+        case .weakPlus1: return "arrow.down.circle.fill"            // Слабость
+        case .stun1: return "bolt.fill"                             // Оглушение
+
+        // Синергийные карты
+        case .bleedStrike: return "drop.fill"                       // Кровавый удар (капля крови)
+        case .weakDefend: return "shield.fill"                      // Ослабляющий щит
+
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "❓"
+            return "questionmark.circle.fill"
+        }
+    }
+
+    /// Цвет иконки (та же логика, что и в ActionCardView)
+    private func iconColor(for kind: ActionCardKind) -> Color {
+        switch kind {
+        // Статусные и синергийные карты используют цвета статусов
+        case .bleedPlus2, .bleedStrike:
+            return Color.red
+        case .weakPlus1, .weakDefend:
+            return Color.orange
+        case .stun1:
+            return Color.purple
+
+        // Базовые карты и плейсхолдеры — нейтральный цвет
+        default:
+            return UIStyle.Colors.inkPrimary
         }
     }
     
@@ -207,7 +232,9 @@ struct RewardView: View {
 }
 
 private struct RewardOptionCard: View {
+    /// SF Symbol имя иконки
     let icon: String
+    let iconColor: Color
     let title: String
     let levelInfo: String
     let bonusInfo: (current: String, next: String)
@@ -222,8 +249,9 @@ private struct RewardOptionCard: View {
                         .fill(UIStyle.Colors.mutedFill)
                         .overlay(Circle().stroke(UIStyle.Colors.cardStroke, lineWidth: 1))
 
-                    Text(icon)
+                    Image(systemName: icon)
                         .font(.title3)
+                        .foregroundStyle(iconColor)
                 }
                 .frame(width: 44, height: 44)
                 

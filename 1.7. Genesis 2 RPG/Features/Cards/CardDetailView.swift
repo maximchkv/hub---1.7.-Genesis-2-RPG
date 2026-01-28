@@ -74,8 +74,9 @@ struct CardDetailView: View {
                     .frame(width: 100, height: 100)
                 
                 if isUnlocked {
-                    Text(icon)
-                        .font(.system(size: 60))
+                    Image(systemName: icon)
+                        .font(.system(size: 60, weight: .medium))
+                        .foregroundStyle(iconColor)
                 } else {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 40))
@@ -264,19 +265,40 @@ struct CardDetailView: View {
         ActionCardTexts.title(for: card)
     }
     
+    /// SF Symbol иконка карты (синхронизировано с ActionCardView)
     private var icon: String {
         switch card {
-        case .powerStrike: return "🗡️"
-        case .defend: return "🛡️"
-        case .doubleStrike: return "⚔️"
-        case .counterStance: return "🔁"
-        case .bleedPlus2: return "🩸"
-        case .weakPlus1: return "⬇️"
-        case .stun1: return "⚡️"
-        case .bleedStrike: return "🩸⚔️"
-        case .weakDefend: return "🛡️⬇️"
+        // Базовые карты
+        case .powerStrike: return "flame.fill"
+        case .defend: return "shield.fill"
+        case .doubleStrike: return "arrow.triangle.2.circlepath"
+        case .counterStance: return "arrow.counterclockwise.circle.fill"
+
+        // Статусные карты
+        case .bleedPlus2: return "drop.fill"
+        case .weakPlus1: return "arrow.down.circle.fill"
+        case .stun1: return "bolt.fill"
+
+        // Синергийные карты
+        case .bleedStrike: return "drop.fill"
+        case .weakDefend: return "shield.fill"
+
         case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
-            return "❓"
+            return "questionmark.circle.fill"
+        }
+    }
+
+    /// Цвет иконки (та же логика, что в ActionCardView)
+    private var iconColor: Color {
+        switch card {
+        case .bleedPlus2, .bleedStrike:
+            return Color.red
+        case .weakPlus1, .weakDefend:
+            return Color.orange
+        case .stun1:
+            return Color.purple
+        default:
+            return UIStyle.Colors.inkPrimary
         }
     }
     
