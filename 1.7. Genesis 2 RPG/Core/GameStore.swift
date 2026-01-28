@@ -603,22 +603,71 @@ final class GameStore: ObservableObject {
     private func counterStanceBlockValue() -> Int { ActionCardTexts.counterStanceBlock }
     private func counterStanceAttackValue() -> Int { ActionCardTexts.counterStanceDamage }
 
-    private func intentFromPattern(_ battle: BattleState) -> EnemyIntent {
-        guard !battle.enemyPattern.isEmpty else {
-            return EnemyIntent(kind: .attack, value: 5)
+    /// Выбрать конкретную карту врага для текущего шага (v2 с тегами/весами, иначе v1 fallback).
+    private func pickEnemyCardForCurrentStep(_ battle: BattleState) -> ActionCardKind? {
+        // v2: tagPattern + cardPool
+        if !battle.enemyTagPattern.isEmpty, !battle.enemyCardPool.isEmpty {
+            let index = battle.enemyPatternIndex % battle.enemyTagPattern.count
+            let step = battle.enemyTagPattern[index]
+            if let card = EnemyCardSelector.pickCard(from: battle.enemyCardPool, for: step) {
+                return card
+            }
         }
 
+        // v1: map fixed move -> card kind
+        guard !battle.enemyPattern.isEmpty else { return nil }
         let move = battle.enemyPattern[battle.enemyPatternIndex].kind
         switch move {
-        case .attack:
-            return EnemyIntent(kind: .attack, value: 5)
+        case .attack: return .powerStrike
+        case .defend: return .defend
+        case .counterStance: return .counterStance
+        case .doubleStrikeFixed4: return .doubleStrike
+        }
+    }
+
+    /// Построить EnemyIntent из выбранной \"карты\" врага (включая статусные карты).
+    private func enemyIntent(forCard kind: ActionCardKind, in battle: BattleState) -> EnemyIntent {
+        switch kind {
+        case .powerStrike:
+            return EnemyIntent(kind: .attack, value: enemyAttackValue())
+        case .doubleStrike:
+            return EnemyIntent(kind: .doubleStrikeFixed4, value: 0)
         case .defend:
-            return EnemyIntent(kind: .defend, value: 5)
+            return EnemyIntent(kind: .defend, value: enemyBlockValue())
         case .counterStance:
             return EnemyIntent(kind: .counterStance, value: 0)
-        case .doubleStrikeFixed4:
-            return EnemyIntent(kind: .doubleStrikeFixed4, value: 0)
+
+        case .bleedPlus2:
+            return EnemyIntent(kind: .bleed, value: ActionCardTexts.bleedPlus2Stacks)
+        case .weakPlus1:
+            return EnemyIntent(kind: .weak, value: ActionCardTexts.weakPlus1Stacks)
+        case .stun1:
+            return EnemyIntent(kind: .stun, value: ActionCardTexts.stun1Stacks)
+
+        case .weakDefend:
+            // Основной интент — защита, но эффект включает и weak (применится на ходе врага)
+            return EnemyIntent(kind: .defend, value: ActionCardTexts.weakDefendBlock)
+
+        case .bleedStrike:
+            // Интент зависит от того, есть ли у игрока bleed
+            let stacks = battle.stacks(.bleed, for: .player)
+            if stacks > 0 {
+                let base = stacks * ActionCardTexts.bleedStrikeDamageMultiplier
+                return EnemyIntent(kind: .attack, value: base)
+            } else {
+                return EnemyIntent(kind: .bleed, value: ActionCardTexts.bleedStrikeBleedStacks)
+            }
+
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return EnemyIntent(kind: .attack, value: enemyAttackValue())
         }
+    }
+
+    /// Выбрать карту под текущий шаг и синхронизировать `enemySelectedCard` + `enemyIntent`.
+    private func refreshEnemySelectionAndIntent(_ battle: inout BattleState) {
+        let card = pickEnemyCardForCurrentStep(battle) ?? .powerStrike
+        battle.enemySelectedCard = card
+        battle.enemyIntent = enemyIntent(forCard: card, in: battle)
     }
 
     // MARK: - Battle
@@ -671,9 +720,11 @@ final class GameStore: ObservableObject {
         newBattle.enemyRole = enemy.role
         newBattle.enemyPattern = enemy.pattern
         newBattle.enemyPatternIndex = 0
+        newBattle.enemyTagPattern = enemy.tagPattern ?? []
+        newBattle.enemyCardPool = enemy.cardPool
 
-        // First intent from pattern
-        newBattle.enemyIntent = intentFromPattern(newBattle)
+        // First intent (and selected card) from pattern
+        refreshEnemySelectionAndIntent(&newBattle)
 
         battle = newBattle
         route = .battle
@@ -1095,8 +1146,10 @@ final class GameStore: ObservableObject {
         // Reset enemy block at the start of enemy turn (after player's turn)
         battle.enemyBlock = 0
 
-        switch battle.enemyIntent.kind {
-        case .attack:
+        let card = battle.enemySelectedCard ?? pickEnemyCardForCurrentStep(battle) ?? .powerStrike
+
+        switch card {
+        case .powerStrike:
             let base = enemyAttackValue()
             let dmg = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
             let beforeHP = battle.playerHP
@@ -1104,21 +1157,28 @@ final class GameStore: ObservableObject {
             battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
-            // Анимация только если был реальный урон по HP
-            if dealt > 0 {
-                triggerShake(for: .player)
-            }
-            pushLog(&battle, side: .enemy, "Attack: dmg \(dealt) (blocked \(blocked))")
-            if battle.playerHP <= 0 {
-                self.battle = battle
-                loseBattle()
-                return
-            }
+            if dealt > 0 { triggerShake(for: .player) }
+            pushLog(&battle, side: .enemy, "Power Strike: dmg \(dealt) (blocked \(blocked))")
 
         case .defend:
             let block = enemyBlockValue()
             battle.enemyBlock += block
             pushLog(&battle, side: .enemy, "Defend: block +\(block)")
+
+        case .doubleStrike:
+            let base = 4
+            let dmg1 = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
+            let dmg2 = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
+            let beforeHP = battle.playerHP
+            let beforeBlock = battle.playerBlock
+            battle.dealDamage(amount: dmg1, to: .player, isWeaponDamage: true)
+            let afterFirstHP = battle.playerHP
+            battle.dealDamage(amount: dmg2, to: .player, isWeaponDamage: true)
+            let dealt = max(0, beforeHP - battle.playerHP)
+            let blocked = max(0, beforeBlock - battle.playerBlock)
+            if max(0, beforeHP - afterFirstHP) > 0 { triggerShake(for: .player) }
+            if max(0, afterFirstHP - battle.playerHP) > 0 { triggerShake(for: .player) }
+            pushLog(&battle, side: .enemy, "Double Strike: dmg \(dealt) (blocked \(blocked))")
 
         case .counterStance:
             let bVal = counterStanceBlockValue()
@@ -1130,44 +1190,51 @@ final class GameStore: ObservableObject {
             battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
             let dealt = max(0, beforeHP - battle.playerHP)
             let blocked = max(0, beforeBlock - battle.playerBlock)
-            // Анимация только если был реальный урон по HP
-            if dealt > 0 {
-                triggerShake(for: .player)
-            }
+            if dealt > 0 { triggerShake(for: .player) }
             pushLog(&battle, side: .enemy, "Counter Stance: block +\(bVal), dmg \(dealt) (blocked \(blocked))")
-            if battle.playerHP <= 0 {
-                self.battle = battle
-                loseBattle()
-                return
+
+        case .bleedPlus2:
+            battle.addStatus(.bleed, stacks: ActionCardTexts.bleedPlus2Stacks, to: .player)
+            pushLog(&battle, side: .enemy, "Bleed: +\(ActionCardTexts.bleedPlus2Stacks)")
+
+        case .weakPlus1:
+            battle.addStatus(.weak, stacks: ActionCardTexts.weakPlus1Stacks, to: .player)
+            pushLog(&battle, side: .enemy, "Weak: +\(ActionCardTexts.weakPlus1Stacks)")
+
+        case .stun1:
+            battle.addStatus(.stun, stacks: ActionCardTexts.stun1Stacks, to: .player)
+            pushLog(&battle, side: .enemy, "Stun: +\(ActionCardTexts.stun1Stacks)")
+
+        case .weakDefend:
+            battle.enemyBlock += ActionCardTexts.weakDefendBlock
+            battle.addStatus(.weak, stacks: ActionCardTexts.weakDefendWeakStacks, to: .player)
+            pushLog(&battle, side: .enemy, "Weak Defend: block +\(ActionCardTexts.weakDefendBlock), weak +\(ActionCardTexts.weakDefendWeakStacks)")
+
+        case .bleedStrike:
+            let stacks = battle.stacks(.bleed, for: .player)
+            if stacks > 0 {
+                let base = stacks * ActionCardTexts.bleedStrikeDamageMultiplier
+                let dmg = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
+                let beforeHP = battle.playerHP
+                let beforeBlock = battle.playerBlock
+                battle.dealDamage(amount: dmg, to: .player, isWeaponDamage: true)
+                let dealt = max(0, beforeHP - battle.playerHP)
+                let blocked = max(0, beforeBlock - battle.playerBlock)
+                if dealt > 0 { triggerShake(for: .player) }
+                pushLog(&battle, side: .enemy, "Bleed Strike: dmg \(dealt) (blocked \(blocked))")
+            } else {
+                battle.addStatus(.bleed, stacks: ActionCardTexts.bleedStrikeBleedStacks, to: .player)
+                pushLog(&battle, side: .enemy, "Bleed Strike: bleed +\(ActionCardTexts.bleedStrikeBleedStacks)")
             }
 
-        case .doubleStrikeFixed4:
-            let base = 4
-            let dmg1 = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
-            let dmg2 = battle.modifiedOutgoingWeaponDamage(base, from: .enemy)
-            let beforeHP = battle.playerHP
-            let beforeBlock = battle.playerBlock
-            battle.dealDamage(amount: dmg1, to: .player, isWeaponDamage: true)
-            let afterFirstHP = battle.playerHP
-            battle.dealDamage(amount: dmg2, to: .player, isWeaponDamage: true)
-            let dealt = max(0, beforeHP - battle.playerHP)
-            let blocked = max(0, beforeBlock - battle.playerBlock)
-            // Анимация только если был реальный урон по HP
-            if max(0, beforeHP - afterFirstHP) > 0 {
-                triggerShake(for: .player) // Первый удар
-            }
-            if max(0, afterFirstHP - battle.playerHP) > 0 {
-                triggerShake(for: .player) // Второй удар
-            }
-            pushLog(&battle, side: .enemy, "Double Strike: dmg \(dealt) (blocked \(blocked))")
-            if battle.playerHP <= 0 {
-                self.battle = battle
-                loseBattle()
-                return
-            }
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            pushLog(&battle, side: .enemy, "Enemy does nothing")
+        }
 
-        case .counter:
-            pushLog(&battle, side: .enemy, "Counter")
+        if battle.playerHP <= 0 {
+            self.battle = battle
+            loseBattle()
+            return
         }
 
         self.battle = battle
@@ -1179,7 +1246,7 @@ final class GameStore: ObservableObject {
         let savedPlayerStatuses = battle.playerStatuses
         let savedEnemyStatuses = battle.enemyStatuses
         battle.advanceEnemyPattern()
-        battle.enemyIntent = intentFromPattern(battle)
+        refreshEnemySelectionAndIntent(&battle)
         // Восстанавливаем статусы (на случай если они были потеряны)
         battle.playerStatuses = savedPlayerStatuses
         battle.enemyStatuses = savedEnemyStatuses
