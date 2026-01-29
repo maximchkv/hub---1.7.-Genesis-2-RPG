@@ -244,7 +244,7 @@ struct BattleView: View {
             Text(entry.text)
                 .font(.caption2)
                 .fontWeight(entry.isPlayer ? .bold : .regular)
-                .foregroundStyle(entry.kind == .system ? .secondary : .primary)
+                .foregroundStyle(entry.kind == .system ? Color.black.opacity(0.65) : Color.black)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .id(entry.id)
         }
@@ -393,11 +393,11 @@ struct BattleView: View {
             VStack(spacing: 4) {
                 Image(systemName: "rectangle.stack.fill")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(Color.black)
                 
                 Text("\(count)")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(Color.black)
             }
             .frame(width: size, height: size)
             .background(.thinMaterial)
@@ -419,11 +419,11 @@ struct BattleView: View {
             VStack(spacing: 4) {
                 Image(systemName: "trash.fill")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(Color.black)
                 
                 Text("\(count)")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(Color.black)
             }
             .frame(width: size, height: size)
             .background(.thinMaterial)
@@ -442,11 +442,11 @@ struct BattleView: View {
         return HStack(spacing: 6) {
             Image(systemName: "bolt.fill")
                 .font(.caption)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(Color.black.opacity(0.7))
             
             Text("\(ap)")
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
@@ -726,7 +726,7 @@ private struct ParticipantsPanel: View {
             // 1) Name
             Text(name)
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -821,7 +821,7 @@ private struct ParticipantsPanel: View {
             // Количество стаков (уменьшен шрифт)
             Text("\(status.stacks)")
                 .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
@@ -841,7 +841,7 @@ private struct ParticipantsPanel: View {
         HStack(spacing: 6) {
             Text("Очки ОД:")
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(UIStyle.Colors.textMuted)
+                .foregroundStyle(Color.black.opacity(0.7))
             
             Image(systemName: "bolt.fill")
                 .font(.system(size: 12, weight: .medium))
@@ -849,7 +849,7 @@ private struct ParticipantsPanel: View {
             
             Text("\(ap)")
                 .font(.headline.weight(.bold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 10)
@@ -885,7 +885,7 @@ private struct ParticipantsPanel: View {
             // Текст интента (всегда в одну строку с уменьшением шрифта)
             Text(intent.displayText)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(UIStyle.Colors.textPrimary)
+                .foregroundStyle(Color.black)
                 .lineLimit(1)
                 .minimumScaleFactor(0.4) // Агрессивное уменьшение для текста интента
                 .fixedSize(horizontal: false, vertical: true) // Разрешаем горизонтальное сжатие
@@ -1045,7 +1045,7 @@ private struct HPBlockStatsView: View {
                     
                     Text("\(hp)/\(maxHP)")
                         .font(.system(size: numberFontSize, weight: .bold))
-                        .foregroundStyle(hpHighlightColor ?? UIStyle.Colors.inkPrimary)
+                        .foregroundStyle(hpHighlightColor ?? Color.black)
                         .minimumScaleFactor(0.3)
                         .lineLimit(1)
                 }
@@ -1061,12 +1061,12 @@ private struct HPBlockStatsView: View {
                 VStack(spacing: spacing) {
                     Image(systemName: "shield.fill")
                         .font(.system(size: iconSize, weight: .medium))
-                        .foregroundStyle(UIStyle.Colors.textMuted)
+                        .foregroundStyle(Color.black.opacity(0.7))
                         .minimumScaleFactor(0.5)
                     
                     Text("\(block)")
                         .font(.system(size: numberFontSize, weight: .bold))
-                        .foregroundStyle(blockHighlightColor ?? UIStyle.Colors.inkPrimary)
+                        .foregroundStyle(blockHighlightColor ?? Color.black)
                         .minimumScaleFactor(0.3)
                         .lineLimit(1)
                 }
