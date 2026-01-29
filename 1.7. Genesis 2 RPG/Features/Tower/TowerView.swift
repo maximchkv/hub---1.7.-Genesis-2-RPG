@@ -78,7 +78,7 @@ struct TowerView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(UIStyle.Colors.textPrimary)
                     .padding(6)
                     .background(Color.primary.opacity(0.05))
                     .clipShape(Circle())
@@ -88,7 +88,7 @@ struct TowerView: View {
 
             Text("Башня")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(UIStyle.Colors.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .center)
 
             Button {
@@ -96,7 +96,7 @@ struct TowerView: View {
             } label: {
                 Image(systemName: "rectangle.stack.fill")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(UIStyle.Colors.textPrimary)
                     .padding(6)
                     .background(Color.primary.opacity(0.05))
                     .clipShape(Circle())
@@ -128,9 +128,9 @@ struct TowerView: View {
         let hpFrac = Double(max(0, min(hp, denom))) / Double(denom)
 
         let hpColor: Color = {
-            if hpFrac > 0.6 { return .green }
-            if hpFrac > 0.3 { return .yellow }
-            return .red
+            if hpFrac > 0.6 { return UIStyle.Colors.hpGreen }
+            if hpFrac > 0.3 { return UIStyle.Colors.threatOrange }
+            return UIStyle.Colors.threatRed
         }()
 
         return metaCard(vertical: 8, horizontal: 12) {
@@ -138,7 +138,7 @@ struct TowerView: View {
                 HStack {
                     Text("Здоровье")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.black)
                     Spacer(minLength: 0)
                     Text("\(hp)/\(maxHP)")
                         .font(.title3)
@@ -180,13 +180,13 @@ struct TowerView: View {
         VStack(spacing: 2) {
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.black.opacity(0.85))
                 .frame(maxWidth: .infinity, alignment: .center)
 
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.black)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
         .frame(minWidth: 0)
@@ -221,11 +221,18 @@ struct TowerView: View {
             MapLegendView()
                 .padding(8)
         }
-        .background(.thinMaterial)
+        .background(
+            ZStack {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.thinMaterial)
+                Color.white.opacity(0.9)
+            }
+        )
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.primary.opacity(0.10), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.26), lineWidth: 1)
         )
     }
 }
