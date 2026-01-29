@@ -34,7 +34,7 @@ struct RewardView: View {
                         } label: {
                             Image(systemName: "rectangle.stack.fill")
                                 .font(.system(size: 20, weight: .medium))
-                                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                                .foregroundStyle(Color.black)
                                 .padding(10)
                                 .background(.thinMaterial)
                                 .clipShape(Circle())
@@ -158,7 +158,7 @@ struct RewardView: View {
 
         // Базовые карты и плейсхолдеры — нейтральный цвет
         default:
-            return UIStyle.Colors.inkPrimary
+            return Color.black
         }
     }
     
@@ -259,7 +259,7 @@ private struct RewardOptionCard: View {
                 if currentLevel > 1 {
                     Text("Lv\(currentLevel)")
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .foregroundStyle(Color.black)
                         .padding(.vertical, 2)
                         .padding(.horizontal, 4)
                         .background(UIStyle.Colors.mutedFill)
@@ -275,14 +275,14 @@ private struct RewardOptionCard: View {
                 HStack(alignment: .center, spacing: 8) {
                     Text(title)
                         .font(.headline)
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .foregroundStyle(Color.black)
                         .lineLimit(2)
                         .minimumScaleFactor(0.9)
                     
                     // Стоимость в очках действия
                     Text("\(cost) ОД")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .foregroundStyle(Color.black)
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)
                         .background(UIStyle.Colors.mutedFill)
@@ -295,7 +295,7 @@ private struct RewardOptionCard: View {
                 // Верхняя строка: информация об уровне
                 Text(levelInfo)
                     .font(.caption)
-                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    .foregroundStyle(Color.black.opacity(0.7))
 
                 // Нижняя строка: информация о бонусе с выделением изменяющихся элементов
                 // Фиксированная высота для одной строки с уменьшением шрифта
@@ -311,7 +311,7 @@ private struct RewardOptionCard: View {
 
             Image(systemName: "chevron.right")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkSecondary.opacity(0.55))
+                .foregroundStyle(Color.black.opacity(0.6))
         }
         .padding(.vertical, 18) // Увеличена вертикальная высота
         .padding(.horizontal, 14)
@@ -357,7 +357,7 @@ private struct RewardOptionCard: View {
          Text(" → ") +
          afterParts.reduce(Text("")) { $0 + $1 })
             .font(.caption)
-            .foregroundStyle(UIStyle.Colors.inkSecondary)
+            .foregroundStyle(Color.black.opacity(0.7))
             .frame(maxWidth: .infinity, alignment: .leading)
     }
     
