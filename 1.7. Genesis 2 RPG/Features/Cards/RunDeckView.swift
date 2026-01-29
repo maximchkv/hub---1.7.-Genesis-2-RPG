@@ -61,7 +61,7 @@ struct RunDeckView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                            .foregroundStyle(Color.black)
                     }
                     .accessibilityLabel("Закрыть")
                 }
@@ -103,7 +103,7 @@ struct RunDeckView: View {
             HStack {
                 Text("Колода забега")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 Spacer()
             }
             
@@ -111,7 +111,7 @@ struct RunDeckView: View {
             HStack {
                 Text("\(deckCards.count) карт")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 
                 Spacer()
             }
@@ -129,11 +129,11 @@ struct RunDeckView: View {
             
             Text("Колода пуста")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
             
             Text("Начните новый забег, чтобы получить стартовую колоду.")
                 .font(.body)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(Color.black.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -230,7 +230,7 @@ struct RunDeckCardCell: View {
                 // Title - масштабируется
                 Text(ActionCardTexts.title(for: kind))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(Color.black)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
@@ -248,7 +248,7 @@ struct RunDeckCardCell: View {
                     Text("\(card.cost)")
                         .font(.caption2.weight(.semibold))
                 }
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(Color.black.opacity(0.7))
             }
             .padding(12)
             .frame(width: cardWidth, height: cardHeight)  // Фиксированный размер карты
@@ -291,7 +291,7 @@ struct RunDeckCardCell: View {
         case .bleedPlus2, .bleedStrike: return Color.red
         case .weakPlus1, .weakDefend: return Color.orange
         case .stun1: return Color.purple
-        default: return UIStyle.Colors.inkPrimary
-        }
+        default: return Color.black
     }
+}
 }

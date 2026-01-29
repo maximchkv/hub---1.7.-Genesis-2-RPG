@@ -58,7 +58,7 @@ struct DiscardPileView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                            .foregroundStyle(Color.black)
                     }
                 }
             }
@@ -94,14 +94,14 @@ struct DiscardPileView: View {
             HStack {
                 Text("Стопка сброса")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 Spacer()
             }
             
             HStack {
                 Text("\(discardPileCards.count) карт")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 Spacer()
             }
         }
@@ -116,11 +116,11 @@ struct DiscardPileView: View {
             
             Text("Стопка сброса пуста")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
             
             Text("Разыграйте карты, чтобы они появились здесь.")
                 .font(.body)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(Color.black.opacity(0.7))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

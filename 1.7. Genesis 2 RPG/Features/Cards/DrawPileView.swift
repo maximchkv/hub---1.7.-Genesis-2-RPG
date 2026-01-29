@@ -58,7 +58,7 @@ struct DrawPileView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                            .foregroundStyle(Color.black)
                     }
                 }
             }
@@ -94,14 +94,14 @@ struct DrawPileView: View {
             HStack {
                 Text("Стопка добора")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 Spacer()
             }
             
             HStack {
                 Text("\(drawPileCards.count) карт")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 Spacer()
             }
         }
@@ -116,11 +116,11 @@ struct DrawPileView: View {
             
             Text("Стопка добора пуста")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
             
             Text("Все карты разыграны или находятся в руке.")
                 .font(.body)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(Color.black.opacity(0.7))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

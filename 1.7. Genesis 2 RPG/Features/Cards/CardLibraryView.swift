@@ -60,7 +60,7 @@ struct CardLibraryView: View {
                     } label: {
                         Image(systemName: "arrow.left")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                            .foregroundStyle(Color.black)
                     }
                     .accessibilityLabel("Назад в Hub")
                 }
@@ -82,7 +82,7 @@ struct CardLibraryView: View {
             HStack {
                 Text("Коллекция карт")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 Spacer()
             }
             
@@ -90,13 +90,13 @@ struct CardLibraryView: View {
             HStack {
                 Text("\(store.meta.collection.unlockedCount) / \(store.meta.collection.totalCount)")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.textOnCard)
+                    .foregroundStyle(Color.black)
                 
                 Spacer()
                 
                 Text("разблокировано")
                     .font(.caption)
-                    .foregroundStyle(UIStyle.Colors.textMuted)
+                    .foregroundStyle(Color.black.opacity(0.7))
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Разблокировано \(store.meta.collection.unlockedCount) из \(store.meta.collection.totalCount) карт")
@@ -138,11 +138,11 @@ struct CardLibraryView: View {
             
             Text("Коллекция пуста")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
             
             Text("Играйте в Tower, улучшайте карты после боев, чтобы разблокировать их в коллекции.")
                 .font(.body)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(Color.black.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
