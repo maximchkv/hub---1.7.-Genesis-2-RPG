@@ -16,6 +16,16 @@ struct EnemyIntent: Codable, Hashable {
     var kind: EnemyIntentKind
     var value: Int = 0
 
+    /// Является ли интент угрозой (для опасной подсветки)
+    var isThreatening: Bool {
+        switch kind {
+        case .attack, .doubleStrikeFixed4, .bleed, .weak, .stun:
+            return true
+        case .defend, .counter, .counterStance:
+            return false
+        }
+    }
+
     /// SF Symbol иконка (синхронизировано с карточками)
     var iconName: String {
         switch kind {
@@ -33,8 +43,10 @@ struct EnemyIntent: Codable, Hashable {
     /// Цвет иконки (синхронизировано с карточками)
     var iconColor: Color {
         switch kind {
-        case .attack, .defend, .counter, .counterStance, .doubleStrikeFixed4, .bleed, .weak, .stun:
-            return UIStyle.Colors.inkPrimary // Нейтральный цвет для базовых интентов
+        case .attack, .doubleStrikeFixed4, .bleed, .weak, .stun:
+            return UIStyle.Colors.damageThreat
+        case .defend, .counter, .counterStance:
+            return UIStyle.Colors.inkPrimary
         }
     }
 

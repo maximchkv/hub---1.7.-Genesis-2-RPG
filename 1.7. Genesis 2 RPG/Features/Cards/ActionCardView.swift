@@ -12,6 +12,7 @@ struct ActionCardView: View {
     let state: CardPlayabilityState
     let level: Int
     let showDebugOutlines: Bool = false
+    let isSelected: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,12 +26,12 @@ struct ActionCardView: View {
                         .fill(UIStyle.Colors.mutedFill)
                     
                     Image(systemName: icon)
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(size: 24, weight: .medium))
                         .foregroundStyle(iconColor)
                         .imageScale(.medium)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .frame(width: 44, height: 44)
+                .frame(width: 52, height: 52)
                 .frame(maxWidth: .infinity, alignment: .center)
 
                 if level > 1 {
@@ -115,10 +116,18 @@ struct ActionCardView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
+                .stroke(
+                    isSelected ? UIStyle.Colors.ctaPrimary : Color.clear,
+                    lineWidth: isSelected ? 2 : 0
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.green, lineWidth: 3)
                 .opacity(showDebugOutlines ? 1 : 0)
         )
         .opacity(opacity)
+        .offset(y: isSelected ? -4 : 0)
     }
 
     private var titleRU: String {

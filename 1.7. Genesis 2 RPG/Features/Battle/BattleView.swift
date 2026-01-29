@@ -5,6 +5,8 @@ struct BattleView: View {
     @EnvironmentObject private var store: GameStore
     @State private var showDrawPile: Bool = false
     @State private var showDiscardPile: Bool = false
+    @State private var selectedCardId: UUID? = nil
+    @State private var endTurnConfirmReady: Bool = false
 
     // Debug layout outlines (3px) to visualize real block bounds
     private let showDebugOutlines: Bool = false
@@ -51,7 +53,8 @@ struct BattleView: View {
                 // Применяем специфичный кап для BattleView
                 let finalContentWidth = min(contentWidth, contentCap)
 
-                VStack(spacing: 0) {
+                ZStack(alignment: .bottom) {
+                    VStack(spacing: 0) {
                     if let battle = store.battle {
                         let isPlayerTurn = (battle.phase == .player)
 
@@ -80,6 +83,8 @@ struct BattleView: View {
                             enemyIntent: battle.enemyIntent,
                             playerShakeTrigger: store.playerShakeTrigger,
                             enemyShakeTrigger: store.enemyShakeTrigger,
+                            highlightPlayer: selectedCardTargetSide(for: battle) == .player,
+                            highlightEnemy: selectedCardTargetSide(for: battle) == .enemy,
                             debug: showDebugOutlines
                         )
                         .frame(width: finalContentWidth)
@@ -101,28 +106,22 @@ struct BattleView: View {
                         // Минимальный отступ между логом и карточками
                         Spacer().frame(height: logToCards)
 
-                        // БЛОК 4: CARDS area - занимает все доступное пространство
-                        VStack(spacing: 0) {
-                            // Карточки - занимают все оставшееся пространство
-                            GeometryReader { cardsGeo in
-                                let availableHeight = cardsGeo.size.height
-                                
+                        // БЛОК 4: CARDS area - занимает все доступное пространство до футера
+                        GeometryReader { cardsGeo in
+                            let availableHeight = cardsGeo.size.height
+                            
+                            VStack(spacing: 0) {
                                 actionCardsRow(
                                     battle: battle,
                                     contentWidth: finalContentWidth,
                                     availableHeight: availableHeight
                                 )
+                                
+                                Spacer()
                             }
-                            
-                            Spacer().frame(height: cardsToButton)
-                            
-                            // БЛОК 5: Compact AP + End Turn button - ограничены по ширине как карточки
-                            compactBottomControls(battle: battle, contentWidth: finalContentWidth)
-                                .frame(width: finalContentWidth)
-                                .frame(maxWidth: .infinity)
                         }
                         .frame(maxHeight: .infinity)
-                        .padding(.bottom, UIStyle.Spacing.m)
+                        .padding(.bottom, footerTotalHeight)
 
                     } else {
                         VStack(spacing: UIStyle.Spacing.m) {
@@ -133,10 +132,19 @@ struct BattleView: View {
                         .padding(.top, 40)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, outerPad)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .padding(.horizontal, outerPad)
+
+                    if let battle = store.battle {
+                        battleFooter(battle: battle, contentWidth: finalContentWidth)
+                    }
+                }
             }
         }
+    }
+
+    private var footerTotalHeight: CGFloat {
+        64 // высота футера + внутренние отступы
     }
 
     // MARK: - Header
@@ -244,25 +252,89 @@ struct BattleView: View {
 
     // MARK: - Bottom Controls
 
-    private func compactBottomControls(battle: BattleState, contentWidth: CGFloat) -> some View {
-        let containerSize: CGFloat = 50  // Высота кнопки такая же как контейнеры
-        
-        return HStack(spacing: UIStyle.Spacing.m) {
-            // Left: Draw pile container
-            drawPileContainer(battle: battle, size: containerSize)
-            
-            // Center: End turn button (same height as containers)
-            Button("Закончить ход") {
-                store.endTurn()
-            }
-            .buttonStyle(UIStyle.PrimaryButtonStyle())
-            .disabled(battle.phase != .player)
-            .opacity(battle.phase == .player ? 1.0 : 0.55)
-            
-            // Right: Discard pile container
-            discardPileContainer(battle: battle, size: containerSize)
+    // MARK: - Fixed battle footer
+
+    private func battleFooter(battle: BattleState, contentWidth: CGFloat) -> some View {
+        let containerSize: CGFloat = 50  // Высота контейнеров стопок
+        let isPlayerTurn = (battle.phase == .player)
+        let playableCards = battle.hand.filter { determineCardState(card: $0, battle: battle) == .available }
+        let hasPlayableCards = !playableCards.isEmpty
+        let noPlayableCards = !hasPlayableCards
+
+        let buttonTitle: String
+        let isEndTurnEnabled: Bool
+        let isDimmed: Bool
+
+        if noPlayableCards {
+            // Нет карт для игры — предлагаем «Продолжить»
+            buttonTitle = "Продолжить"
+            isEndTurnEnabled = isPlayerTurn
+            isDimmed = !isPlayerTurn
+        } else if battle.actionPoints > 0 {
+            // Есть ОД и есть что играть — требуем подтверждения
+            buttonTitle = "Завершить ход"
+            isEndTurnEnabled = isPlayerTurn && endTurnConfirmReady
+            isDimmed = !isEndTurnEnabled
+        } else {
+            // ОД = 0 — CTA активен сразу
+            buttonTitle = "Завершить ход"
+            isEndTurnEnabled = isPlayerTurn
+            isDimmed = !isPlayerTurn
         }
-        .frame(width: contentWidth)
+
+        let footerBackground = Color.black.opacity(0.35)
+
+        return VStack(spacing: 0) {
+            Divider()
+                .background(UIStyle.Colors.cardStroke.opacity(0.6))
+
+            HStack(spacing: UIStyle.Spacing.m) {
+                // Left: Draw pile container
+                drawPileContainer(battle: battle, size: containerSize)
+
+                // Center: End turn button (CTA)
+                Button(action: {
+                    handleEndTurnTap(battle: battle, hasPlayableCards: hasPlayableCards)
+                }) {
+                    Text(buttonTitle)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(UIStyle.PrimaryButtonStyle())
+                .disabled(!isEndTurnEnabled)
+                .opacity(isDimmed ? 0.6 : 1.0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
+                        .stroke(
+                            endTurnConfirmReady && battle.actionPoints > 0 && hasPlayableCards
+                            ? UIStyle.Colors.ctaPrimary
+                            : Color.clear,
+                            lineWidth: 2
+                        )
+                        .padding(.horizontal, 2)
+                )
+                .gesture(
+                    DragGesture(minimumDistance: 30, coordinateSpace: .local)
+                        .onEnded { value in
+                            // Свайп вправо для подтверждения
+                            if value.translation.width > 50 {
+                                confirmAndEndTurnIfPossible(battle: battle, hasPlayableCards: hasPlayableCards)
+                            }
+                        }
+                )
+
+                // Right: Discard pile container
+                discardPileContainer(battle: battle, size: containerSize)
+            }
+            .frame(width: contentWidth)
+            .padding(.horizontal, UIStyle.Spacing.s)
+            .padding(.vertical, UIStyle.Spacing.s)
+            .background(
+                footerBackground
+                    .background(.ultraThinMaterial)
+            )
+        }
+        .frame(maxWidth: .infinity)
+        .background(footerBackground.ignoresSafeArea(edges: .bottom))
         .sheet(isPresented: $showDrawPile) {
             DrawPileView()
                 .environmentObject(store)
@@ -271,6 +343,45 @@ struct BattleView: View {
             DiscardPileView()
                 .environmentObject(store)
         }
+        .onChange(of: battle.phase) { _ in
+            // Сбрасываем confirm между ходами
+            endTurnConfirmReady = false
+        }
+    }
+
+    private func handleEndTurnTap(battle: BattleState, hasPlayableCards: Bool) {
+        guard battle.phase == .player else { return }
+
+        let noPlayableCards = !hasPlayableCards
+
+        if noPlayableCards || battle.actionPoints == 0 {
+            endTurnConfirmReady = false
+            store.endTurn()
+            return
+        }
+
+        if endTurnConfirmReady {
+            endTurnConfirmReady = false
+            store.endTurn()
+        } else {
+            endTurnConfirmReady = true
+        }
+    }
+
+    private func confirmAndEndTurnIfPossible(battle: BattleState, hasPlayableCards: Bool) {
+        guard battle.phase == .player else { return }
+
+        let noPlayableCards = !hasPlayableCards
+
+        if noPlayableCards || battle.actionPoints == 0 {
+            endTurnConfirmReady = false
+            store.endTurn()
+            return
+        }
+
+        endTurnConfirmReady = true
+        store.endTurn()
+        endTurnConfirmReady = false
     }
     
     private func drawPileContainer(battle: BattleState, size: CGFloat) -> some View {
@@ -360,15 +471,17 @@ struct BattleView: View {
             ForEach(battle.hand.prefix(maxCardsInRow), id: \.id) { card in
                 let cardState = determineCardState(card: card, battle: battle)
                 let lvl = card.level  // Use level from card itself
+                let isSelected = (selectedCardId == card.id)
 
                 Button {
-                    store.playCard(card)
+                    handleCardTap(card: card, battle: battle, state: cardState)
                 } label: {
-                    ActionCardView(card: card, state: cardState, level: lvl)
+                    ActionCardView(card: card, state: cardState, level: lvl, isSelected: isSelected)
                         .frame(width: calculatedCardWidth, height: cardHeight)
+                        .opacity(isSelected ? 1.0 : 1.0)
                 }
-                .buttonStyle(.plain)
-                .disabled(cardState != .available)
+                .buttonStyle(BattleCardButtonStyle())
+                .disabled(cardState != .available && !isSelected)
             }
         }
         .frame(maxWidth: .infinity)
@@ -391,6 +504,79 @@ struct BattleView: View {
         }
         
         return .available
+    }
+}
+
+// MARK: - Card tap & targeting helpers
+
+extension BattleView {
+    private func handleCardTap(card: ActionCard, battle: BattleState, state: CardPlayabilityState) {
+        guard battle.phase == .player else { return }
+
+        switch state {
+        case .available:
+            if selectedCardId == card.id {
+                selectedCardId = nil
+                endTurnConfirmReady = false
+                store.playCard(card)
+            } else {
+                selectedCardId = card.id
+                endTurnConfirmReady = false
+            }
+        case .insufficientAP, .alreadyUsed, .notPlayerTurn:
+            // Ничего не делаем по тапу по недоступным картам
+            break
+        }
+    }
+
+    private func targetSide(for kind: ActionCardKind) -> BattleSide? {
+        switch kind {
+        case .defend, .weakDefend:
+            return .player
+        case .powerStrike,
+             .doubleStrike,
+             .counterStance,
+             .bleedPlus2,
+             .weakPlus1,
+             .stun1,
+             .bleedStrike:
+            return .enemy
+        case .placeholder1, .placeholder2, .placeholder3, .placeholder4, .placeholder5:
+            return nil
+        }
+    }
+
+    private func selectedCardTargetSide(for battle: BattleState) -> BattleSide? {
+        guard let id = selectedCardId,
+              let card = battle.hand.first(where: { $0.id == id }) else {
+            return nil
+        }
+        return targetSide(for: card.kind)
+    }
+}
+
+// MARK: - Card button style (pressed state)
+
+private struct BattleCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .overlay(
+                RoundedRectangle(cornerRadius: UIStyle.cardRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                UIStyle.Colors.edgeCyanGlow.opacity(configuration.isPressed ? 0.7 : 0.0),
+                                UIStyle.Colors.edgeMagentaGlow.opacity(configuration.isPressed ? 0.7 : 0.0)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: configuration.isPressed ? 2 : 0
+                    )
+                    .blur(radius: configuration.isPressed ? 1.2 : 0.8)
+            )
+            .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -431,6 +617,8 @@ private struct ParticipantsPanel: View {
     let enemyIntent: EnemyIntent
     let playerShakeTrigger: Int
     let enemyShakeTrigger: Int
+    let highlightPlayer: Bool
+    let highlightEnemy: Bool
     let debug: Bool
 
     private let corner: CGFloat = 16
@@ -453,7 +641,8 @@ private struct ParticipantsPanel: View {
                 intent: nil,
                 actionPoints: playerActionPoints,
                 portrait: .player,
-                shakeTrigger: playerShakeTrigger
+                shakeTrigger: playerShakeTrigger,
+                isHighlighted: highlightPlayer
             )
             .frame(maxWidth: .infinity, alignment: .topLeading)
 
@@ -466,7 +655,8 @@ private struct ParticipantsPanel: View {
                 intent: enemyIntent,
                 actionPoints: nil,
                 portrait: .enemy(name: enemyName),
-                shakeTrigger: enemyShakeTrigger
+                shakeTrigger: enemyShakeTrigger,
+                isHighlighted: highlightEnemy
             )
             .frame(maxWidth: .infinity, alignment: .topTrailing)
         }
@@ -487,7 +677,8 @@ private struct ParticipantsPanel: View {
         intent: EnemyIntent?,
         actionPoints: Int?,
         portrait: PortraitKind,
-        shakeTrigger: Int
+        shakeTrigger: Int,
+        isHighlighted: Bool
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: corner)
 
@@ -501,11 +692,17 @@ private struct ParticipantsPanel: View {
             actionPoints: actionPoints,
             portrait: portrait,
             shakeTrigger: shakeTrigger,
-            debug: debug
+            debug: debug,
+            isHighlighted: isHighlighted
         )
         .padding(innerPad)
         .background(.thinMaterial, in: shape)
-        .overlay(shape.stroke(UIStyle.Colors.cardStroke, lineWidth: 1))
+        .overlay(
+            shape.stroke(
+                isHighlighted ? UIStyle.Colors.ctaPrimary : UIStyle.Colors.cardStroke,
+                lineWidth: isHighlighted ? 2 : 1
+            )
+        )
         .overlay(
             shape.stroke(Color.red, lineWidth: 3)
                 .opacity(debug ? 1 : 0)
@@ -522,7 +719,8 @@ private struct ParticipantsPanel: View {
         actionPoints: Int?,
         portrait: PortraitKind,
         shakeTrigger: Int,
-        debug: Bool
+        debug: Bool,
+        isHighlighted: Bool
     ) -> some View {
         VStack(spacing: rowGap) {
             // 1) Name
@@ -643,14 +841,14 @@ private struct ParticipantsPanel: View {
         HStack(spacing: 6) {
             Text("Очки ОД:")
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(UIStyle.Colors.textMuted)
             
             Image(systemName: "bolt.fill")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.yellow)
+                .foregroundStyle(UIStyle.Colors.ctaPrimary)
             
             Text("\(ap)")
-                .font(.caption2.weight(.bold))
+                .font(.headline.weight(.bold))
                 .foregroundStyle(UIStyle.Colors.inkPrimary)
         }
         .padding(.vertical, 4)
@@ -667,25 +865,27 @@ private struct ParticipantsPanel: View {
     // MARK: - Intent Block (такой же формат как Action Points)
     
     private func intentBlock(intent: EnemyIntent) -> some View {
-        HStack(spacing: 6) {
-            Text("Собирается:")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6) // Уменьшение шрифта если не помещается
+        let baseBackground = intent.isThreatening ? UIStyle.Colors.threatOrange.opacity(0.28) : UIStyle.Colors.mutedFill
+        let strokeColor = intent.isThreatening ? UIStyle.Colors.threatRed : UIStyle.Colors.cardStroke
+        let nextTurnIcon = "arrow.forward.circle.fill"
+
+        return HStack(spacing: 6) {
+            Image(systemName: nextTurnIcon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(strokeColor)
             
             // SF Symbol иконка (синхронизировано с карточками)
             Image(systemName: intent.iconName)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(intent.iconColor)
                 .imageScale(.medium)
                 .symbolRenderingMode(.hierarchical)
-                .frame(width: 12, height: 12) // Фиксированный размер иконки
+                .frame(width: 14, height: 14) // Фиксированный размер иконки
             
             // Текст интента (всегда в одну строку с уменьшением шрифта)
             Text(intent.displayText)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(UIStyle.Colors.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.4) // Агрессивное уменьшение для текста интента
                 .fixedSize(horizontal: false, vertical: true) // Разрешаем горизонтальное сжатие
@@ -693,11 +893,11 @@ private struct ParticipantsPanel: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(UIStyle.Colors.mutedFill)
+        .background(baseBackground)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
+                .stroke(strokeColor, lineWidth: 1)
         )
     }
     
@@ -819,14 +1019,20 @@ private struct HPBlockStatsView: View {
     let debug: Bool
     
     private let fixedHeight: CGFloat = 48
+    
+    @State private var previousHP: Int?
+    @State private var previousBlock: Int?
+    @State private var hpHighlightColor: Color? = nil
+    @State private var blockHighlightColor: Color? = nil
 
     var body: some View {
         GeometryReader { geo in
             let availableHeight = geo.size.height
             
             // Адаптивные размеры на основе фиксированной высоты 48px
-            let iconSize = max(12, min(18, availableHeight * 0.35))
-            let fontSize = max(10, min(14, availableHeight * 0.28))
+            let iconSize = max(12, min(18, availableHeight * 0.30))
+            let numberFontSize = max(14, min(20, availableHeight * 0.40))
+            let labelFontSize = max(8, min(11, availableHeight * 0.22))
             let spacing = max(2, min(5, availableHeight * 0.1))
             
             HStack(spacing: 0) {
@@ -838,8 +1044,8 @@ private struct HPBlockStatsView: View {
                         .minimumScaleFactor(0.5)
                     
                     Text("\(hp)/\(maxHP)")
-                        .font(.system(size: fontSize, weight: .semibold))
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .font(.system(size: numberFontSize, weight: .bold))
+                        .foregroundStyle(hpHighlightColor ?? UIStyle.Colors.inkPrimary)
                         .minimumScaleFactor(0.3)
                         .lineLimit(1)
                 }
@@ -855,12 +1061,12 @@ private struct HPBlockStatsView: View {
                 VStack(spacing: spacing) {
                     Image(systemName: "shield.fill")
                         .font(.system(size: iconSize, weight: .medium))
-                        .foregroundStyle(UIStyle.Colors.inkSecondary)
+                        .foregroundStyle(UIStyle.Colors.textMuted)
                         .minimumScaleFactor(0.5)
                     
                     Text("\(block)")
-                        .font(.system(size: fontSize, weight: .semibold))
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .font(.system(size: numberFontSize, weight: .bold))
+                        .foregroundStyle(blockHighlightColor ?? UIStyle.Colors.inkPrimary)
                         .minimumScaleFactor(0.3)
                         .lineLimit(1)
                 }
@@ -869,6 +1075,44 @@ private struct HPBlockStatsView: View {
             }
         }
         .frame(height: fixedHeight)
+        .onChange(of: hp) { newValue in
+            let old = previousHP ?? newValue
+            let diff = newValue - old
+            previousHP = newValue
+            
+            guard diff != 0 else { return }
+            
+            if diff > 0 {
+                hpHighlightColor = UIStyle.Colors.healProtection
+            } else {
+                hpHighlightColor = UIStyle.Colors.damageThreat
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    hpHighlightColor = nil
+                }
+            }
+        }
+        .onChange(of: block) { newValue in
+            let old = previousBlock ?? newValue
+            let diff = newValue - old
+            previousBlock = newValue
+            
+            guard diff != 0 else { return }
+            
+            if diff > 0 {
+                blockHighlightColor = UIStyle.Colors.healProtection
+            } else {
+                blockHighlightColor = UIStyle.Colors.damageThreat
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    blockHighlightColor = nil
+                }
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 0)
                 .stroke(Color.blue, lineWidth: 2)
