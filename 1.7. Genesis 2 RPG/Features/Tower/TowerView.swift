@@ -226,7 +226,7 @@ struct TowerView: View {
                 Color.clear
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(.thinMaterial)
-                Color.white.opacity(0.9)
+                Color.white.opacity(0.05)
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
