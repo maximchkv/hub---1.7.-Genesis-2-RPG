@@ -94,14 +94,14 @@ struct DrawPileView: View {
             HStack {
                 Text("Стопка добора")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 Spacer()
             }
             
             HStack {
                 Text("\(drawPileCards.count) карт")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 Spacer()
             }
         }

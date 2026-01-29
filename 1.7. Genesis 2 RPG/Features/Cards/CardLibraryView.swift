@@ -82,7 +82,7 @@ struct CardLibraryView: View {
             HStack {
                 Text("Коллекция карт")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 Spacer()
             }
             
@@ -90,13 +90,13 @@ struct CardLibraryView: View {
             HStack {
                 Text("\(store.meta.collection.unlockedCount) / \(store.meta.collection.totalCount)")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 
                 Spacer()
                 
                 Text("разблокировано")
                     .font(.caption)
-                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    .foregroundStyle(UIStyle.Colors.textMuted)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Разблокировано \(store.meta.collection.unlockedCount) из \(store.meta.collection.totalCount) карт")

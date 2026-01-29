@@ -94,14 +94,14 @@ struct DiscardPileView: View {
             HStack {
                 Text("Стопка сброса")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 Spacer()
             }
             
             HStack {
                 Text("\(discardPileCards.count) карт")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 Spacer()
             }
         }

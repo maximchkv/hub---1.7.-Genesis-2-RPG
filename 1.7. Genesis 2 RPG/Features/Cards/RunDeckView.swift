@@ -103,7 +103,7 @@ struct RunDeckView: View {
             HStack {
                 Text("Колода забега")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 Spacer()
             }
             
@@ -111,7 +111,7 @@ struct RunDeckView: View {
             HStack {
                 Text("\(deckCards.count) карт")
                     .font(.headline)
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                 
                 Spacer()
             }
