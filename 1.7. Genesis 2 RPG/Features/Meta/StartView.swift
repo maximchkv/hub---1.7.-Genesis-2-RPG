@@ -278,17 +278,17 @@ struct StartView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(chip.onboardingTitle)
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(chip.onboardingLines, id: \.self) { line in
                     HStack(alignment: .top, spacing: 10) {
                         Text("•")
-                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+                            .foregroundStyle(UIStyle.Colors.textMuted)
 
                         Text(line)
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                            .foregroundStyle(UIStyle.Colors.textOnCard)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .font(.callout)

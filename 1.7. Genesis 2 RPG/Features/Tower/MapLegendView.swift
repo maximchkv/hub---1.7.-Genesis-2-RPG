@@ -32,7 +32,7 @@ struct MapLegendView: View {
                             .font(.caption2)
                     }
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(.thinMaterial)
@@ -58,7 +58,7 @@ struct MapLegendView: View {
                     
                     Text(item.label)
                         .font(.caption)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(UIStyle.Colors.textOnCard)
                 }
             }
         }

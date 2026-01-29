@@ -28,13 +28,13 @@ struct ChestView: View {
                             VStack(alignment: .leading, spacing: UIStyle.Spacing.s) {
                                 Text("\(art.icon) \(art.name)")
                                     .font(.headline)
-                                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                                    .foregroundStyle(UIStyle.Colors.textOnCard)
                                 Text(art.description)
                                     .font(.callout)
-                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                    .foregroundStyle(UIStyle.Colors.textMuted)
                                 Text("Бонус дохода: +\(art.incomeBonus)/день")
                                     .font(.caption)
-                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                    .foregroundStyle(UIStyle.Colors.textMuted)
                             }
                             .uiCard()
                             .padding(.bottom, UIStyle.Spacing.m)
