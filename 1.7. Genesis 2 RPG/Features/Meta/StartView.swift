@@ -234,26 +234,31 @@ struct StartView: View {
             )
             .animation(.easeInOut(duration: 0.22), value: selectedChip)
 
-            // CTA button — Liquid Gold
+            // CTA button — Molten gold pill (layered glass + animated gold field)
             Button("Start Run") {
                 store.startRun()
             }
-            .buttonStyle(UIStyle.PrimaryButtonStyle())
+            .buttonStyle(UIStyle.MoltenGoldPillButtonStyle())
             
-            // Debug button: start first battle
+            // Debug button: start first battle (dim, small)
             Button {
                 store.debugStartFirstBattle()
             } label: {
                 Text("DEBUG: First Battle")
-                    .font(.caption)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(UIStyle.Colors.textMuted.opacity(0.8))
+                    .frame(height: 26)
+                    .padding(.horizontal, 12)
                     .background(
-                        RoundedRectangle(cornerRadius: UIStyle.buttonRadius)
-                            .fill(Color.red.opacity(0.7))
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(UIStyle.Colors.mutedFill.opacity(0.8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(SwiftUI.Color.red.opacity(0.2), lineWidth: 1)
+                            )
                     )
             }
+            .buttonStyle(.plain)
         }
         .frame(width: contentWidth)
     }
