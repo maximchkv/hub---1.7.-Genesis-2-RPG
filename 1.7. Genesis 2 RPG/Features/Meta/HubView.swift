@@ -82,18 +82,18 @@ struct HubView: View {
 
     private func metricCell(title: String, value: String) -> some View {
         VStack(spacing: 6) {
-            // LABEL SLOT — фикс. высота, перенос до 2 строк, прижат вверх
+            // LABEL SLOT — чёрный текст на светлой карточке
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(Color.black.opacity(0.75))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(height: metricLabelHeight, alignment: .top)
 
-            // VALUE SLOT — фикс. высота, все значения на одной линии
+            // VALUE SLOT — чёрный текст на светлой карточке
             Text(value)
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(height: metricValueHeight, alignment: .top)
@@ -120,15 +120,17 @@ struct HubView: View {
                         HStack(alignment: .center, spacing: 10) {
                             Image(systemName: "arrow.up.right.circle")
                                 .font(.title3)
+                                .foregroundStyle(Color.black)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Tower")
                                     .font(.headline)
+                                    .foregroundStyle(Color.black)
                                     .lineLimit(1)
 
                                 Text("Climb the floors")
                                     .font(.caption)
-                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                    .foregroundStyle(Color.black.opacity(0.7))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
                             }
@@ -167,15 +169,17 @@ struct HubView: View {
                         HStack(alignment: .center, spacing: 10) {
                             Image(systemName: "building.columns")
                                 .font(.title3)
+                                .foregroundStyle(Color.black)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Castle")
                                     .font(.headline)
+                                    .foregroundStyle(Color.black)
                                     .lineLimit(1)
 
                                 Text("Build between runs")
                                     .font(.caption)
-                                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                                    .foregroundStyle(Color.black.opacity(0.7))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
                             }
@@ -230,15 +234,17 @@ struct HubView: View {
                 HStack(alignment: .center, spacing: 10) {
                     Image(systemName: systemImage)
                         .font(.title3)
+                        .foregroundStyle(Color.black)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
                             .font(.headline)
+                            .foregroundStyle(Color.black)
                             .lineLimit(1)
 
                         Text(subtitle)
                             .font(.caption)
-                            .foregroundStyle(UIStyle.Colors.inkSecondary)
+                            .foregroundStyle(Color.black.opacity(0.7))
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
                     }
@@ -279,7 +285,7 @@ struct HubView: View {
         } label: {
             Image(systemName: "ladybug")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(Color.black)
                 .padding(10)
                 .background(.thinMaterial)
                 .clipShape(Circle())
