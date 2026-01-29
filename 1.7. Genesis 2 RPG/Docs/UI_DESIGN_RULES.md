@@ -74,6 +74,9 @@ SAFE AREA — ЧЕКЛИСТ
 - Иридесценция (только свет, не solid!):
   - `iridescentCyan`, `iridescentMagenta` — используются **только** как glows/рефлексы.
   - `edgeCyanGlow`, `edgeMagentaGlow`, `specularLineSoft`, `reflectionCyan`, `reflectionMagenta`.
+- Семантика боя / башни:
+  - `hpGreen`, `healProtection` — **тёмный** зелёный для здоровья и полосы HP (читаемость на светлом материале).
+  - `threatRed`, `threatOrange`, `damageThreat` — урон и угроза.
 
 Запрет:
 - Не использовать `iridescentCyan`/`iridescentMagenta` как сплошную заливку.
@@ -173,6 +176,11 @@ VStack {
 - фон: `liquidGlassMid` поверх `bgInkCenter`,
 - бордер: `liquidStroke` + мягкий edge-glow,
 - тень: широкая, мягкая, без резких линий.
+
+Текст внутри карточек (инфоблоки и др.):
+- В блоках с `.uiCard()` **не использовать белый или почти белый шрифт** — на стекле он плохо читается.
+- Использовать для текста: `textSecondary` (основной текст, заголовки инфоблоков), `textMuted` (второстепенный текст).
+- Не использовать: `Color.white`, `.white`, `textPrimary` / `inkPrimary` внутри инфоблоков.
 
 Запрет:
 - не рисовать свои `.background(.thinMaterial)` и `.stroke` вокруг карточек,

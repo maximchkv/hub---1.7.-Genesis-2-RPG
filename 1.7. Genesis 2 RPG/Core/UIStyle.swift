@@ -50,8 +50,8 @@ enum UIStyle {
             Image("bg_parchment")
                 .resizable()
                 .scaledToFill()
-                .opacity(1.22)
-                .blur(radius: 1)
+                .opacity(4)
+                .blur(radius: 0.05)
                 .blendMode(.softLight)
         }
     }
@@ -74,6 +74,8 @@ enum UIStyle {
         static let textPrimary   = SwiftUI.Color(red: 0.93, green: 0.94, blue: 0.96) // #EDEFF5
         static let textSecondary = SwiftUI.Color(red: 0.73, green: 0.75, blue: 0.81) // #B9C0CF
         static let textMuted     = SwiftUI.Color(red: 0.49, green: 0.53, blue: 0.61) // #7E879B
+        // Текст на карточках/инфоблоках: не белый — используй textSecondary/textMuted (см. UI_DESIGN_RULES)
+        static let textOnCard   = textSecondary
 
         // Accent (Chrome-like)
         static let chromeGold           = SwiftUI.Color(red: 0.72, green: 0.61, blue: 0.39) // #B79B63
@@ -106,8 +108,27 @@ enum UIStyle {
         static let accent      = chromeGold
         static let mutedFill   = SwiftUI.Color.white.opacity(0.04)
 
-        // Consistent HP green (used across UI) — kept as-is
-        static let hpGreen     = SwiftUI.Color(red: 0.12, green: 0.45, blue: 0.20)
+        // Semantic combat colors (fixed meanings across battle UI)
+        // Зеленый — восстановление / защита (тёмный, читаемый на светлом материале)
+        static let hpGreen     = SwiftUI.Color(red: 0.08, green: 0.34, blue: 0.14)
+        static let healProtection = hpGreen
+
+        // Красный / оранжевый — урон / угроза
+        static let threatRed      = SwiftUI.Color(red: 0.82, green: 0.20, blue: 0.24)
+        static let threatOrange   = SwiftUI.Color(red: 0.96, green: 0.56, blue: 0.18)
+        static let damageThreat   = threatRed
+
+        // Золото — финальное действие (CTA)
+        static let ctaPrimary     = chromeGold
+
+        // Molten gold CTA (champagne → honey → amber)
+        static let moltenChampagne = SwiftUI.Color(red: 0.97, green: 0.93, blue: 0.86) // #F7EDDB
+        static let moltenHoney     = SwiftUI.Color(red: 0.90, green: 0.72, blue: 0.30) // #E6B84D
+        static let moltenAmber     = SwiftUI.Color(red: 0.76, green: 0.52, blue: 0.18) // #C2852E
+        static let warmTintGlass  = SwiftUI.Color(red: 0.95, green: 0.80, blue: 0.50).opacity(0.12) // warm overlay for material
+
+        // Серый — недоступно / отключено
+        static let disabled       = textMuted
         
         // Dark green for highlighting growing numbers (used in reward cards)
         static let growthGreen = SwiftUI.Color(red: 0.10, green: 0.50, blue: 0.15)
@@ -256,6 +277,192 @@ enum UIStyle {
                 )
                 .scaleEffect(isPressed ? 0.98 : 1.0)
                 .animation(.easeInOut(duration: 0.18), value: isPressed)
+        }
+    }
+
+    // MARK: - Molten Gold Pill CTA (Start Run style)
+    // Layered glass + animated gold gradient field with vignette and specular.
+    // Use: Button("Start Run") { ... }.buttonStyle(UIStyle.MoltenGoldPillButtonStyle())
+    //
+    // Parameters: flowSpeed (animation), scale (gradient scale), turbulence (phase noise),
+    // and state deltas for pressed/disabled.
+    struct MoltenGoldPillBackground: View {
+        var flowSpeed: Double = 0.25
+        var scale: Double = 1.2
+        var turbulence: Double = 0.12
+        var isPressed: Bool = false
+        var isDisabled: Bool = false
+        
+        private let pillRadius: CGFloat = UIStyle.buttonRadius
+        
+        var body: some View {
+            TimelineView(.animation(minimumInterval: 1/30)) { timeline in
+                let effectiveSpeed = isDisabled ? 0 : (isPressed ? flowSpeed * 0.4 : flowSpeed)
+                let phase = timeline.date.timeIntervalSinceReferenceDate * effectiveSpeed
+                let effectiveScale = isPressed ? scale * 0.95 : scale
+                let effectiveTurbulence = isDisabled ? 0 : (isPressed ? turbulence * 0.6 : turbulence)
+                
+                ZStack {
+                    // 1) Base: material + warm tint + subtle inner shadow
+                    baseLayer
+                    // 2) Animated gold gradient field (champagne→honey→amber), heavy blur, vignette
+                    goldLayer(phase: phase, scale: effectiveScale, turbulence: effectiveTurbulence)
+                    // 3) Optional radial refraction (subtle overlay)
+                    refractionOverlay
+                    // 4) Broad blurred specular highlight
+                    specularHighlight
+                }
+                .opacity(isDisabled ? 0.6 : 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: pillRadius, style: .continuous))
+        }
+        
+        private var baseLayer: some View {
+            ZStack {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.ultraThinMaterial)
+                    .overlay(Colors.warmTintGlass)
+                    .overlay(innerShadowOverlay)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: pillRadius, style: .continuous))
+        }
+        
+        private var innerShadowOverlay: some View {
+            RoundedRectangle(cornerRadius: pillRadius, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            .clear,
+                            SwiftUI.Color.black.opacity(0.0),
+                            SwiftUI.Color.black.opacity(0.18)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 24
+                )
+                .blur(radius: 8)
+                .offset(y: 4)
+                .blendMode(.multiply)
+        }
+        
+        private func goldLayer(phase: Double, scale: Double, turbulence: Double) -> some View {
+            let s = 0.5 + turbulence * sin(phase)
+            let t = 0.5 + turbulence * cos(phase * 0.7)
+            let u = 0.5 + turbulence * 0.5 * sin(phase * 1.3)
+            let v = 0.5 + turbulence * 0.5 * cos(phase * 0.9)
+            
+            return RoundedRectangle(cornerRadius: pillRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Colors.moltenChampagne,
+                            Colors.moltenHoney,
+                            Colors.moltenAmber,
+                            Colors.moltenHoney,
+                            Colors.moltenChampagne
+                        ],
+                        startPoint: UnitPoint(x: s, y: t),
+                        endPoint: UnitPoint(x: u, y: v)
+                    )
+                )
+                .blur(radius: 28 * (isPressed ? 0.9 : 1))
+                .opacity(isDisabled ? 0.5 : (isPressed ? 0.85 : 0.95))
+                .mask(vignetteMask(scale: scale))
+        }
+        
+        private func vignetteMask(scale: Double) -> some View {
+            RoundedRectangle(cornerRadius: pillRadius, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            SwiftUI.Color.white,
+                            SwiftUI.Color.white.opacity(0.75),
+                            SwiftUI.Color.white.opacity(0.25)
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 200 * scale
+                    )
+                )
+        }
+        
+        private var refractionOverlay: some View {
+            RoundedRectangle(cornerRadius: pillRadius, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            SwiftUI.Color.white.opacity(0.06),
+                            .clear,
+                            .clear
+                        ],
+                        center: UnitPoint(x: 0.35, y: 0.3),
+                        startRadius: 0,
+                        endRadius: 120
+                    )
+                )
+                .blendMode(.plusLighter)
+        }
+        
+        private var specularHighlight: some View {
+            RoundedRectangle(cornerRadius: pillRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            SwiftUI.Color.white.opacity(0.0),
+                            SwiftUI.Color.white.opacity(0.35),
+                            SwiftUI.Color.white.opacity(0.12),
+                            SwiftUI.Color.white.opacity(0.0)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .blur(radius: 6)
+                .offset(y: isPressed ? 2 : -6)
+        }
+    }
+
+    struct MoltenGoldPillButtonStyle: ButtonStyle {
+        var flowSpeed: Double = 0.25
+        var scale: Double = 1.2
+        var turbulence: Double = 0.12
+        /// Pressed: slow flow, slightly smaller scale, lower gold opacity (handled in background)
+        var pressedFlowScale: Double = 0.4
+        var pressedScaleDelta: Double = 0.98
+        /// Disabled: no flow, lower opacity (handled in background)
+        var disabledOpacity: Double = 0.6
+        
+        @Environment(\.isEnabled) private var isEnabled
+        
+        func makeBody(configuration: Configuration) -> some View {
+            let isPressed = configuration.isPressed
+            let isDisabled = !isEnabled
+            
+            return configuration.label
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(Colors.bgInkDeep.opacity(isDisabled ? 0.6 : 0.96))
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .padding(.horizontal, 2)
+                .background(
+                    MoltenGoldPillBackground(
+                        flowSpeed: flowSpeed,
+                        scale: scale,
+                        turbulence: turbulence,
+                        isPressed: isPressed,
+                        isDisabled: isDisabled
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: UIStyle.buttonRadius, style: .continuous)
+                        .strokeBorder(Colors.liquidStroke.opacity(0.5), lineWidth: 1)
+                )
+                .shadow(color: SwiftUI.Color.black.opacity(0.5), radius: isPressed ? 10 : 18, x: 0, y: isPressed ? 6 : 12)
+                .scaleEffect(isPressed ? pressedScaleDelta : 1.0)
+                .animation(.easeInOut(duration: 0.2), value: isPressed)
+                .animation(.easeInOut(duration: 0.25), value: isDisabled)
         }
     }
 
