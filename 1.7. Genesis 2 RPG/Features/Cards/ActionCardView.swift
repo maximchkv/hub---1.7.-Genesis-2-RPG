@@ -38,7 +38,7 @@ struct ActionCardView: View {
                     Text("Lv\(level)")
                         .font(.caption2)
                         .fontWeight(.semibold)
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .foregroundStyle(UIStyle.Colors.textOnCard)
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)
                         .background(UIStyle.Colors.mutedFill)
@@ -55,7 +55,7 @@ struct ActionCardView: View {
             // Name - фиксированная высота, текст масштабируется
             Text(titleRU)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.3)
@@ -76,7 +76,7 @@ struct ActionCardView: View {
                     Spacer()
                     Text(effectRU)
                         .font(.caption)
-                        .foregroundStyle(UIStyle.Colors.inkSecondary)
+                        .foregroundStyle(UIStyle.Colors.textMuted)
                         .multilineTextAlignment(.center)
                         .lineLimit(6)
                         .minimumScaleFactor(0.3)
@@ -97,7 +97,7 @@ struct ActionCardView: View {
             // Cost
             Text("\(card.cost) ОД")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .background(
@@ -167,7 +167,7 @@ struct ActionCardView: View {
         case .stun1: return Color.purple
         
         // Базовые карты - нейтральный цвет
-        default: return UIStyle.Colors.inkPrimary
+        default: return UIStyle.Colors.textOnCard
         }
     }
 

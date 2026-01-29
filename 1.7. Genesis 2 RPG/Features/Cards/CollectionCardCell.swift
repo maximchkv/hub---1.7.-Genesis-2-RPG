@@ -28,7 +28,7 @@ struct CollectionCardCell: View {
                     } else {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 32))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(UIStyle.Colors.textMuted)
                     }
                 }
                 .frame(width: 80, height: 80)  // Фиксированный размер иконки
@@ -36,7 +36,7 @@ struct CollectionCardCell: View {
                 // Title - масштабируется
                 Text(isUnlocked ? titleRU : "???")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
@@ -46,7 +46,7 @@ struct CollectionCardCell: View {
                 if isUnlocked {
                     Text("\(cost) ОД")
                         .font(.caption2)
-                        .foregroundStyle(UIStyle.Colors.inkSecondary)
+                        .foregroundStyle(UIStyle.Colors.textMuted)
                 }
             }
             .padding(10)
@@ -104,7 +104,7 @@ struct CollectionCardCell: View {
         case .stun1: return Color.purple
         
         // Базовые карты - нейтральный цвет
-        default: return UIStyle.Colors.inkPrimary
+        default: return UIStyle.Colors.textOnCard
         }
     }
     

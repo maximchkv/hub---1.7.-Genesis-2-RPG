@@ -54,7 +54,7 @@ struct CardDetailView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(UIStyle.Colors.inkPrimary)
+                            .foregroundStyle(UIStyle.Colors.textOnCard)
                     }
                     .accessibilityLabel("Закрыть")
                 }
@@ -80,13 +80,13 @@ struct CardDetailView: View {
                 } else {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 40))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(UIStyle.Colors.textMuted)
                 }
             }
             
             Text(isUnlocked ? titleRU : "???")
                 .font(.title2.weight(.bold))
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textPrimary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -98,17 +98,17 @@ struct CardDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Описание")
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
             
             Text(isUnlocked ? effectRU : "Заблокированная карта. Играйте в Tower, чтобы разблокировать.")
                 .font(.body)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(UIStyle.Colors.textMuted)
             
             if isUnlocked {
                 HStack {
                     Label("\(cost) ОД", systemImage: "bolt.fill")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(UIStyle.Colors.inkPrimary)
+                        .foregroundStyle(UIStyle.Colors.textOnCard)
                 }
                 .padding(.top, 4)
             }
@@ -123,7 +123,7 @@ struct CardDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Значения по уровням")
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
             
             VStack(spacing: 8) {
                 ForEach(1...5, id: \.self) { level in
@@ -141,12 +141,12 @@ struct CardDetailView: View {
         return HStack {
             Text("Lv\(level)")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isCurrentLevel ? UIStyle.Colors.accent : UIStyle.Colors.inkPrimary)
+                .foregroundStyle(isCurrentLevel ? UIStyle.Colors.accent : UIStyle.Colors.textOnCard)
                 .frame(width: 50, alignment: .leading)
             
             Text(levelEffect(level: level))
                 .font(.subheadline)
-                .foregroundStyle(isCurrentLevel ? UIStyle.Colors.accent : UIStyle.Colors.inkSecondary)
+                .foregroundStyle(isCurrentLevel ? UIStyle.Colors.accent : UIStyle.Colors.textMuted)
             
             Spacer()
             
@@ -198,20 +198,20 @@ struct CardDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Статистика")
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
             
             let stats = store.meta.collection.stats(for: card)
             
             HStack {
                 Image(systemName: "play.circle")
-                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    .foregroundStyle(UIStyle.Colors.textMuted)
                 Text("Использовано раз:")
                     .font(.subheadline)
-                    .foregroundStyle(UIStyle.Colors.inkSecondary)
+                    .foregroundStyle(UIStyle.Colors.textMuted)
                 Spacer()
                 Text("\(stats.timesUsed)")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(UIStyle.Colors.inkPrimary)
+                    .foregroundStyle(UIStyle.Colors.textOnCard)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -228,13 +228,13 @@ struct CardDetailView: View {
             
             Text(card.isPlaceholder ? "Скоро появится" : "Карта заблокирована")
                 .font(.headline)
-                .foregroundStyle(UIStyle.Colors.inkPrimary)
+                .foregroundStyle(UIStyle.Colors.textOnCard)
             
             Text(card.isPlaceholder ? 
                 "Эта карта появится в будущих обновлениях игры. Следите за новостями!" :
                 "Улучшайте карты после боев в Tower, чтобы разблокировать их в коллекции.")
                 .font(.subheadline)
-                .foregroundStyle(UIStyle.Colors.inkSecondary)
+                .foregroundStyle(UIStyle.Colors.textMuted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -298,7 +298,7 @@ struct CardDetailView: View {
         case .stun1:
             return Color.purple
         default:
-            return UIStyle.Colors.inkPrimary
+            return UIStyle.Colors.textOnCard
         }
     }
     
