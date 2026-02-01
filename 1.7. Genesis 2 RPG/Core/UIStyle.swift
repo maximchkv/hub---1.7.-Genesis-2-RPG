@@ -761,7 +761,20 @@ enum UIStyle {
     struct LiquidSegmentedControl<Option: Hashable>: View {
         let options: [Option]
         let titleProvider: (Option) -> String
+        let iconProvider: ((Option) -> Image)?
         @Binding var selection: Option
+
+        init(
+            options: [Option],
+            titleProvider: @escaping (Option) -> String,
+            iconProvider: ((Option) -> Image)? = nil,
+            selection: Binding<Option>
+        ) {
+            self.options = options
+            self.titleProvider = titleProvider
+            self.iconProvider = iconProvider
+            self._selection = selection
+        }
         
         private let railHeight: CGFloat = 40
         
@@ -858,15 +871,26 @@ enum UIStyle {
                                         }
                                     }
                                 } label: {
-                                    Text(titleProvider(option))
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                        .kerning(-0.4)
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                        .foregroundStyle(
-                                            isActive
-                                            ? Colors.bgInkDeep.opacity(0.96)
-                                            : Colors.textSecondary.opacity(0.9)
-                                        )
+                                    Group {
+                                        if let iconProvider {
+                                            Label {
+                                                Text(titleProvider(option))
+                                            } icon: {
+                                                iconProvider(option)
+                                            }
+                                        } else {
+                                            Text(titleProvider(option))
+                                        }
+                                    }
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .kerning(-0.4)
+                                    .labelStyle(.titleAndIcon)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .foregroundStyle(
+                                        isActive
+                                        ? Colors.bgInkDeep.opacity(0.96)
+                                        : Colors.textSecondary.opacity(0.9)
+                                    )
                                 }
                                 .buttonStyle(.plain)
                             }

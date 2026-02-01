@@ -356,6 +356,11 @@ final class GameStore: ObservableObject {
 
     // MARK: - Run
     func startRun(routeToHub: Bool = true) {
+        // Переход на Hub сразу, чтобы UI успел обновиться до тяжёлой инициализации
+        if routeToHub {
+            route = .hub
+        }
+
         var newRun = RunState()
         
         // Generate starting deck
@@ -373,10 +378,6 @@ final class GameStore: ObservableObject {
         // Auto-unlock base cards on first run
         if meta.collection.unlockedCards.isEmpty {
             unlockBaseCards()
-        }
-        
-        if routeToHub {
-            route = .hub
         }
     }
     
