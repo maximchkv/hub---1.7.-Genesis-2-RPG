@@ -38,7 +38,7 @@ struct ActionCardView: View {
                     Text("Lv\(level)")
                         .font(.caption2)
                         .fontWeight(.semibold)
-                        .foregroundStyle(UIStyle.Colors.textOnCard)
+                        .foregroundStyle(Color.white)
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)
                         .background(UIStyle.Colors.mutedFill)
@@ -55,7 +55,7 @@ struct ActionCardView: View {
             // Name - фиксированная высота, текст масштабируется
             Text(titleRU)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.textOnCard)
+                .foregroundStyle(Color.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.3)
@@ -76,7 +76,7 @@ struct ActionCardView: View {
                     Spacer()
                     Text(effectRU)
                         .font(.caption)
-                        .foregroundStyle(UIStyle.Colors.textMuted)
+                        .foregroundStyle(Color.white.opacity(0.92))
                         .multilineTextAlignment(.center)
                         .lineLimit(6)
                         .minimumScaleFactor(0.3)
@@ -97,7 +97,7 @@ struct ActionCardView: View {
             // Cost
             Text("\(card.cost) ОД")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(UIStyle.Colors.textOnCard)
+                .foregroundStyle(Color.white)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .background(
@@ -108,7 +108,7 @@ struct ActionCardView: View {
         .padding(6)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white.opacity(0.16)) // Менее прозрачные карточки для всех состояний
+                .fill(Color.white.opacity(0.24)) // Менее прозрачные карточки для всех состояний
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
@@ -182,7 +182,7 @@ struct ActionCardView: View {
         case .available:
             return 1.0
         case .insufficientAP, .alreadyUsed, .notPlayerTurn:
-            return 0.75
+            return 0.88
         }
     }
     

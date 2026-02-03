@@ -22,7 +22,7 @@ struct BattleView: View {
     private let interBlock: CGFloat = UIStyle.Spacing.m // Стандартные отступы между блоками
     private var headerToParticipants: CGFloat { interBlock }
     private var participantsToLog: CGFloat { interBlock }
-    private var logToCards: CGFloat { interBlock }
+    private let logToCards: CGFloat = 24
     private let cardsToButton: CGFloat = UIStyle.Spacing.m
     private let headerHeight: CGFloat = 22
 
