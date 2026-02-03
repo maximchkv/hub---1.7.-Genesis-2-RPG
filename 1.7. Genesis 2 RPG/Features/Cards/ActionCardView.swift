@@ -108,7 +108,7 @@ struct ActionCardView: View {
         .padding(6)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(UIStyle.Colors.cardFill)
+                .fill(Color.white.opacity(0.16)) // Менее прозрачные карточки для всех состояний
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
@@ -182,7 +182,7 @@ struct ActionCardView: View {
         case .available:
             return 1.0
         case .insufficientAP, .alreadyUsed, .notPlayerTurn:
-            return 0.60
+            return 0.75
         }
     }
     

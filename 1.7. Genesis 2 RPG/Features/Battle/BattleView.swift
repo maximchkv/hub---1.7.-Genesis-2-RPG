@@ -27,14 +27,15 @@ struct BattleView: View {
     private let headerHeight: CGFloat = 22
 
 
-    // Log sizing (always visible, ~1/3 longer than before)
-    private let logFixedHeight: CGFloat = 80 // Увеличено примерно на треть (было 60)
+    // Log sizing (always visible, +15% по высоте)
+    private let logFixedHeight: CGFloat = 92 // 80 * 1.15
     private let logCorner: CGFloat = 14
 
     // Action cards sizing (improved readability)
     // Базовые размеры для расчета пропорций
     private let actionCardBaseWidth: CGFloat = 160
     private let actionCardBaseHeight: CGFloat = 220
+    private let actionCardMaxHeight: CGFloat = 207 // ~+10% к высоте карточек (188 * 1.1)
     private let actionCardRowSpacing: CGFloat = UIStyle.Spacing.m
     private let maxCardsInRow: Int = 3 // Максимальное количество карточек в ряду
 
@@ -153,7 +154,18 @@ struct BattleView: View {
         ZStack {
             Text("Этаж \(floor)")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                )
+                .shadow(color: Color.white.opacity(0.4), radius: 6)
                 .frame(maxWidth: .infinity)
 
             HStack {
@@ -282,8 +294,6 @@ struct BattleView: View {
             isDimmed = !isPlayerTurn
         }
 
-        let footerBackground = Color.black.opacity(0.35)
-
         return VStack(spacing: 0) {
             Divider()
                 .background(UIStyle.Colors.cardStroke.opacity(0.6))
@@ -328,13 +338,8 @@ struct BattleView: View {
             .frame(width: contentWidth)
             .padding(.horizontal, UIStyle.Spacing.s)
             .padding(.vertical, UIStyle.Spacing.s)
-            .background(
-                footerBackground
-                    .background(.ultraThinMaterial)
-            )
         }
         .frame(maxWidth: .infinity)
-        .background(footerBackground.ignoresSafeArea(edges: .bottom))
         .sheet(isPresented: $showDrawPile) {
             DrawPileView()
                 .environmentObject(store)
@@ -400,8 +405,7 @@ struct BattleView: View {
                     .foregroundStyle(Color.black)
             }
             .frame(width: size, height: size)
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .background(Color.white.opacity(0.28), in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
@@ -426,8 +430,7 @@ struct BattleView: View {
                     .foregroundStyle(Color.black)
             }
             .frame(width: size, height: size)
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .background(Color.white.opacity(0.28), in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(UIStyle.Colors.cardStroke, lineWidth: 1)
@@ -464,8 +467,8 @@ struct BattleView: View {
         let availableWidth = contentWidth - spacingTotal
         let calculatedCardWidth = availableWidth / CGFloat(cardCount)
         
-        // Высота карточек адаптивная - используем все доступное пространство
-        let cardHeight = availableHeight
+        // Высота карточек ограничена сверху для более компактного вида
+        let cardHeight = min(availableHeight, actionCardMaxHeight)
         
         return HStack(spacing: actionCardRowSpacing) {
             ForEach(battle.hand.prefix(maxCardsInRow), id: \.id) { card in
